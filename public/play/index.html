@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#071c27" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>星芽跃界 · Starsprout Rift Run</title>
+    <meta name="description" content="原创纸雕风横版动作闯关游戏，支持键盘与手机触控。" />
+    <link rel="stylesheet" href="./game.css" />
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <canvas id="game" width="1280" height="720" aria-label="星芽跃界游戏画面"></canvas>
+      <div class="paper-grain" aria-hidden="true"></div>
+
+      <section id="start-screen" class="screen start-screen is-visible" aria-label="主菜单">
+        <div class="brand-block">
+          <p class="eyebrow">ORIGINAL PAPER-CUT PLATFORM ADVENTURE</p>
+          <h1><span>星芽</span><span>跃界</span></h1>
+          <p class="roman-title">STARSPROUT · RIFT RUN</p>
+          <p class="tagline">穿过六片失衡生态，拆解两位核心守门者。</p>
+          <nav class="menu-actions" aria-label="游戏菜单">
+            <button class="primary-action" data-action="continue">
+              <span class="button-kicker">ENTER</span>
+              <span id="continue-label">开始远征</span>
+            </button>
+            <button data-action="levels">跃界航线</button>
+            <button data-action="help">操作说明</button>
+          </nav>
+        </div>
+        <div class="start-meta">
+          <span>8 个关卡</span><span>2 场 BOSS</span><span>自动存档</span>
+        </div>
+      </section>
+
+      <section id="level-screen" class="screen panel-screen" aria-label="关卡选择" aria-hidden="true">
+        <header class="panel-heading">
+          <p class="eyebrow">RIFT ROUTE</p>
+          <h2>跃界航线</h2>
+          <button class="text-action" data-action="back">返回</button>
+        </header>
+        <div id="level-grid" class="level-grid"></div>
+      </section>
+
+      <section id="help-screen" class="screen panel-screen" aria-label="操作说明" aria-hidden="true">
+        <header class="panel-heading">
+          <p class="eyebrow">FIELD GUIDE</p>
+          <h2>一眼就会的操作</h2>
+          <button class="text-action" data-action="back">返回</button>
+        </header>
+        <div class="guide-layout">
+          <div class="guide-primary">
+            <div><kbd>A</kbd><kbd>D</kbd><span>移动</span></div>
+            <div><kbd>SPACE</kbd><span>跳跃，长按更高</span></div>
+            <div><kbd>SHIFT</kbd><span>冲刺</span></div>
+            <div><kbd>J</kbd><span>脉冲 / 触发机关</span></div>
+            <div><kbd>S</kbd><span>空中下砸</span></div>
+          </div>
+          <div class="guide-notes">
+            <p><strong>触屏：</strong>左侧方向区移动，右侧三个按钮分别对应跳跃、脉冲和冲刺。</p>
+            <p><strong>BOSS：</strong>正面强攻无效。先观察场地机关，再寻找发光核心。</p>
+            <p><strong>进度：</strong>到达检查点和完成关卡时自动保存。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="briefing" class="screen briefing-screen" aria-hidden="true">
+        <div class="briefing-rule"></div>
+        <p id="briefing-number" class="eyebrow">STAGE 01</p>
+        <h2 id="briefing-title">风铃草原</h2>
+        <p id="briefing-subtitle" class="briefing-subtitle">追着风去远方</p>
+        <p id="briefing-mechanic" class="briefing-mechanic">顺着风带越过裂谷</p>
+        <p class="start-prompt">按任意动作键 / 点击屏幕开始</p>
+      </section>
+
+      <section id="pause-screen" class="screen center-screen" aria-hidden="true">
+        <p class="eyebrow">FIELD PAUSED</p>
+        <h2>远征暂停</h2>
+        <div class="stack-actions">
+          <button class="primary-action" data-action="resume">继续</button>
+          <button data-action="restart">重开本关</button>
+          <button data-action="levels">跃界航线</button>
+          <button data-action="home">返回主菜单</button>
+        </div>
+      </section>
+
+      <section id="complete-screen" class="screen center-screen" aria-hidden="true">
+        <p class="eyebrow">RIFT RESTORED</p>
+        <h2 id="complete-title">区域修复完成</h2>
+        <p id="complete-detail">下一片生态已经开放。</p>
+        <button class="primary-action" data-action="next">前往下一关</button>
+        <button data-action="levels">返回航线</button>
+      </section>
+
+      <section id="victory-screen" class="screen center-screen victory-screen" aria-hidden="true">
+        <p class="eyebrow">WORLD CORE ONLINE</p>
+        <h2>世界重新发芽</h2>
+        <p>六片生态已经恢复，两位守门者的核心也重归星海。</p>
+        <p id="victory-stats" class="victory-stats">8 / 8 关 · 0 枚记忆种子</p>
+        <button class="primary-action" data-action="levels">再次挑战</button>
+        <button data-action="home">返回主菜单</button>
+      </section>
+
+      <div id="hud" class="hud" aria-hidden="true">
+        <div class="hud-left">
+          <div id="health" class="health" aria-label="生命值"></div>
+          <div class="stage-copy"><span id="hud-stage">STAGE 01</span><strong id="hud-name">风铃草原</strong></div>
+        </div>
+        <div id="boss-hud" class="boss-hud" hidden>
+          <span id="boss-name">守门者</span>
+          <div id="boss-health" class="boss-health"></div>
+          <small id="boss-status">观察场地</small>
+        </div>
+        <div class="hud-right">
+          <div class="dash-label"><span>SHIFT</span><i id="dash-fill"></i></div>
+          <span id="item-status">J 脉冲 · S 下砸</span>
+        </div>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <div class="utility-bar" aria-label="快捷设置">
+        <button data-action="mute" aria-label="声音开关"><span id="mute-icon">声音</span></button>
+        <button data-action="fullscreen" aria-label="全屏">全屏</button>
+        <button data-action="pause" aria-label="暂停">暂停</button>
+      </div>
+
+      <div id="touch-controls" class="touch-controls" aria-label="触屏控制">
+        <div class="touch-move">
+          <button data-touch="left" aria-label="向左">‹</button>
+          <button data-touch="right" aria-label="向右">›</button>
+        </div>
+        <div class="touch-actions">
+          <button class="touch-dash" data-touch="dash" aria-label="冲刺">冲</button>
+          <button class="touch-shoot" data-touch="shoot" aria-label="脉冲">击</button>
+          <button class="touch-jump" data-touch="jump" aria-label="跳跃">跃</button>
+        </div>
+      </div>
+
+      <div class="portrait-notice" role="status">
+        <strong>请横屏游玩</strong>
+        <span>旋转设备后，操作区域会自动展开。</span>
+      </div>
+      <div id="announcer" class="sr-only" aria-live="assertive"></div>
+    </div>
+
+    <script src="./levels.js"></script>
+    <script src="./game.js"></script>
+  </body>
+</html>

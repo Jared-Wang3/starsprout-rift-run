@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="星芽跃界图标">
+  <rect width="512" height="512" rx="104" fill="#071c27"/>
+  <path d="M42 364 190 176l87 78L380 92l90 272Z" fill="#123744"/>
+  <path d="m56 389 154-97 53 42 82-68 111 123Z" fill="#2ab7a9"/>
+  <path d="M64 390h384v48H64z" fill="#f4edda"/>
+  <path d="M216 291c0-41 24-74 61-74s68 33 68 74v77H216Z" fill="#f6c453" stroke="#071c27" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M278 218c-10-52 16-99 72-121 10 55-14 102-72 121Z" fill="#71c7d4" stroke="#071c27" stroke-width="16" stroke-linejoin="round"/>
+  <path d="M277 222c-40-6-70-37-72-80 47 2 76 29 72 80Z" fill="#f05d4e" stroke="#071c27" stroke-width="16" stroke-linejoin="round"/>
+  <path d="m280 248 13 27 30 4-22 21 6 30-27-14-27 14 5-30-22-21 31-4Z" fill="#f4edda" stroke="#071c27" stroke-width="10" stroke-linejoin="round"/>
+  <path d="m119 117 12 25 28 4-20 19 5 28-25-13-25 13 5-28-20-19 28-4Z" fill="#f4edda"/>
+  <circle cx="398" cy="181" r="18" fill="#f05d4e"/>
+  <path d="M90 390h332" stroke="#071c27" stroke-width="18" stroke-linecap="square"/>
+</svg>
