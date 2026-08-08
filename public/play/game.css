@@ -63,7 +63,10 @@ button:active {
   inset: 0;
   overflow: hidden;
   isolation: isolate;
-  background: var(--ink);
+  background:
+    radial-gradient(circle at 18% 82%, rgba(42, 183, 169, 0.1), transparent 22%),
+    radial-gradient(circle at 82% 18%, rgba(246, 196, 83, 0.08), transparent 24%),
+    linear-gradient(160deg, var(--ink), #04141d 72%);
 }
 
 #game {
@@ -420,8 +423,8 @@ button:active {
   opacity: 0.23;
 }
 
-.level-card:hover,
-.level-card:focus-visible {
+.level-card:not(:disabled):hover,
+.level-card:not(:disabled):focus-visible {
   transform: translate(-2px, -2px);
   border-color: var(--paper);
   outline-color: var(--card-accent, var(--amber));
@@ -533,7 +536,9 @@ kbd {
   justify-content: center;
   flex-direction: column;
   padding: 2rem;
-  background: rgba(3, 16, 23, 0.82);
+  background:
+    repeating-linear-gradient(105deg, transparent 0 7px, rgba(244, 237, 218, 0.018) 7px 8px),
+    rgba(3, 16, 23, 0.88);
   text-align: center;
   backdrop-filter: blur(5px);
 }
@@ -597,6 +602,14 @@ kbd {
   gap: 0.65rem;
 }
 
+.stack-actions > button:not(.primary-action),
+.center-screen > button:not(.primary-action) {
+  border-left: 4px solid var(--teal);
+  background: rgba(18, 49, 59, 0.86);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.34);
+}
+
 .center-screen > button {
   min-width: 15rem;
   margin: 0.35rem;
@@ -632,9 +645,11 @@ kbd {
 .hud-left,
 .hud-right,
 .boss-hud {
-  background: rgba(3, 16, 23, 0.83);
+  background: linear-gradient(135deg, rgba(3, 16, 23, 0.95), rgba(18, 49, 59, 0.88));
   border-top: 3px solid var(--paper);
   padding: 0.55rem 0.7rem;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  box-shadow: inset 0 -1px 0 rgba(244, 237, 218, 0.12);
 }
 
 .hud-left {
@@ -652,12 +667,13 @@ kbd {
 .health i {
   width: 1rem;
   height: 0.72rem;
-  transform: skewX(-18deg);
+  clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%);
   background: rgba(244, 237, 218, 0.22);
 }
 
 .health i.is-full {
-  background: var(--coral);
+  background: linear-gradient(90deg, var(--coral), #ff8b68);
+  box-shadow: inset 0 -2px 0 rgba(3, 16, 23, 0.25);
 }
 
 .stage-copy span,
@@ -701,7 +717,8 @@ kbd {
   grid-row: 1;
   width: 100%;
   height: 0.38rem;
-  background: rgba(244, 237, 218, 0.22);
+  border: 1px solid rgba(244, 237, 218, 0.16);
+  background: rgba(244, 237, 218, 0.12);
 }
 
 #dash-fill {
@@ -711,7 +728,7 @@ kbd {
   width: 100%;
   height: 0.38rem;
   transform-origin: left center;
-  background: var(--amber);
+  background: linear-gradient(90deg, var(--amber), #ffe08a);
 }
 
 #item-status {
@@ -747,6 +764,7 @@ kbd {
 
 .boss-health i {
   height: 0.42rem;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
   background: rgba(244, 237, 218, 0.2);
 }
 
@@ -767,10 +785,10 @@ kbd {
   min-width: 12rem;
   max-width: min(34rem, 80vw);
   transform: translate(-50%, -1rem);
-  border: 1px solid rgba(244, 237, 218, 0.45);
+  border: 1px solid rgba(244, 237, 218, 0.48);
   border-left: 5px solid var(--amber);
   padding: 0.72rem 1rem;
-  background: rgba(3, 16, 23, 0.93);
+  background: linear-gradient(110deg, rgba(18, 49, 59, 0.97), rgba(3, 16, 23, 0.96));
   color: var(--paper);
   font-size: 0.82rem;
   font-weight: 800;
@@ -802,13 +820,29 @@ kbd {
   bottom: auto;
 }
 
+.app-shell:has(#pause-screen.is-visible) .utility-bar {
+  display: none;
+}
+
 .utility-bar button {
-  min-height: 38px;
-  min-width: 50px;
+  min-height: 44px;
+  min-width: 52px;
   padding: 0.55rem 0.65rem;
-  border-color: rgba(244, 237, 218, 0.18);
-  color: rgba(244, 237, 218, 0.72);
-  font-size: 0.66rem;
+  border-color: rgba(244, 237, 218, 0.28);
+  border-bottom: 3px solid var(--teal);
+  background: rgba(3, 16, 23, 0.9);
+  color: rgba(244, 237, 218, 0.84);
+  font-size: 0.72rem;
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.32);
+}
+
+.app-shell:has(#hud.is-visible) .utility-bar button:not([data-action="pause"]) {
+  display: none;
+}
+
+.app-shell:has(#hud.is-visible) .utility-bar button[data-action="pause"] {
+  border-bottom-color: var(--coral);
 }
 
 .touch-controls {
@@ -837,9 +871,10 @@ kbd {
   border: 2px solid rgba(244, 237, 218, 0.42);
   border-radius: 50%;
   padding: 0;
-  background: rgba(7, 28, 39, 0.68);
+  background: color-mix(in srgb, var(--ink) 88%, var(--paper));
   color: var(--paper);
   font-size: 1.4rem;
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.46), inset 0 0 0 1px rgba(244, 237, 218, 0.13);
   backdrop-filter: blur(4px);
   user-select: none;
 }
@@ -848,23 +883,34 @@ kbd {
   transform: scale(0.92);
   background: var(--amber);
   color: var(--ink);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(244, 237, 218, 0.16);
 }
 
 .touch-actions .touch-jump {
   width: 5.3rem;
   height: 5.3rem;
   border-color: var(--amber);
+  background: var(--amber);
+  color: var(--ink);
+  box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.48), inset 0 0 0 2px rgba(255, 255, 255, 0.16);
 }
 
 .touch-actions .touch-shoot {
   border-color: var(--sky);
+  background: color-mix(in srgb, var(--sky) 22%, var(--ink));
 }
 
 .touch-actions .touch-dash {
   width: 3.7rem;
   height: 3.7rem;
   border-color: var(--coral);
+  background: color-mix(in srgb, var(--coral) 24%, var(--ink));
   font-size: 1rem;
+}
+
+.touch-actions .touch-down {
+  border-color: color-mix(in srgb, var(--amber) 72%, var(--paper));
+  background: color-mix(in srgb, var(--amber) 16%, var(--ink));
 }
 
 .sr-only {
@@ -957,6 +1003,40 @@ kbd {
   }
 }
 
+@media (max-height: 600px) and (min-width: 761px) {
+  .app-shell:has(#level-screen.is-visible) .utility-bar,
+  .app-shell:has(#help-screen.is-visible) .utility-bar {
+    display: none;
+  }
+
+  .panel-screen {
+    padding-top: calc(1.25rem + var(--safe-top));
+    padding-bottom: calc(1.25rem + var(--safe-bottom));
+  }
+
+  .panel-heading {
+    margin-bottom: 1rem;
+    padding-bottom: 0.7rem;
+  }
+
+  .panel-heading h2 {
+    font-size: clamp(2.35rem, 9vh, 3.35rem);
+  }
+
+  .guide-layout {
+    gap: 2rem;
+  }
+
+  .guide-primary > div {
+    min-height: 3.55rem;
+  }
+
+  .guide-notes {
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+}
+
 @media (max-width: 760px) {
   .level-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -980,7 +1060,15 @@ kbd {
 
 @media (orientation: portrait) and (max-width: 760px) {
   #game {
-    object-position: center 46%;
+    inset: 46% 0 auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    transform: translateY(-50%);
+    border-block: 2px solid color-mix(in srgb, var(--sky) 58%, transparent);
+    background: var(--ink);
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.22), 0 12px 28px rgba(0, 0, 0, 0.28);
+    object-position: center;
   }
 
   .start-screen {
