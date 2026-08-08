@@ -314,19 +314,37 @@ button:active {
   flex-direction: column;
   overflow-y: auto;
   padding: calc(3rem + var(--safe-top)) calc(5vw + var(--safe-right)) calc(3rem + var(--safe-bottom)) calc(5vw + var(--safe-left));
-  background: rgba(3, 16, 23, 0.93);
+  background:
+    linear-gradient(155deg, transparent 0 34%, rgba(42, 183, 169, 0.055) 34% 35%, transparent 35% 100%),
+    radial-gradient(circle at 88% 18%, rgba(246, 196, 83, 0.1), transparent 28%),
+    rgba(3, 16, 23, 0.96);
   backdrop-filter: blur(10px);
+  scrollbar-color: var(--teal) var(--ink);
 }
 
 .panel-heading {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: end;
   max-width: 76rem;
   width: 100%;
   margin: 0 auto 2rem;
-  border-bottom: 2px solid rgba(244, 237, 218, 0.28);
+  border-bottom: 2px solid rgba(244, 237, 218, 0.34);
   padding-bottom: 1rem;
+}
+
+.panel-heading::after {
+  content: "01  ·  02  ·  03  ·  ◆  ·  05  ·  06  ·  07  ·  ◆";
+  position: absolute;
+  right: 6.8rem;
+  bottom: -0.52rem;
+  padding: 0 0.6rem;
+  background: var(--ink);
+  color: rgba(244, 237, 218, 0.48);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
 }
 
 .panel-heading .eyebrow {
@@ -340,12 +358,16 @@ button:active {
   font-size: clamp(2.3rem, 5vw, 4.5rem);
   line-height: 0.95;
   letter-spacing: -0.05em;
+  text-shadow: 0.055em 0.055em 0 rgba(240, 93, 78, 0.6), 0.09em 0.09em 0 var(--shadow);
 }
 
 .panel-heading .text-action {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
+  border-left: 4px solid var(--amber);
+  background: rgba(18, 49, 59, 0.78);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%);
 }
 
 .level-grid {
@@ -358,24 +380,44 @@ button:active {
 
 .level-card {
   position: relative;
+  isolation: isolate;
   min-height: 9.6rem;
   overflow: hidden;
-  padding: 1rem;
-  border: 1px solid rgba(244, 237, 218, 0.28);
-  border-radius: 2px;
-  background: var(--card-bg, #12313b);
+  padding: 1rem 1rem 0.9rem 1.15rem;
+  border: 1px solid rgba(244, 237, 218, 0.36);
+  border-top: 4px solid var(--card-accent, var(--amber));
+  border-radius: 0;
+  background:
+    linear-gradient(105deg, color-mix(in srgb, var(--card-accent, var(--amber)) 16%, transparent), transparent 54%),
+    linear-gradient(160deg, color-mix(in srgb, var(--card-bg, #12313b) 93%, var(--paper)), var(--card-bg, #12313b));
   text-align: left;
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.32);
+  box-shadow: inset 0 -1px 0 rgba(244, 237, 218, 0.12);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  filter: drop-shadow(6px 6px 0 rgba(0, 0, 0, 0.32));
+}
+
+.level-card::before {
+  content: attr(data-level);
+  position: absolute;
+  z-index: -1;
+  right: 0.35rem;
+  bottom: -0.38em;
+  color: rgba(244, 237, 218, 0.09);
+  font-size: 5.6rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.12em;
 }
 
 .level-card::after {
   content: "";
   position: absolute;
-  inset: auto -14% -40% 35%;
-  height: 78%;
-  transform: rotate(-12deg);
+  z-index: -1;
+  inset: auto -12% -42% 34%;
+  height: 86%;
+  transform: rotate(-14deg);
   background: var(--card-accent, var(--amber));
-  opacity: 0.2;
+  opacity: 0.23;
 }
 
 .level-card:hover,
@@ -383,19 +425,32 @@ button:active {
   transform: translate(-2px, -2px);
   border-color: var(--paper);
   outline-color: var(--card-accent, var(--amber));
+  filter: drop-shadow(9px 9px 0 rgba(0, 0, 0, 0.38));
 }
 
 .level-card[disabled] {
   cursor: not-allowed;
-  filter: grayscale(0.8);
-  opacity: 0.52;
+  filter: saturate(0.26) brightness(0.76) drop-shadow(4px 4px 0 rgba(0, 0, 0, 0.28));
+  opacity: 0.72;
+}
+
+.level-card[data-level="4"],
+.level-card[data-level="8"] {
+  border-top-color: var(--coral);
+  background:
+    linear-gradient(105deg, rgba(240, 93, 78, 0.18), transparent 56%),
+    linear-gradient(160deg, color-mix(in srgb, var(--card-bg, #12313b) 91%, var(--paper)), var(--card-bg, #12313b));
 }
 
 .level-card .card-number {
   display: block;
-  margin-bottom: 1.75rem;
+  width: fit-content;
+  margin-bottom: 1.45rem;
+  border-bottom: 2px solid currentColor;
+  padding-bottom: 0.28rem;
   color: var(--card-accent, var(--amber));
   font-size: 0.68rem;
+  font-weight: 900;
   letter-spacing: 0.14em;
 }
 
@@ -408,7 +463,9 @@ button:active {
 
 .level-card strong {
   color: var(--paper);
-  font-size: clamp(1.03rem, 1.65vw, 1.28rem);
+  font-size: clamp(1.08rem, 1.75vw, 1.36rem);
+  letter-spacing: -0.02em;
+  text-shadow: 2px 2px 0 rgba(3, 16, 23, 0.45);
 }
 
 .level-card small {
@@ -427,7 +484,11 @@ button:active {
 }
 
 .guide-primary {
+  padding: 0 1.25rem;
   border-top: 4px solid var(--amber);
+  background: rgba(18, 49, 59, 0.66);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  filter: drop-shadow(7px 7px 0 rgba(0, 0, 0, 0.28));
 }
 
 .guide-primary > div {
@@ -453,6 +514,9 @@ kbd {
 
 .guide-notes {
   align-self: center;
+  border-left: 4px solid var(--teal);
+  padding: 0.2rem 1.2rem;
+  background: linear-gradient(90deg, rgba(42, 183, 169, 0.1), transparent);
   color: var(--paper-dim);
   font-size: 1rem;
   line-height: 1.7;
@@ -900,6 +964,17 @@ kbd {
   .guide-layout {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .panel-heading::after {
+    display: none;
+  }
+
+  .level-card .card-number {
+    font-size: 0.57rem;
+    letter-spacing: 0.05em;
   }
 }
 
