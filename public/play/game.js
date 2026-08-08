@@ -3,7 +3,9 @@
 
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
-  const VIEW_W = canvas.width;
+  const WIDE_VIEW_W = canvas.width;
+  const PORTRAIT_VIEW_W = 960;
+  let VIEW_W = WIDE_VIEW_W;
   const VIEW_H = canvas.height;
   const STEP = 1 / 60;
   const SAVE_KEY = "starsprout-save-v2";
@@ -52,6 +54,30 @@
   let muted = save.muted || false;
   let audioContext = null;
   let captureReady = false;
+
+  function usesPortraitViewport() {
+    return window.matchMedia("(orientation: portrait) and (max-width: 760px)").matches;
+  }
+
+  function syncCanvasViewport() {
+    const nextWidth = usesPortraitViewport() ? PORTRAIT_VIEW_W : WIDE_VIEW_W;
+    if (nextWidth === VIEW_W) return;
+
+    const previousWidth = VIEW_W;
+    const previousFocus = player
+      ? player.x + player.w / 2
+      : cameraX + previousWidth / 2;
+
+    VIEW_W = nextWidth;
+    canvas.width = VIEW_W;
+    canvas.height = VIEW_H;
+
+    if (currentLevel) {
+      const maxCamera = Math.max(0, currentLevel.worldWidth - VIEW_W);
+      cameraX = clamp(previousFocus - VIEW_W * 0.34, 0, maxCamera);
+      autoCameraX = clamp(autoCameraX, 0, maxCamera);
+    }
+  }
 
   function loadSave() {
     try {
@@ -1390,23 +1416,24 @@
 
   function renderMenuWorld() {
     const theme = DEFAULT_THEMES[0];
+    const menuX = (value) => value * VIEW_W / WIDE_VIEW_W;
     const gradient = ctx.createLinearGradient(0, 0, 0, VIEW_H);
     gradient.addColorStop(0, "#163e50");
     gradient.addColorStop(0.58, "#32786f");
     gradient.addColorStop(1, "#e2b96d");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    drawSun(1040, 152, 98, "#f6c453", 0.88);
+    drawSun(menuX(1040), 152, 98, "#f6c453", 0.88);
     drawMenuRifts(theme);
     drawParallaxHills(theme, menuTime * 16, 0);
-    drawWindmill(885, 280, 1.45, theme, menuTime);
-    drawPaperCloud(720 + Math.sin(menuTime * 0.25) * 25, 105, 1.25, theme.paper, 0.58);
-    drawPaperCloud(1080 + Math.sin(menuTime * 0.18) * 36, 280, 0.85, theme.paper, 0.42);
+    drawWindmill(menuX(885), 280, 1.45, theme, menuTime);
+    drawPaperCloud(menuX(720) + Math.sin(menuTime * 0.25) * 25, 105, 1.25, theme.paper, 0.58);
+    drawPaperCloud(menuX(1080) + Math.sin(menuTime * 0.18) * 36, 280, 0.85, theme.paper, 0.42);
     ctx.fillStyle = theme.ground;
-    paperPolygon([[520, 610], [630, 542], [775, 570], [930, 512], [1090, 545], [1280, 474], [1280, 720], [500, 720]], theme.ground, theme.ink, 5);
-    drawHero(1000, 468 + Math.sin(menuTime * 2.2) * 5, 1.8, 1, 0, theme, menuTime);
+    paperPolygon([[menuX(520), 610], [menuX(630), 542], [menuX(775), 570], [menuX(930), 512], [menuX(1090), 545], [VIEW_W, 474], [VIEW_W, 720], [menuX(500), 720]], theme.ground, theme.ink, 5);
+    drawHero(menuX(1000), 468 + Math.sin(menuTime * 2.2) * 5, 1.8, 1, 0, theme, menuTime);
     for (let i = 0; i < 12; i += 1) {
-      const x = 600 + mod(i * 117 + menuTime * (18 + i), 760);
+      const x = menuX(600) + mod(i * menuX(117) + menuTime * (18 + i), menuX(760));
       const y = 340 + Math.sin(i * 2.2 + menuTime) * 70;
       drawLeaf(x, y, 10 + (i % 3) * 4, theme.edge, menuTime + i);
     }
@@ -1415,7 +1442,7 @@
   function drawMenuRifts(theme) {
     const colors = ["#71c7d4", "#d78cff", "#f05d4e", "#5fe0c2"];
     for (let i = 0; i < 4; i += 1) {
-      const x = 660 + i * 165;
+      const x = (660 + i * 165) * VIEW_W / WIDE_VIEW_W;
       const y = 198 + Math.sin(menuTime * 0.7 + i) * 25;
       ctx.save();
       ctx.translate(x, y);
@@ -2026,6 +2053,7 @@
   }
 
   function init() {
+    syncCanvasViewport();
     $("#mute-icon").textContent = muted ? "静音" : "声音";
     renderLevelGrid();
     openMenu();
@@ -2034,6 +2062,8 @@
     if (requested >= 1 && requested <= 8) startLevel(requested, params.get("autostart") === "1" || params.get("capture") === "1");
     requestAnimationFrame(loop);
   }
+
+  window.addEventListener("resize", syncCanvasViewport, { passive: true });
 
   window.__STARSPROUT_TEST__ = {
     startLevel: (id) => startLevel(id, true),
@@ -2044,6 +2074,7 @@
       player: player ? { x: player.x, y: player.y, health: player.health } : null,
       boss: runtime?.boss ? { hp: runtime.boss.hp, state: runtime.boss.state, vulnerable: runtime.boss.vulnerable } : null,
       cameraX,
+      viewport: { width: VIEW_W, height: VIEW_H },
       unlocked: save.unlocked,
       seeds: save.seeds,
     }),

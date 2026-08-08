@@ -57,7 +57,7 @@ test("game shell exposes every required screen and HUD surface", async () => {
     );
   }
 
-  for (const touch of ["left", "right", "jump", "shoot", "dash"]) {
+  for (const touch of ["left", "right", "jump", "down", "shoot", "dash"]) {
     assert.match(
       html,
       new RegExp(`\\bdata-touch=["']${touch}["']`),
@@ -76,16 +76,21 @@ test("game shell exposes every required screen and HUD surface", async () => {
   );
 });
 
-test("touch UI is hidden by default and enabled for touch/small screens", async () => {
+test("touch UI supports portrait play without a blocking rotate notice", async () => {
+  const html = await readProjectFile("public/play/index.html");
   const css = await readProjectFile("public/play/game.css");
 
+  assert.doesNotMatch(html, /portrait-notice/i);
+  assert.doesNotMatch(html, /请横屏游玩/);
   assert.match(css, /\.touch-controls\s*\{[^}]*\bdisplay:\s*none\s*;/s);
   assert.match(
     css,
     /@media\s*\([^)]*(?:pointer:\s*coarse|max-width:\s*900px)[^)]*\)[^{]*\{[\s\S]*?\.touch-controls\.is-visible\s*\{[^}]*\bdisplay:\s*flex\s*;/i,
   );
   assert.match(css, /\.touch-controls\s+button\s*\{[^}]*(?:\bwidth:\s*(?:4(?:\.\d+)?rem|[5-9]\dpx)|\bmin-width:\s*44px)[^}]*/s);
-  assert.match(css, /@media\s*\(orientation:\s*portrait\)[\s\S]*?\.portrait-notice\s*\{[^}]*\bdisplay:\s*flex\s*;/i);
+  assert.match(css, /@media\s*\(orientation:\s*portrait\)\s+and\s+\(max-width:\s*760px\)/i);
+  assert.match(css, /\.touch-actions\s+\.touch-down\s*\{/i);
+  assert.doesNotMatch(css, /\.portrait-notice\s*\{/i);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
 });
 
@@ -104,6 +109,8 @@ test("game engine parses and exposes a deterministic QA hook", async () => {
     `game.js syntax error:\n${syntax.stderr || syntax.stdout}`,
   );
   assert.match(source, /(?:window|globalThis)\.__STARSPROUT_TEST__\s*=/);
+  assert.match(source, /PORTRAIT_VIEW_W\s*=\s*960/);
+  assert.match(source, /window\.addEventListener\(["']resize["'],\s*syncCanvasViewport/);
 
   for (const api of ["snapshot", "startLevel", "step", "captureReady"]) {
     assert.match(

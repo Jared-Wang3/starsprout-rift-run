@@ -701,31 +701,6 @@ kbd {
   font-size: 1rem;
 }
 
-.portrait-notice {
-  position: absolute;
-  z-index: 30;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 2rem;
-  background: var(--ink);
-  text-align: center;
-}
-
-.portrait-notice strong {
-  color: var(--amber);
-  font-size: 1.8rem;
-}
-
-.portrait-notice span {
-  max-width: 18rem;
-  color: var(--paper-dim);
-  line-height: 1.5;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -792,12 +767,6 @@ kbd {
   }
 }
 
-@media (orientation: portrait) and (pointer: coarse) {
-  .portrait-notice {
-    display: flex;
-  }
-}
-
 @media (max-height: 520px) {
   .brand-block h1 {
     font-size: clamp(3.5rem, 12vh, 5.4rem);
@@ -829,6 +798,145 @@ kbd {
   .guide-layout {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 760px) {
+  #game {
+    object-position: center 46%;
+  }
+
+  .start-screen {
+    align-items: center;
+    overflow-y: auto;
+    padding:
+      calc(4rem + var(--safe-top))
+      calc(1rem + var(--safe-right))
+      calc(2.5rem + var(--safe-bottom))
+      calc(1rem + var(--safe-left));
+    background: linear-gradient(180deg, rgba(3, 16, 23, 0.94), rgba(3, 16, 23, 0.72));
+  }
+
+  .brand-block {
+    width: 100%;
+    max-width: none;
+    transform: none;
+  }
+
+  .brand-block h1 {
+    flex-wrap: nowrap;
+    font-size: clamp(3.5rem, 18vw, 4.8rem);
+  }
+
+  .roman-title {
+    margin-top: 0.65rem;
+    font-size: 0.78rem;
+  }
+
+  .tagline {
+    margin: 0.65rem 0 1rem;
+    font-size: 0.92rem;
+  }
+
+  .menu-actions {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .menu-actions .primary-action {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 4.5rem;
+  }
+
+  .start-meta {
+    display: none;
+  }
+
+  .panel-screen {
+    padding:
+      calc(4rem + var(--safe-top))
+      calc(0.85rem + var(--safe-right))
+      calc(1.25rem + var(--safe-bottom))
+      calc(0.85rem + var(--safe-left));
+  }
+
+  .panel-heading {
+    margin-bottom: 1rem;
+  }
+
+  .panel-heading h2 {
+    font-size: clamp(2rem, 11vw, 3rem);
+  }
+
+  .hud {
+    top: calc(0.4rem + var(--safe-top));
+    right: calc(3.7rem + var(--safe-right));
+    left: calc(0.45rem + var(--safe-left));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+
+  .hud-left {
+    width: max-content;
+    max-width: 100%;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .health i {
+    width: 0.78rem;
+  }
+
+  .stage-copy strong {
+    max-width: 10rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .boss-hud {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .boss-health {
+    margin: 0.25rem 0;
+  }
+
+  .app-shell:has(#hud.is-visible) .utility-bar button {
+    display: none;
+  }
+
+  .app-shell:has(#hud.is-visible) .utility-bar button[data-action="pause"] {
+    display: block;
+  }
+
+  .touch-controls {
+    right: calc(0.45rem + var(--safe-right));
+    bottom: calc(0.45rem + var(--safe-bottom));
+    left: calc(0.45rem + var(--safe-left));
+  }
+
+  .touch-move,
+  .touch-actions {
+    gap: 0.2rem;
+  }
+
+  .touch-controls button,
+  .touch-actions .touch-dash,
+  .touch-actions .touch-down {
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 0.9rem;
+  }
+
+  .touch-actions .touch-jump {
+    width: 3.5rem;
+    height: 3.5rem;
   }
 }
 
