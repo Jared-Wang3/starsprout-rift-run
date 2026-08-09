@@ -3,6 +3,8 @@
 
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   const WIDE_VIEW_W = canvas.width;
   const PORTRAIT_VIEW_W = 960;
   let VIEW_W = WIDE_VIEW_W;
@@ -10,6 +12,86 @@
   const STEP = 1 / 60;
   const SAVE_KEY = "starsprout-save-v2";
   const api = window.StarSproutLevels;
+
+  const DEFAULT_ART_ASSETS = {
+    paper: { src: "./assets/art-v2/paper-texture.webp" },
+    hero: { src: "./assets/art-v2/hero-sprites.png", cols: 4, rows: 2 },
+    enemiesA: { src: "./assets/art-v2/enemy-atlas-a.png", cols: 4, rows: 2 },
+    enemiesB: { src: "./assets/art-v2/enemy-atlas-b.png", cols: 4, rows: 2 },
+    boss: { src: "./assets/art-v2/boss-sprites.png", cols: 4, rows: 2 },
+    collectibles: { src: "./assets/art-v2/collectibles.png", cols: 4, rows: 2 },
+    environmentsA: { src: "./assets/art-v2/environments-a.webp", cols: 2, rows: 2, gutter: 0 },
+    environmentsB: { src: "./assets/art-v2/environments-b.webp", cols: 2, rows: 2, gutter: 0 },
+  };
+  const DEFAULT_HERO_FRAMES = {
+    idle: { sheet: "hero", col: 0, row: 0 },
+    runContact: { sheet: "hero", col: 1, row: 0 },
+    runPassing: { sheet: "hero", col: 2, row: 0 },
+    jump: { sheet: "hero", col: 3, row: 0 },
+    fall: { sheet: "hero", col: 0, row: 1 },
+    dash: { sheet: "hero", col: 1, row: 1 },
+    downstrike: { sheet: "hero", col: 2, row: 1 },
+    hurt: { sheet: "hero", col: 3, row: 1 },
+  };
+  const DEFAULT_ENEMY_FRAMES = {
+    "seed-hopper": { sheet: "enemiesA", col: 0, row: 0 },
+    "kite-mite": { sheet: "enemiesA", col: 1, row: 0 },
+    "shard-crawler": { sheet: "enemiesA", col: 2, row: 0 },
+    "echo-bat": { sheet: "enemiesA", col: 3, row: 0 },
+    "tin-snail": { sheet: "enemiesA", col: 0, row: 1 },
+    "pollen-drone": { sheet: "enemiesA", col: 1, row: 1 },
+    "steam-tick": { sheet: "enemiesA", col: 2, row: 1 },
+    "reef-crab": { sheet: "enemiesA", col: 3, row: 1 },
+    "paper-jelly": { sheet: "enemiesB", col: 0, row: 0 },
+    "cargo-bot": { sheet: "enemiesB", col: 1, row: 0 },
+    "propeller-wasp": { sheet: "enemiesB", col: 2, row: 0 },
+    "coal-golem": { sheet: "enemiesB", col: 3, row: 0 },
+    "cinder-bat": { sheet: "enemiesB", col: 0, row: 1 },
+    "orbit-eye": { sheet: "enemiesB", col: 1, row: 1 },
+    "shadow-sprout": { sheet: "enemiesB", col: 2, row: 1 },
+  };
+  const DEFAULT_BOSS_FRAMES = {
+    boilerNormal: { sheet: "boss", col: 0, row: 0 },
+    boilerCharge: { sheet: "boss", col: 1, row: 0 },
+    boilerCoreOpen: { sheet: "boss", col: 2, row: 0 },
+    boilerFrozenHit: { sheet: "boss", col: 3, row: 0 },
+    eclipseNormal: { sheet: "boss", col: 0, row: 1 },
+    eclipseBeamCharge: { sheet: "boss", col: 1, row: 1 },
+    eclipseShieldBreak: { sheet: "boss", col: 2, row: 1 },
+    eclipseCoreExposed: { sheet: "boss", col: 3, row: 1 },
+  };
+  const DEFAULT_COLLECTIBLE_FRAMES = {
+    "memory-seed": { sheet: "collectibles", col: 0, row: 0 },
+    heart: { sheet: "collectibles", col: 0, row: 0 },
+    "wind-feather": { sheet: "collectibles", col: 1, row: 0 },
+    "resonance-orb": { sheet: "collectibles", col: 2, row: 0 },
+    "crystal-crown": { sheet: "collectibles", col: 3, row: 0 },
+    "clock-spring": { sheet: "collectibles", col: 3, row: 0 },
+    "coolant-charge": { sheet: "collectibles", col: 0, row: 1 },
+    "coolant-pod": { sheet: "collectibles", col: 0, row: 1 },
+    "tide-rune": { sheet: "collectibles", col: 0, row: 1 },
+    "air-pearl": { sheet: "collectibles", col: 1, row: 1 },
+    "parcel-wings": { sheet: "collectibles", col: 1, row: 1 },
+    "star-charge": { sheet: "collectibles", col: 2, row: 1 },
+    "quench-bell": { sheet: "collectibles", col: 2, row: 1 },
+    "forge-seal": { sheet: "collectibles", col: 2, row: 1 },
+    "guardian-core": { sheet: "collectibles", col: 3, row: 1 },
+    "world-core-seed": { sheet: "collectibles", col: 3, row: 1 },
+  };
+  const ART_ALIASES = {
+    paper: ["paper", "paperTexture", "paper-texture"],
+    hero: ["hero", "heroSprites", "hero-sprites"],
+    enemiesA: ["enemiesA", "enemyAtlasA", "enemy-atlas-a"],
+    enemiesB: ["enemiesB", "enemyAtlasB", "enemy-atlas-b"],
+    boss: ["boss", "bossSprites", "boss-sprites"],
+    collectibles: ["collectibles", "collectibleSprites", "collectible-sprites"],
+    environmentsA: ["environmentsA", "environmentAtlasA", "environment-atlas-a"],
+    environmentsB: ["environmentsB", "environmentAtlasB", "environment-atlas-b"],
+  };
+  const artImageCache = new Map();
+  let paperPattern = null;
+  let paperPatternSource = null;
+  let environmentBackdropCache = null;
 
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -20,6 +102,91 @@
   const deepClone = (value) => JSON.parse(JSON.stringify(value));
   const cssColor = (value, fallback) => typeof value === "string" && value ? value : fallback;
   const pad = (value) => String(value).padStart(2, "0");
+
+  function artManifest() {
+    return window.StarSproutArt || {};
+  }
+
+  function artAssetConfig(name) {
+    const assets = artManifest().assets || artManifest().images || {};
+    const aliases = ART_ALIASES[name] || [name];
+    let configured;
+    for (const alias of aliases) {
+      if (assets[alias]) {
+        configured = assets[alias];
+        break;
+      }
+    }
+    const fallback = DEFAULT_ART_ASSETS[name] || {};
+    if (typeof configured === "string") return { ...fallback, src: configured };
+    return { ...fallback, ...(configured || {}) };
+  }
+
+  function artImage(name) {
+    const config = artAssetConfig(name);
+    if (!config.src) return null;
+    const key = `${name}:${config.src}`;
+    let cached = artImageCache.get(key);
+    if (!cached) {
+      const image = new Image();
+      cached = { image, config, ready: false, failed: false };
+      image.decoding = "async";
+      image.addEventListener("load", () => { cached.ready = true; }, { once: true });
+      image.addEventListener("error", () => { cached.failed = true; }, { once: true });
+      image.src = config.src;
+      artImageCache.set(key, cached);
+    }
+    cached.config = config;
+    if (!cached.ready && cached.image.complete && cached.image.naturalWidth > 0) cached.ready = true;
+    return cached.ready && !cached.failed ? cached : null;
+  }
+
+  function frameSpec(group, name, fallback) {
+    const configured = artManifest()[group]?.[name];
+    const source = configured || fallback;
+    if (Array.isArray(source)) return { sheet: source[0], col: Number(source[1]) || 0, row: Number(source[2]) || 0 };
+    return source ? { ...source } : null;
+  }
+
+  function drawAtlasFrame(frame, x, y, width, height, options = {}) {
+    if (!frame?.sheet) return false;
+    const record = artImage(frame.sheet);
+    if (!record) return false;
+    const cols = Number(frame.cols || record.config.cols) || 4;
+    const rows = Number(frame.rows || record.config.rows) || 2;
+    const cellW = record.image.naturalWidth / cols;
+    const cellH = record.image.naturalHeight / rows;
+    const gutter = Math.max(0, Number(frame.gutter ?? record.config.gutter) || 0);
+    const col = clamp(Number(frame.col) || 0, 0, cols - 1);
+    const row = clamp(Number(frame.row) || 0, 0, rows - 1);
+    const anchorX = Number(options.anchorX ?? frame.anchorX ?? 0.5);
+    const anchorY = Number(options.anchorY ?? frame.anchorY ?? 0.9);
+    const flipX = options.flipX ? -1 : 1;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(flipX, 1);
+    ctx.drawImage(
+      record.image,
+      col * cellW + gutter,
+      row * cellH + gutter,
+      Math.max(1, cellW - gutter * 2),
+      Math.max(1, cellH - gutter * 2),
+      -width * anchorX,
+      -height * anchorY,
+      width,
+      height,
+    );
+    ctx.restore();
+    return true;
+  }
+
+  function inCamera(x, width = 0, margin = 140) {
+    return x + width >= cameraX - margin && x <= cameraX + VIEW_W + margin;
+  }
+
+  function stableWave(seed, amount = 1) {
+    return (Math.sin(seed * 12.9898) * 0.5 + Math.cos(seed * 4.1414) * 0.5) * amount;
+  }
 
   const DEFAULT_THEMES = [
     { skyTop: "#79cbd0", skyBottom: "#e7d7a6", far: "#5a8f79", mid: "#34634e", ground: "#22463d", edge: "#f6c453", accent: "#f05d4e", paper: "#f4edda", ink: "#071c27" },
@@ -71,6 +238,8 @@
     VIEW_W = nextWidth;
     canvas.width = VIEW_W;
     canvas.height = VIEW_H;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     if (currentLevel) {
       const maxCamera = Math.max(0, currentLevel.worldWidth - VIEW_W);
@@ -119,6 +288,10 @@
     const fallback = DEFAULT_THEMES[id - 1] || DEFAULT_THEMES[0];
     const source = theme?.palette || theme || {};
     return {
+      id: theme?.id || `theme-${id}`,
+      material: theme?.material || "layered-paper",
+      ambient: theme?.ambient ? deepClone(theme.ambient) : null,
+      landmark: theme?.landmark ? deepClone(theme.landmark) : null,
       skyTop: cssColor(source.skyTop || source.sky?.[0] || source.background, fallback.skyTop),
       skyBottom: cssColor(source.skyBottom || source.sky?.[1], fallback.skyBottom),
       far: cssColor(source.far || source.back || source.backgroundFar, fallback.far),
@@ -126,6 +299,9 @@
       ground: cssColor(source.ground || source.platform || source.groundDark, fallback.ground),
       edge: cssColor(source.edge || source.highlight || source.accent2 || source.accentSecondary, fallback.edge),
       accent: cssColor(source.accent || source.primary, fallback.accent),
+      accent2: cssColor(source.accent2 || source.accentSecondary, fallback.edge),
+      danger: cssColor(source.danger, fallback.accent),
+      fog: cssColor(source.fog, fallback.far),
       paper: cssColor(source.paper || source.light, fallback.paper),
       ink: cssColor(source.ink || source.dark, fallback.ink),
     };
@@ -220,6 +396,7 @@
         w: Number(platform.w || platform.width) || 160,
         h: Number(platform.h || platform.height) || 28,
         type: platform.type || platform.kind || "ground",
+        material: platform.material || level.theme.material || "layered-paper",
         motion: platform.motion || null,
         conveyor: Number(platform.conveyor?.speed ?? platform.conveyor ?? platform.speedX) || 0,
         fragile: platform.type === "fragile" || platform.kind === "fragile" || Boolean(platform.fragile),
@@ -238,11 +415,12 @@
 
     if (!platforms.length) {
       for (let x = 0; x < level.worldWidth; x += 480) {
-        platforms.push({ id: `fallback-${x}`, x, y: 610, w: 360, h: 110, type: "ground", originX: x, originY: 610, dx: 0, dy: 0 });
+        platforms.push({ id: `fallback-${x}`, x, y: 610, w: 360, h: 110, type: "ground", material: level.theme.material, originX: x, originY: 610, dx: 0, dy: 0 });
       }
     }
 
     const hazards = level.hazards.map((hazard, index) => ({
+      ...hazard,
       id: hazard.id || `h-${index}`,
       x: Number(hazard.x) || 0,
       y: Number(hazard.y) || 0,
@@ -269,6 +447,7 @@
     }));
 
     const collectibles = level.collectibles.map((item, index) => ({
+      ...item,
       id: item.id || `c-${index}`,
       x: Number(item.x) || 0,
       y: Number(item.y) || 0,
@@ -1379,7 +1558,7 @@
       particle.vy += 420 * dt;
       particle.vx *= 0.985;
     });
-    runtime.particles = runtime.particles.filter((particle) => particle.life > 0);
+    runtime.particles = runtime.particles.filter((particle) => particle.life > 0).slice(-180);
   }
 
   function updateCamera(dt) {
@@ -1464,6 +1643,9 @@
   function renderWorld() {
     const theme = currentLevel.theme;
     renderBackground(theme);
+    // Keep the cavern atmosphere in the backdrop while leaving hazards,
+    // enemies and pickups readable on small screens.
+    renderDarkness(theme);
     ctx.save();
     ctx.translate(-cameraX, 0);
     renderWindZones(theme);
@@ -1473,60 +1655,276 @@
     renderDevices(theme);
     renderCollectibles(theme);
     renderCheckpoints(theme);
-    runtime.enemies.forEach((enemy) => { if (enemy.alive) drawEnemy(enemy, theme); });
-    runtime.enemyShots.forEach((shot) => drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, shot.w * 0.7, theme.accent, theme.ink));
-    runtime.shockwaves.forEach((wave) => drawShockwave(wave, theme));
-    runtime.projectiles.forEach((shot) => drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, 11, theme.edge, theme.paper));
+    runtime.enemies.forEach((enemy) => { if (enemy.alive && inCamera(enemy.x, enemy.w)) drawEnemy(enemy, theme); });
+    runtime.enemyShots.forEach((shot) => { if (inCamera(shot.x, shot.w, 80)) drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, shot.w * 0.7, theme.accent, theme.ink); });
+    runtime.shockwaves.forEach((wave) => { if (inCamera(wave.x, wave.w, 80)) drawShockwave(wave, theme); });
+    runtime.projectiles.forEach((shot) => { if (inCamera(shot.x, shot.w, 80)) drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, 11, theme.edge, theme.paper); });
     if (runtime.boss && runtime.boss.hp > 0) drawBoss(runtime.boss, theme);
     if (player) drawHero(player.x + player.w / 2, player.y + player.h, 1, player.facing, player.vx, theme, player.anim, player);
-    runtime.particles.forEach(drawParticle);
+    runtime.particles.forEach((particle) => { if (inCamera(particle.x, particle.size * 2, 80)) drawParticle(particle); });
     renderWaterAndLava(theme);
     ctx.restore();
     renderForeground(theme);
-    renderDarkness(theme);
   }
 
   function renderBackground(theme) {
     const gradient = ctx.createLinearGradient(0, 0, 0, VIEW_H);
     gradient.addColorStop(0, theme.skyTop);
-    gradient.addColorStop(1, theme.skyBottom);
+    gradient.addColorStop(0.62, theme.skyBottom);
+    gradient.addColorStop(1, theme.fog);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 
-    if (currentLevel.id === 8) {
-      drawSun(1010 - cameraX * 0.03, 150, 118, theme.ink, 1);
-      ctx.strokeStyle = theme.edge;
-      ctx.lineWidth = 18;
-      ctx.globalAlpha = 0.75;
-      ctx.beginPath();
-      ctx.arc(1010 - cameraX * 0.03, 150, 128, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    } else if (currentLevel.id === 2 || currentLevel.id === 4 || currentLevel.id === 7) {
-      drawSun(1080 - cameraX * 0.02, 120, 70, theme.accent, 0.35);
-    } else {
-      drawSun(1040 - cameraX * 0.025, 125, 76, theme.edge, 0.72);
-    }
+    const illustrated = drawEnvironmentBackdrop(theme);
 
-    drawLandmark(theme);
-    drawParallaxHills(theme, cameraX, currentLevel.id);
-    drawPaperCloud(210 - cameraX * 0.08, 118, 0.85, theme.paper, 0.28);
-    drawPaperCloud(850 - cameraX * 0.05, 210, 1.1, theme.paper, 0.22);
+    ctx.fillStyle = theme.paper;
+    ctx.globalAlpha = 0.055;
+    ctx.fillRect(0, 315, VIEW_W, 170);
+    ctx.globalAlpha = 1;
+
+    if (!illustrated) {
+      if (currentLevel.id === 8) {
+        drawSun(1010 - cameraX * 0.03, 150, 118, theme.ink, 1);
+        ctx.strokeStyle = theme.edge;
+        ctx.lineWidth = 18;
+        ctx.globalAlpha = 0.75;
+        ctx.beginPath();
+        ctx.arc(1010 - cameraX * 0.03, 150, 128, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (currentLevel.id === 2 || currentLevel.id === 4 || currentLevel.id === 7) {
+        drawSun(1080 - cameraX * 0.02, 120, 70, theme.accent, 0.35);
+      } else {
+        drawSun(1040 - cameraX * 0.025, 125, 76, theme.edge, 0.72);
+      }
+
+      renderThemeSkyCuts(theme);
+      drawLandmark(theme);
+      drawParallaxHills(theme, cameraX, currentLevel.id);
+      if (![2, 4, 7, 8].includes(currentLevel.id)) {
+        drawPaperCloud(210 - cameraX * 0.08, 118, 0.85, theme.paper, 0.28);
+        drawPaperCloud(850 - cameraX * 0.05, 210, 1.1, theme.paper, 0.22);
+      }
+    } else {
+      ctx.save();
+      ctx.globalAlpha = 0.1;
+      drawParallaxHills(theme, cameraX, currentLevel.id);
+      ctx.restore();
+    }
+    renderPaperSurface(theme);
+  }
+
+  function drawEnvironmentBackdrop(theme) {
+    const fallback = currentLevel.id <= 4
+      ? { sheet: "environmentsA", col: (currentLevel.id - 1) & 1, row: Math.floor((currentLevel.id - 1) / 2) }
+      : { sheet: "environmentsB", col: (currentLevel.id - 5) & 1, row: Math.floor((currentLevel.id - 5) / 2) };
+    const frame = frameSpec("levelBackgroundFrames", String(currentLevel.id), fallback);
+    if (!frame?.sheet) return false;
+    const record = artImage(frame.sheet);
+    if (!record) return false;
+    const cols = Number(frame.cols || record.config.cols) || 2;
+    const rows = Number(frame.rows || record.config.rows) || 2;
+    const cellW = record.image.naturalWidth / cols;
+    const cellH = record.image.naturalHeight / rows;
+    const gutter = Math.max(0, Number(frame.gutter ?? record.config.gutter) || 0);
+    const sourceW = Math.max(1, cellW - gutter * 2);
+    const sourceH = Math.max(1, cellH - gutter * 2);
+    const sx = (Number(frame.col) || 0) * cellW + gutter;
+    const sy = (Number(frame.row) || 0) * cellH + gutter;
+    // Cover the logical viewport with one continuous crop. The earlier
+    // contain + stretched underlay treatment exposed two vertical seams on
+    // wide screens and made the illustration look pasted onto the scene.
+    const scale = Math.max(VIEW_W / sourceW, VIEW_H / sourceH);
+    const dw = sourceW * scale;
+    const dh = sourceH * scale;
+    const dx = (VIEW_W - dw) * 0.5;
+    const dy = (VIEW_H - dh) * 0.5;
+    const cacheKey = [record.config.src, frame.col, frame.row, gutter, VIEW_W, VIEW_H, theme.id].join(":");
+    if (environmentBackdropCache?.key !== cacheKey) {
+      const layer = document.createElement("canvas");
+      layer.width = VIEW_W;
+      layer.height = VIEW_H;
+      const layerCtx = layer.getContext("2d");
+      layerCtx.imageSmoothingEnabled = true;
+      layerCtx.imageSmoothingQuality = "high";
+      layerCtx.globalAlpha = 0.82;
+      layerCtx.drawImage(record.image, sx, sy, sourceW, sourceH, dx, dy, dw, dh);
+      const wash = layerCtx.createLinearGradient(0, 0, 0, VIEW_H);
+      wash.addColorStop(0, "rgba(255,255,255,0.03)");
+      wash.addColorStop(0.72, theme.mid);
+      wash.addColorStop(1, theme.ground);
+      layerCtx.globalCompositeOperation = "soft-light";
+      layerCtx.globalAlpha = 0.24;
+      layerCtx.fillStyle = wash;
+      layerCtx.fillRect(0, 0, VIEW_W, VIEW_H);
+      environmentBackdropCache = { key: cacheKey, layer };
+    }
+    ctx.drawImage(environmentBackdropCache.layer, 0, 0);
+    return true;
+  }
+
+  function renderThemeSkyCuts(theme) {
+    const id = currentLevel.id;
+    const t = runtime?.time || menuTime;
+    ctx.save();
+    if (id === 1) {
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 4;
+      ctx.globalAlpha = 0.18;
+      for (let i = 0; i < 6; i += 1) {
+        const y = 88 + i * 58;
+        const drift = mod(t * (18 + i * 3) - cameraX * 0.05 + i * 173, VIEW_W + 420) - 210;
+        ctx.beginPath();
+        ctx.moveTo(drift - 150, y);
+        ctx.bezierCurveTo(drift - 60, y - 26, drift + 20, y + 24, drift + 132, y - 5);
+        ctx.stroke();
+        drawLeaf(drift + 145, y - 8, 9 + i % 3, theme.edge, 0.3 + i * 0.8);
+      }
+    } else if (id === 2) {
+      ctx.globalAlpha = 0.2;
+      for (let i = 0; i < 15; i += 1) {
+        const x = mod(i * 137 - cameraX * 0.035, VIEW_W + 120) - 60;
+        const y = 55 + mod(i * 89, 330);
+        const size = 4 + i % 4;
+        paperPolygon([[x, y - size * 2], [x + size, y], [x, y + size * 2], [x - size, y]], i % 3 ? theme.edge : theme.accent2, null);
+      }
+      ctx.globalAlpha = 0.13;
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 7; i += 1) {
+        const x = 90 + i * 190 - mod(cameraX * 0.04, 190);
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 45, 345); ctx.stroke();
+      }
+    } else if (id === 3) {
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 6;
+      ctx.globalAlpha = 0.12;
+      for (let x = -120 - mod(cameraX * 0.05, 240); x < VIEW_W + 200; x += 240) {
+        ctx.beginPath(); ctx.arc(x + 120, 330, 156, Math.PI, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + 120, 174); ctx.lineTo(x + 120, 445); ctx.stroke();
+      }
+      ctx.globalAlpha = 0.18;
+      for (let i = 0; i < 7; i += 1) drawGear(92 + i * 184 - mod(cameraX * 0.025, 184), 90 + (i % 2) * 72, 18 + (i % 3) * 5, i % 2 ? theme.edge : theme.accent, t * (i % 2 ? 0.14 : -0.1));
+    } else if (id === 4) {
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = theme.ink;
+      for (let i = 0; i < 5; i += 1) {
+        const x = 70 + i * 260 - mod(cameraX * 0.035, 260);
+        ctx.fillRect(x, 72, 54, 340);
+        ctx.fillStyle = theme.edge;
+        ctx.fillRect(x + 8, 102 + (i % 3) * 42, 38, 8);
+        ctx.fillStyle = theme.ink;
+      }
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 10;
+      ctx.globalAlpha = 0.12;
+      ctx.beginPath(); ctx.moveTo(0, 180); ctx.bezierCurveTo(VIEW_W * 0.3, 115, VIEW_W * 0.62, 245, VIEW_W, 150); ctx.stroke();
+      for (let i = 0; i < 5; i += 1) drawPaperCloud(110 + i * 290 - mod(cameraX * 0.025, 290), 115 + Math.sin(t * 0.35 + i) * 15, 0.48 + i % 2 * 0.2, theme.paper, 0.1);
+    } else if (id === 5) {
+      ctx.strokeStyle = theme.paper;
+      ctx.globalAlpha = 0.16;
+      ctx.lineWidth = 4;
+      for (let y = 105; y < 390; y += 68) {
+        ctx.beginPath();
+        for (let x = -40; x <= VIEW_W + 40; x += 40) {
+          const yy = y + Math.sin(x * 0.018 + t * 0.5 + y) * 8;
+          if (x === -40) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle = theme.edge;
+      for (let i = 0; i < 11; i += 1) {
+        const x = mod(i * 119 - cameraX * 0.04, VIEW_W + 80) - 40;
+        const y = 60 + mod(i * 67, 300);
+        ctx.globalAlpha = 0.08 + (i % 3) * 0.035;
+        ctx.beginPath(); ctx.arc(x, y, 4 + i % 5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (id === 6) {
+      ctx.strokeStyle = theme.paper;
+      ctx.globalAlpha = 0.13;
+      ctx.lineWidth = 5;
+      for (let i = 0; i < 8; i += 1) {
+        const y = 52 + i * 52;
+        const offset = mod(t * (22 + i * 3) + i * 143 - cameraX * 0.08, VIEW_W + 260) - 130;
+        ctx.beginPath(); ctx.moveTo(offset - 90, y); ctx.lineTo(offset + 100, y - 18); ctx.stroke();
+      }
+      ctx.strokeStyle = theme.ink;
+      ctx.globalAlpha = 0.16;
+      ctx.lineWidth = 3;
+      for (let x = 120 - mod(cameraX * 0.04, 230); x < VIEW_W + 100; x += 230) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 45, 370); ctx.stroke();
+      }
+    } else if (id === 7) {
+      ctx.fillStyle = theme.ink;
+      ctx.globalAlpha = 0.22;
+      for (let i = 0; i < 6; i += 1) drawPaperCloud(40 + i * 240 - mod(cameraX * 0.025, 240), 95 + (i % 3) * 42, 0.75 + (i % 2) * 0.25, theme.ink, 0.16);
+      for (let i = 0; i < 20; i += 1) {
+        const x = mod(i * 83 - cameraX * 0.035, VIEW_W + 100) - 50;
+        const y = 50 + mod(i * 109 - t * (12 + i % 5), 390);
+        ctx.globalAlpha = 0.2 + (i % 4) * 0.08;
+        ctx.fillStyle = i % 3 ? theme.edge : theme.accent;
+        ctx.beginPath(); ctx.arc(x, y, 2 + i % 3, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (id === 8) {
+      ctx.fillStyle = theme.paper;
+      for (let i = 0; i < 34; i += 1) {
+        const x = mod(i * 97 - cameraX * 0.018, VIEW_W + 40) - 20;
+        const y = 28 + mod(i * 53, 390);
+        ctx.globalAlpha = 0.18 + (i % 5) * 0.09;
+        const r = 1.4 + i % 3;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = theme.edge;
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.2;
+      for (let i = 0; i < 3; i += 1) {
+        ctx.beginPath(); ctx.ellipse(VIEW_W * 0.58 - cameraX * 0.018, 175, 185 + i * 44, 54 + i * 18, -0.2, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function renderPaperSurface(theme) {
+    const record = artImage("paper");
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    if (record) {
+      if (paperPatternSource !== record.image) {
+        paperPattern = ctx.createPattern(record.image, "repeat");
+        paperPatternSource = record.image;
+      }
+      if (paperPattern) {
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = paperPattern;
+        ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      }
+    } else {
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.045;
+      for (let i = 0; i < 42; i += 1) {
+        const x = mod(i * 97, VIEW_W + 80) - 40;
+        const y = mod(i * 61, VIEW_H);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 32 + (i % 4) * 11, y + stableWave(i, 7)); ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   function drawLandmark(theme) {
     const px = VIEW_W * 0.7 - cameraX * 0.12;
     const id = currentLevel.id;
+    const kind = theme.landmark?.type || "";
     ctx.save();
     ctx.globalAlpha = 0.78;
-    if (id === 1) drawWindmill(px, 245, 1.2, theme, runtime.time);
-    if (id === 2) drawCrystalCathedral(px, 180, theme);
-    if (id === 3) drawGreenhouseClock(px, 215, theme, runtime.time);
-    if (id === 4) drawBeetleRelief(px, 205, theme);
-    if (id === 5) drawTideColossus(px, 205, theme);
-    if (id === 6) drawSkyFreighter(px - 90, 168 + Math.sin(runtime.time * 0.4) * 8, theme);
-    if (id === 7) drawForgeDragon(px, 230, theme);
-    if (id === 8) drawEclipseTemple(px, 215, theme);
+    if (kind.includes("windmill") || id === 1) drawWindmill(px, 245, 1.2, theme, runtime.time);
+    else if (kind.includes("crystal") || id === 2) drawCrystalCathedral(px, 180, theme);
+    else if (kind.includes("clock") || id === 3) drawGreenhouseClock(px, 215, theme, runtime.time);
+    else if (kind.includes("gauge") || id === 4) drawBeetleRelief(px, 205, theme);
+    else if (kind.includes("astrolabe") || id === 5) drawTideColossus(px, 205, theme);
+    else if (kind.includes("crane") || id === 6) drawSkyFreighter(px - 90, 168 + Math.sin(runtime.time * 0.4) * 8, theme);
+    else if (kind.includes("hammer") || id === 7) drawForgeDragon(px, 230, theme);
+    else if (kind.includes("sun") || id === 8) drawEclipseTemple(px, 215, theme);
     ctx.restore();
   }
 
@@ -1583,92 +1981,448 @@
 
   function renderPlatforms(theme) {
     activePlatforms().forEach((platform, index) => {
-      const type = platform.type;
-      const fill = type === "glass" ? theme.far : type === "metal" || type === "conveyor" ? theme.ink : theme.ground;
+      if (!inCamera(platform.x, platform.w)) return;
       ctx.save();
-      if (platform.fragile && platform.breakTimer > 0) ctx.translate((Math.random() - 0.5) * 4, 0);
-      ctx.fillStyle = theme.ink;
-      ctx.fillRect(platform.x + 6, platform.y + 7, platform.w, platform.h);
-      ctx.fillStyle = fill;
-      ctx.fillRect(platform.x, platform.y, platform.w, platform.h);
-      ctx.fillStyle = type === "hidden" ? theme.accent : theme.edge;
-      ctx.fillRect(platform.x, platform.y, platform.w, Math.min(7, platform.h));
-      if (type === "conveyor" || platform.conveyor) {
-        ctx.fillStyle = theme.paper;
-        ctx.globalAlpha = 0.55;
-        for (let x = platform.x + 15; x < platform.x + platform.w - 10; x += 42) {
-          ctx.beginPath();
-          ctx.moveTo(x, platform.y + 13);
-          ctx.lineTo(x + Math.sign(platform.conveyor || 1) * 12, platform.y + 19);
-          ctx.lineTo(x, platform.y + 25);
-          ctx.closePath();
-          ctx.fill();
-        }
-      } else if (platform.fragile) {
-        ctx.strokeStyle = theme.ink;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(platform.x + platform.w * 0.22, platform.y + 4);
-        ctx.lineTo(platform.x + platform.w * 0.44, platform.y + platform.h * 0.7);
-        ctx.lineTo(platform.x + platform.w * 0.67, platform.y + 9);
-        ctx.stroke();
-      } else if (currentLevel.id === 2) {
-        ctx.fillStyle = theme.paper;
-        ctx.globalAlpha = 0.08;
-        for (let x = platform.x + 20; x < platform.x + platform.w; x += 54) ctx.fillRect(x, platform.y + 16, 13, platform.h - 20);
-      } else if (currentLevel.id === 3) {
-        ctx.strokeStyle = theme.edge;
-        ctx.globalAlpha = 0.28;
-        ctx.lineWidth = 2;
-        for (let x = platform.x + 24; x < platform.x + platform.w; x += 48) {
-          ctx.beginPath(); ctx.arc(x, platform.y + platform.h / 2, 11, 0, Math.PI * 2); ctx.stroke();
-        }
-      } else {
-        ctx.fillStyle = theme.paper;
-        ctx.globalAlpha = 0.08;
-        for (let x = platform.x + 18; x < platform.x + platform.w; x += 68) ctx.fillRect(x, platform.y + 20 + (index % 2) * 8, 30, 4);
+      if (platform.fragile && platform.breakTimer > 0) {
+        ctx.translate(Math.sin(runtime.time * 52 + platform.phase) * 2.2, 0);
       }
+      drawPlatformMaterial(platform, theme, index);
       ctx.restore();
     });
   }
 
-  function renderHazards(theme) {
-    runtime.hazards.forEach((hazard) => {
-      if (hazard.type === "fire" || hazard.type === "lava") {
-        for (let x = hazard.x; x < hazard.x + hazard.w; x += 26) drawFlame(x + 13, hazard.y + hazard.h, 24, theme.accent, theme.edge);
-      } else {
-        ctx.fillStyle = theme.accent;
-        ctx.strokeStyle = theme.ink;
-        ctx.lineWidth = 3;
+  function platformFamily(platform) {
+    const value = `${platform.material || ""} ${platform.type || ""}`.toLowerCase();
+    if (value.includes("cloud")) return "cloud";
+    if (["kite", "cloth", "red-cargo"].some((token) => value.includes(token))) return "cloth";
+    if (["crystal", "mica", "glass", "ghost"].some((token) => value.includes(token))) return "crystal";
+    if (["grass", "soil", "pressed"].some((token) => value.includes(token))) return "grass";
+    if (["brass", "gear", "belt", "star-", "mirror", "orbit"].some((token) => value.includes(token))) return "brass";
+    if (["wood", "crate", "pallet", "reed", "raft"].some((token) => value.includes(token))) return "wood";
+    if (["obsidian", "basalt", "slag", "charcoal"].some((token) => value.includes(token))) return "volcanic";
+    if (["metal", "steel", "iron", "cargo-train", "engine", "boiler", "rust", "grate", "pipe", "anvil", "chain", "forge", "lift"].some((token) => value.includes(token))) return "metal";
+    return "stone";
+  }
+
+  function drawPlatformMaterial(platform, theme, index) {
+    const family = platformFamily(platform);
+    const x = platform.x;
+    const y = platform.y;
+    const w = platform.w;
+    const h = platform.h;
+    const capH = Math.min(12, Math.max(6, h * 0.22));
+    const palette = {
+      grass: [theme.ground, theme.mid, theme.edge],
+      cloud: [theme.paper, theme.fog, theme.edge],
+      cloth: [theme.accent, theme.paper, theme.edge],
+      crystal: [theme.far, theme.mid, theme.accent2],
+      brass: [theme.accent, theme.ground, theme.edge],
+      wood: [theme.ground, theme.mid, theme.paper],
+      volcanic: [theme.ink, theme.ground, theme.accent],
+      metal: [theme.ink, theme.far, theme.edge],
+      stone: [theme.ground, theme.mid, theme.edge],
+    }[family];
+
+    ctx.fillStyle = theme.ink;
+    ctx.globalAlpha = 0.42;
+    ctx.fillRect(x + 7, y + 9, w, h);
+    ctx.globalAlpha = platform.hidden && !runtime.hiddenRevealed ? 0.48 : 1;
+    ctx.fillStyle = palette[0];
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = palette[1];
+    ctx.fillRect(x + 4, y + capH, Math.max(0, w - 8), Math.max(0, h - capH - 4));
+    ctx.fillStyle = platform.hidden ? theme.accent : palette[2];
+    ctx.fillRect(x, y, w, capH);
+
+    // Carry the same paper stock through the playable geometry so the
+    // platforms feel cut from the illustrated world instead of overlaid UI.
+    if (paperPattern && h > 14) {
+      ctx.save();
+      ctx.globalCompositeOperation = "soft-light";
+      ctx.globalAlpha = 0.13;
+      ctx.fillStyle = paperPattern;
+      ctx.fillRect(x, y, w, h);
+      ctx.restore();
+    }
+
+    if (family === "grass") {
+      ctx.fillStyle = palette[2];
+      for (let px = x + 8; px < x + w - 4; px += 16) {
+        const tuft = 5 + mod(Math.floor(px / 16) + index, 4);
         ctx.beginPath();
-        ctx.moveTo(hazard.x, hazard.y + hazard.h);
-        for (let x = hazard.x; x < hazard.x + hazard.w; x += 26) {
-          ctx.lineTo(x + 13, hazard.y);
-          ctx.lineTo(x + 26, hazard.y + hazard.h);
-        }
+        ctx.moveTo(px - 5, y + 2);
+        ctx.lineTo(px, y - tuft);
+        ctx.lineTo(px + 2, y + 2);
+        ctx.lineTo(px + 7, y - tuft * 0.65);
+        ctx.lineTo(px + 8, y + capH);
         ctx.closePath();
         ctx.fill();
-        ctx.stroke();
       }
+      if (h > 28) {
+        ctx.strokeStyle = theme.paper;
+        ctx.globalAlpha *= 0.13;
+        ctx.lineWidth = 2;
+        for (let px = x + 22; px < x + w; px += 56) {
+          ctx.beginPath(); ctx.moveTo(px, y + 20); ctx.quadraticCurveTo(px + 13, y + h * 0.5, px - 2, y + h - 8); ctx.stroke();
+        }
+      }
+    } else if (family === "cloud") {
+      ctx.fillStyle = theme.paper;
+      for (let px = x + 12; px < x + w; px += 28) {
+        ctx.beginPath(); ctx.arc(px, y + capH * 0.55, Math.min(13, capH + 4), Math.PI, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = theme.ink;
+      ctx.globalAlpha *= 0.18;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x + 8, y + h - 5); ctx.quadraticCurveTo(x + w * 0.5, y + h + 4, x + w - 8, y + h - 5); ctx.stroke();
+    } else if (family === "cloth") {
+      ctx.strokeStyle = theme.ink;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha *= 0.36;
+      ctx.setLineDash([8, 6]);
+      ctx.strokeRect(x + 7, y + 6, Math.max(0, w - 14), Math.max(0, h - 12));
+      ctx.setLineDash([]);
+      for (let px = x + 18; px < x + w - 6; px += 36) {
+        ctx.beginPath(); ctx.moveTo(px, y + capH + 2); ctx.lineTo(px + 18, y + h - 5); ctx.lineTo(px + 36, y + capH + 2); ctx.stroke();
+      }
+    } else if (family === "crystal") {
+      ctx.fillStyle = theme.paper;
+      ctx.globalAlpha *= 0.12;
+      for (let px = x + 8; px < x + w - 4; px += 38) {
+        const shardW = Math.min(26, x + w - px);
+        paperPolygon([[px, y + capH], [px + shardW * 0.45, y + h - 3], [px + shardW, y + capH], [px + shardW * 0.62, y + 4]], theme.paper, null);
+      }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = theme.accent2;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x + 4, y + capH); ctx.lineTo(x + w - 4, y + capH); ctx.stroke();
+    } else if (family === "brass" || family === "metal") {
+      const spacing = family === "brass" ? 34 : 42;
+      ctx.fillStyle = family === "brass" ? theme.ink : theme.paper;
+      ctx.globalAlpha *= family === "brass" ? 0.5 : 0.34;
+      for (let px = x + 12; px < x + w - 6; px += spacing) {
+        ctx.beginPath(); ctx.arc(px, y + Math.min(h - 6, capH + 8), 3.2, 0, Math.PI * 2); ctx.fill();
+      }
+      if (h > 34) {
+        ctx.strokeStyle = family === "brass" ? theme.ink : theme.edge;
+        ctx.lineWidth = 3;
+        for (let px = x + 28; px < x + w; px += 86) {
+          ctx.beginPath(); ctx.moveTo(px, y + capH + 5); ctx.lineTo(px, y + h - 6); ctx.stroke();
+        }
+      }
+    } else if (family === "wood") {
+      ctx.strokeStyle = theme.ink;
+      ctx.globalAlpha *= 0.28;
+      ctx.lineWidth = 3;
+      for (let px = x + 45; px < x + w; px += 55) {
+        ctx.beginPath(); ctx.moveTo(px, y + capH); ctx.lineTo(px - 4, y + h); ctx.stroke();
+      }
+      if (h > 36) {
+        ctx.beginPath(); ctx.moveTo(x + 8, y + h * 0.55); ctx.lineTo(x + w - 8, y + h * 0.45); ctx.stroke();
+      }
+    } else {
+      ctx.strokeStyle = family === "volcanic" ? theme.accent : theme.paper;
+      ctx.globalAlpha *= family === "volcanic" ? 0.42 : 0.12;
+      ctx.lineWidth = 3;
+      for (let px = x + 24; px < x + w - 12; px += 58) {
+        const top = y + capH + 5 + mod(index + Math.floor(px / 20), 12);
+        ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px + 12, Math.min(y + h - 5, top + 18)); ctx.lineTo(px + 3, Math.min(y + h - 3, top + 35)); ctx.stroke();
+      }
+    }
+
+    ctx.globalAlpha = 1;
+    if (platform.type === "conveyor" || platform.conveyor) {
+      ctx.fillStyle = theme.paper;
+      ctx.globalAlpha = 0.62;
+      for (let px = x + 15; px < x + w - 10; px += 42) {
+        ctx.beginPath();
+        ctx.moveTo(px, y + 13);
+        ctx.lineTo(px + Math.sign(platform.conveyor || 1) * 12, y + 19);
+        ctx.lineTo(px, y + 25);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    if (platform.fragile) {
+      ctx.strokeStyle = theme.ink;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.22, y + 4);
+      ctx.lineTo(x + w * 0.44, y + h * 0.7);
+      ctx.lineTo(x + w * 0.67, y + 9);
+      ctx.stroke();
+    }
+  }
+
+  function renderHazards(theme) {
+    runtime.hazards.forEach((hazard) => {
+      if (!inCamera(hazard.x, hazard.w)) return;
+      const type = String(hazard.type || "spikes").toLowerCase();
+      if (type === "fall" || type.includes("star-void")) drawVoidHazard(hazard, theme, type.includes("star"));
+      else if (type.includes("strong-current")) drawCurrentHazard(hazard, theme);
+      else if (type.includes("thorn")) drawThornHazard(hazard, theme);
+      else if (type.includes("crystal-spike")) drawSpikeHazard(hazard, theme, "crystal");
+      else if (type.includes("stalactite")) drawStalactiteHazard(hazard, theme);
+      else if (type.includes("saw") || type.includes("gear")) drawSawHazard(hazard, theme);
+      else if (type.includes("steam")) drawSteamHazard(hazard, theme);
+      else if (type.includes("urchin")) drawUrchinHazard(hazard, theme);
+      else if (type.includes("electric")) drawElectricHazard(hazard, theme);
+      else if (type.includes("lava") || type.includes("flame") || type === "fire") drawFireHazard(hazard, theme);
+      else if (type.includes("void-rift")) drawRiftHazard(hazard, theme);
+      else if (type.includes("falling-star")) drawFallingStarHazard(hazard, theme);
+      else if (type.includes("slag")) drawSpikeHazard(hazard, theme, "slag");
+      else drawSpikeHazard(hazard, theme, "paper");
     });
   }
 
+  function drawVoidHazard(hazard, theme, stellar = false) {
+    ctx.save();
+    ctx.fillStyle = theme.ink;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(hazard.x, hazard.y + hazard.h);
+    for (let x = hazard.x; x <= hazard.x + hazard.w; x += 24) {
+      ctx.lineTo(x, hazard.y + 7 + stableWave(x * 0.07, 6));
+    }
+    ctx.lineTo(hazard.x + hazard.w, hazard.y + hazard.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = stellar ? theme.edge : theme.accent;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.58;
+    ctx.beginPath();
+    ctx.moveTo(hazard.x, hazard.y + 8);
+    for (let x = hazard.x; x <= hazard.x + hazard.w; x += 24) ctx.lineTo(x, hazard.y + 7 + stableWave(x * 0.07, 6));
+    ctx.stroke();
+    if (stellar) {
+      ctx.fillStyle = theme.paper;
+      for (let i = 0; i < Math.max(3, Math.floor(hazard.w / 60)); i += 1) {
+        const px = hazard.x + 22 + mod(i * 61, Math.max(24, hazard.w - 30));
+        const py = hazard.y + 16 + mod(i * 19, Math.max(12, hazard.h - 20));
+        ctx.globalAlpha = 0.26;
+        ctx.beginPath(); ctx.arc(px, py, 2 + i % 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawCurrentHazard(hazard, theme) {
+    ctx.save();
+    ctx.fillStyle = theme.accent2;
+    ctx.globalAlpha = 0.08;
+    ctx.fillRect(hazard.x, hazard.y, hazard.w, hazard.h);
+    const direction = Math.sign(Number(hazard.forceX) || 1);
+    ctx.strokeStyle = theme.paper;
+    ctx.fillStyle = theme.paper;
+    ctx.globalAlpha = 0.32;
+    ctx.lineWidth = 3;
+    for (let y = hazard.y + 28; y < hazard.y + hazard.h; y += 48) {
+      const drift = mod(runtime.time * 40 + y, 90);
+      for (let x = hazard.x - 60 + drift; x < hazard.x + hazard.w; x += 90) {
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + direction * 46, y + Math.sin(x * 0.04) * 6); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + direction * 46, y); ctx.lineTo(x + direction * 32, y - 8); ctx.lineTo(x + direction * 32, y + 8); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawThornHazard(hazard, theme) {
+    ctx.save();
+    ctx.strokeStyle = theme.ink;
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(hazard.x, hazard.y + hazard.h);
+    for (let x = hazard.x; x <= hazard.x + hazard.w; x += 16) {
+      ctx.lineTo(x, hazard.y + hazard.h * 0.64 + Math.sin(x * 0.08) * 6);
+    }
+    ctx.stroke();
+    ctx.fillStyle = theme.danger;
+    for (let x = hazard.x + 6; x < hazard.x + hazard.w; x += 18) {
+      const tipY = hazard.y + 1 + mod(Math.floor(x), 7);
+      paperPolygon([[x - 7, hazard.y + hazard.h * 0.68], [x, tipY], [x + 7, hazard.y + hazard.h * 0.68]], theme.danger, theme.ink, 2);
+    }
+    ctx.restore();
+  }
+
+  function drawSpikeHazard(hazard, theme, style) {
+    const fill = style === "crystal" ? theme.accent2 : style === "slag" ? theme.ink : theme.danger;
+    const inner = style === "crystal" ? theme.paper : style === "slag" ? theme.accent : theme.edge;
+    ctx.save();
+    for (let x = hazard.x; x < hazard.x + hazard.w; x += 26) {
+      const right = Math.min(x + 26, hazard.x + hazard.w);
+      const center = (x + right) / 2;
+      paperPolygon([[x, hazard.y + hazard.h], [center, hazard.y], [right, hazard.y + hazard.h]], fill, theme.ink, 2.5);
+      ctx.fillStyle = inner;
+      ctx.globalAlpha = 0.34;
+      ctx.beginPath(); ctx.moveTo(center, hazard.y + 4); ctx.lineTo(center, hazard.y + hazard.h - 4); ctx.lineTo(x + 4, hazard.y + hazard.h - 3); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  function drawStalactiteHazard(hazard, theme) {
+    ctx.save();
+    paperPolygon([
+      [hazard.x, hazard.y],
+      [hazard.x + hazard.w, hazard.y],
+      [hazard.x + hazard.w * 0.62, hazard.y + hazard.h * 0.76],
+      [hazard.x + hazard.w * 0.5, hazard.y + hazard.h],
+      [hazard.x + hazard.w * 0.34, hazard.y + hazard.h * 0.7],
+    ], theme.far, theme.ink, 4);
+    ctx.fillStyle = theme.paper;
+    ctx.globalAlpha = 0.22;
+    ctx.beginPath(); ctx.moveTo(hazard.x + hazard.w * 0.2, hazard.y + 8); ctx.lineTo(hazard.x + hazard.w * 0.49, hazard.y + hazard.h * 0.88); ctx.lineTo(hazard.x + hazard.w * 0.42, hazard.y + 10); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSawHazard(hazard, theme) {
+    const radius = Math.min(Number(hazard.radius) || 34, Math.max(hazard.w, hazard.h) * 0.5);
+    const spin = runtime.time * (Number(hazard.angularSpeed) || 2.2);
+    ctx.save();
+    ctx.translate(hazard.x + hazard.w / 2, hazard.y + hazard.h / 2);
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.arc(0, 7, radius + 5, 0, Math.PI * 2); ctx.fill();
+    drawGear(0, 0, radius, theme.edge, spin);
+    ctx.fillStyle = theme.paper;
+    ctx.beginPath(); ctx.arc(0, 0, radius * 0.17, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSteamHazard(hazard, theme) {
+    const pulse = 0.72 + Math.sin(runtime.time * 5 + Number(hazard.phase || 0) * 3) * 0.16;
+    ctx.save();
+    ctx.fillStyle = theme.ink;
+    ctx.fillRect(hazard.x + 5, hazard.y + hazard.h - 18, hazard.w - 10, 18);
+    ctx.fillStyle = theme.edge;
+    ctx.fillRect(hazard.x + 12, hazard.y + hazard.h - 13, hazard.w - 24, 5);
+    ctx.globalAlpha = pulse;
+    for (let y = hazard.y + hazard.h - 28, i = 0; y > hazard.y - 6; y -= 24, i += 1) {
+      const px = hazard.x + hazard.w / 2 + Math.sin(runtime.time * 3 + i) * 8;
+      drawPaperCloud(px, y, 0.2 + (i % 3) * 0.035, theme.paper, Math.max(0.12, pulse - i * 0.06));
+    }
+    ctx.restore();
+  }
+
+  function drawUrchinHazard(hazard, theme) {
+    const radius = Math.min(hazard.w, hazard.h * 2) * 0.35;
+    ctx.save();
+    ctx.translate(hazard.x + hazard.w / 2, hazard.y + hazard.h * 0.72);
+    ctx.fillStyle = theme.ink;
+    for (let i = 0; i < 14; i += 1) {
+      ctx.rotate(Math.PI * 2 / 14);
+      ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(0, -radius * 1.45); ctx.lineTo(4, 0); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = theme.accent2;
+    ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ink;
+    for (let i = 0; i < 5; i += 1) {
+      ctx.beginPath(); ctx.arc(Math.cos(i * 2.1) * radius * 0.55, Math.sin(i * 2.1) * radius * 0.55, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawElectricHazard(hazard, theme) {
+    ctx.save();
+    ctx.fillStyle = theme.ink;
+    ctx.fillRect(hazard.x, hazard.y + hazard.h - 12, hazard.w, 12);
+    ctx.strokeStyle = theme.edge;
+    ctx.lineWidth = 5;
+    for (let x = hazard.x + 12; x < hazard.x + hazard.w; x += 22) {
+      ctx.beginPath(); ctx.arc(x, hazard.y + hazard.h * 0.57, 9, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.strokeStyle = theme.paper;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.72;
+    ctx.beginPath();
+    ctx.moveTo(hazard.x + 5, hazard.y + hazard.h * 0.42);
+    for (let x = hazard.x + 12; x < hazard.x + hazard.w; x += 12) {
+      ctx.lineTo(x, hazard.y + hazard.h * 0.42 + (Math.floor(x / 12) % 2 ? 11 : -10));
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFireHazard(hazard, theme) {
+    const lavaPool = String(hazard.type).toLowerCase() === "lava";
+    const tall = !lavaPool && hazard.h > 80;
+    ctx.save();
+    if (lavaPool) {
+      ctx.fillStyle = theme.danger;
+      ctx.fillRect(hazard.x, hazard.y + 9, hazard.w, Math.max(0, hazard.h - 9));
+      ctx.fillStyle = theme.ink;
+      ctx.globalAlpha = 0.34;
+      for (let x = hazard.x + 24; x < hazard.x + hazard.w; x += 72) {
+        ctx.beginPath(); ctx.ellipse(x, hazard.y + hazard.h * 0.58 + stableWave(x, 7), 22, 5, -0.1, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      for (let x = hazard.x; x < hazard.x + hazard.w; x += 28) {
+        drawFlame(x + 14, hazard.y + 13, 19 + Math.sin(runtime.time * 5 + x) * 3, theme.danger, theme.edge);
+      }
+    } else if (tall) {
+      ctx.fillStyle = theme.ink;
+      ctx.fillRect(hazard.x + 6, hazard.y + hazard.h - 17, hazard.w - 12, 17);
+      for (let y = hazard.y + hazard.h - 9, i = 0; y > hazard.y; y -= 28, i += 1) {
+        drawFlame(hazard.x + hazard.w / 2 + Math.sin(runtime.time * 5 + i) * 6, y, 20 + i % 2 * 4, theme.danger, theme.edge);
+      }
+    } else {
+      for (let x = hazard.x; x < hazard.x + hazard.w; x += 26) {
+        drawFlame(x + 13, hazard.y + hazard.h, 24 + Math.sin(runtime.time * 5 + x) * 3, theme.danger, theme.edge);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawRiftHazard(hazard, theme) {
+    ctx.save();
+    ctx.translate(hazard.x + hazard.w / 2, hazard.y + hazard.h / 2);
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.ellipse(0, 0, hazard.w * 0.5, hazard.h * 0.48, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = theme.accent2;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.72;
+    ctx.beginPath(); ctx.ellipse(0, 0, hazard.w * 0.42, hazard.h * 0.31, Math.sin(runtime.time) * 0.12, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFallingStarHazard(hazard, theme) {
+    ctx.save();
+    ctx.translate(hazard.x + hazard.w / 2, hazard.y + hazard.h / 2);
+    ctx.rotate(runtime.time * 1.2 + Number(hazard.phase || 0));
+    drawStarShape(0, 0, Math.min(hazard.w, hazard.h) * 0.48, theme.edge, theme.ink);
+    ctx.restore();
+  }
+
   function renderDevices(theme) {
-    runtime.crystals.forEach((crystal) => drawCrystal(crystal.x + crystal.w / 2, crystal.y + crystal.h, crystal.active ? theme.edge : theme.far, crystal.active));
-    runtime.switches.forEach((device) => drawGear(device.x + device.w / 2, device.y + device.h / 2, 25, device.active ? theme.edge : theme.paper, runtime.time * (device.active ? 3 : 0.4)));
+    runtime.crystals.forEach((crystal) => { if (inCamera(crystal.x, crystal.w)) drawCrystal(crystal.x + crystal.w / 2, crystal.y + crystal.h, crystal.active ? theme.edge : theme.far, crystal.active); });
+    runtime.switches.forEach((device) => {
+      if (!inCamera(device.x, device.w)) return;
+      ctx.save();
+      ctx.fillStyle = theme.ink;
+      ctx.beginPath(); ctx.roundRect(device.x - 4, device.y + device.h * 0.42, device.w + 8, device.h * 0.62, 7); ctx.fill();
+      drawGear(device.x + device.w / 2, device.y + device.h / 2, 25, device.active ? theme.edge : theme.paper, runtime.time * (device.active ? 3 : 0.4));
+      ctx.restore();
+    });
     runtime.gates.filter(isGateActive).forEach((gate) => {
+      if (!inCamera(gate.x, gate.w)) return;
       ctx.fillStyle = theme.ink;
       ctx.fillRect(gate.x, gate.y, gate.w, gate.h);
       ctx.fillStyle = theme.edge;
       for (let y = gate.y + 12; y < gate.y + gate.h; y += 34) ctx.fillRect(gate.x + 6, y, gate.w - 12, 8);
+      ctx.fillStyle = theme.paper;
+      for (let y = gate.y + 18; y < gate.y + gate.h; y += 68) {
+        ctx.beginPath(); ctx.arc(gate.x + gate.w / 2, y, 3, 0, Math.PI * 2); ctx.fill();
+      }
     });
-    runtime.valves.forEach((valve) => drawValve(valve, theme));
-    runtime.mirrors.forEach((mirror) => drawMirror(mirror, theme));
-    runtime.coolants.forEach((coolant) => { if (coolant.active) drawSeed(coolant.x + 20, coolant.y + 20, theme.accent, runtime.time + coolant.index); });
+    runtime.valves.forEach((valve) => { if (inCamera(valve.x, valve.w)) drawValve(valve, theme); });
+    runtime.mirrors.forEach((mirror) => { if (inCamera(mirror.x, mirror.w)) drawMirror(mirror, theme); });
+    runtime.coolants.forEach((coolant) => { if (coolant.active && inCamera(coolant.x, coolant.w)) drawCoolantDevice(coolant, theme); });
+    (runtime.devices.fans || []).forEach((fan, index) => { if (inCamera(Number(fan.x) || 0, Number(fan.w) || 90)) drawFanDevice(fan, theme, index); });
 
     if (runtime.devices.vent) {
       const vent = runtime.devices.vent;
       const active = runtime.valves.length > 0 && runtime.valves.every((valve) => valve.active);
+      if (inCamera(vent.x, vent.w)) {
       ctx.fillStyle = theme.ink;
       ctx.fillRect(vent.x, vent.y, vent.w, vent.h);
       for (let x = vent.x + 18; x < vent.x + vent.w; x += 30) {
@@ -1680,14 +2434,219 @@
           ctx.globalAlpha = 1;
         }
       }
+      }
+    }
+    if (runtime.devices.altar && inCamera(runtime.devices.altar.x, runtime.devices.altar.w || 200)) {
+      const altar = runtime.devices.altar;
+      ctx.fillStyle = theme.ink;
+      ctx.fillRect(altar.x + 8, altar.y + 9, altar.w || 200, altar.h || 45);
+      ctx.fillStyle = theme.ground;
+      ctx.fillRect(altar.x, altar.y, altar.w || 200, altar.h || 45);
+      ctx.strokeStyle = theme.edge;
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(altar.x + (altar.w || 200) / 2, altar.y + 5, 28, Math.PI, Math.PI * 2); ctx.stroke();
     }
     if (currentLevel.id === 8 && runtime.mirrors.every((mirror) => mirror.active)) drawMirrorBeam(theme);
   }
 
+  function drawCoolantDevice(coolant, theme) {
+    const x = coolant.x + coolant.w / 2;
+    const y = coolant.y + coolant.h / 2 + Math.sin(runtime.time * 3 + coolant.index) * 4;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.18);
+    paperPolygon([[-10, -19], [10, -19], [14, -11], [14, 12], [8, 19], [-8, 19], [-14, 12], [-14, -11]], theme.accent2, theme.ink, 3);
+    ctx.fillStyle = theme.paper;
+    ctx.globalAlpha = 0.68;
+    ctx.fillRect(-7, -11, 5, 22);
+    ctx.fillStyle = theme.edge;
+    ctx.fillRect(-9, -23, 18, 6);
+    ctx.restore();
+  }
+
+  function drawFanDevice(fan, theme, index) {
+    const x = Number(fan.x) || 0;
+    const y = Number(fan.y) || 0;
+    const size = Number(fan.size || fan.radius) || 42;
+    ctx.save();
+    ctx.translate(x + size, y + size);
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.arc(0, 0, size + 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ground;
+    ctx.beginPath(); ctx.arc(0, 0, size + 2, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(runtime.time * (4 + index * 0.25));
+    for (let i = 0; i < 4; i += 1) {
+      ctx.rotate(Math.PI / 2);
+      ctx.fillStyle = i % 2 ? theme.edge : theme.paper;
+      ctx.beginPath();
+      ctx.moveTo(7, 0);
+      ctx.quadraticCurveTo(size * 0.62, -size * 0.46, size * 0.78, -5);
+      ctx.quadraticCurveTo(size * 0.56, size * 0.18, 7, 6);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = theme.accent;
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   function renderCollectibles(theme) {
     runtime.collectibles.forEach((item) => {
-      if (!item.collected) drawSeed(item.x + 13, item.y + 13 + Math.sin(runtime.time * 3 + item.t) * 7, theme.edge, runtime.time + item.t);
+      if (!item.collected && inCamera(item.x, item.w, 80)) {
+        drawCollectible(item, theme);
+      }
     });
+  }
+
+  function drawCollectible(item, theme) {
+    const type = String(item.type || "memory-seed").toLowerCase();
+    const x = item.x + item.w / 2;
+    const y = item.y + item.h / 2 + Math.sin(runtime.time * 3 + item.t) * 7;
+    const pulse = 1 + Math.sin(runtime.time * 4 + item.t) * 0.06;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(pulse, pulse);
+    ctx.fillStyle = theme.paper;
+    ctx.globalAlpha = 0.1;
+    ctx.beginPath(); ctx.arc(0, 1, 23, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    const spriteFrame = frameSpec("collectibleFrames", type, DEFAULT_COLLECTIBLE_FRAMES[type]);
+    if (spriteFrame) {
+      const spriteW = Number(spriteFrame.drawW) || 64;
+      const spriteH = Number(spriteFrame.drawH) || 80;
+      if (drawAtlasFrame(spriteFrame, 0, 0, spriteW, spriteH, { anchorX: 0.5, anchorY: Number(spriteFrame.anchorY ?? 0.5) })) {
+        ctx.restore();
+        return;
+      }
+    }
+
+    if (type.includes("memory-seed") || type === "seed") {
+      drawSeed(0, 0, theme.edge, runtime.time + item.t);
+    } else if (type === "heart") {
+      drawHeartShape(0, 1, 15, theme.danger, theme.ink);
+      ctx.fillStyle = theme.paper;
+      ctx.globalAlpha = 0.48;
+      ctx.beginPath(); ctx.arc(-5, -5, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (type.includes("feather")) {
+      ctx.rotate(-0.55 + Math.sin(runtime.time * 2 + item.t) * 0.08);
+      ctx.fillStyle = theme.paper;
+      ctx.strokeStyle = theme.ink;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-2, 18);
+      ctx.quadraticCurveTo(-19, -1, 5, -20);
+      ctx.quadraticCurveTo(23, -4, -2, 18);
+      ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = theme.accent2;
+      ctx.beginPath(); ctx.moveTo(-4, 17); ctx.lineTo(8, -15); ctx.stroke();
+    } else if (type.includes("resonance-orb")) {
+      drawOrb(0, 0, 15, theme.accent2, theme.paper);
+      ctx.strokeStyle = theme.edge;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.65;
+      ctx.beginPath(); ctx.arc(0, 0, 21, runtime.time, runtime.time + Math.PI * 1.35); ctx.stroke();
+    } else if (type.includes("crystal-crown")) {
+      paperPolygon([[-17, 11], [-15, -10], [-6, 0], [0, -17], [7, 0], [17, -11], [15, 11]], theme.accent2, theme.ink, 3);
+      ctx.fillStyle = theme.paper;
+      ctx.fillRect(-11, 5, 22, 4);
+    } else if (type.includes("spring")) {
+      drawGear(0, 0, 16, theme.edge, runtime.time * 1.4);
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 1.7); ctx.stroke();
+    } else if (type.includes("coolant")) {
+      ctx.rotate(0.22);
+      paperPolygon([[-9, -18], [9, -18], [13, -11], [13, 12], [7, 18], [-7, 18], [-13, 12], [-13, -11]], theme.accent2, theme.ink, 3);
+      ctx.fillStyle = theme.paper;
+      ctx.globalAlpha = 0.72;
+      ctx.fillRect(-7, -10, 5, 21);
+      ctx.fillStyle = theme.edge;
+      ctx.fillRect(-8, -22, 16, 6);
+    } else if (type.includes("core")) {
+      ctx.strokeStyle = theme.edge;
+      ctx.lineWidth = 4;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath(); ctx.arc(0, 0, 20, runtime.time, runtime.time + Math.PI * 1.55); ctx.stroke();
+      ctx.globalAlpha = 1;
+      paperPolygon([[0, -15], [13, -3], [8, 14], [-8, 14], [-13, -3]], theme.accent, theme.ink, 3);
+      ctx.fillStyle = theme.paper;
+      ctx.beginPath(); ctx.arc(-3, -4, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (type.includes("tide-rune")) {
+      paperPolygon([[0, -18], [17, 0], [0, 18], [-17, 0]], theme.accent2, theme.ink, 3);
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 2, 9, Math.PI * 0.15, Math.PI * 1.35); ctx.stroke();
+    } else if (type.includes("pearl")) {
+      ctx.fillStyle = theme.paper;
+      ctx.strokeStyle = theme.accent2;
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = theme.edge;
+      ctx.globalAlpha = 0.46;
+      ctx.beginPath(); ctx.arc(-5, -5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(16, -15, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (type.includes("wings")) {
+      ctx.fillStyle = theme.paper;
+      ctx.strokeStyle = theme.ink;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(-14, -1, 13, 7, -0.55, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(14, -1, 13, 7, 0.55, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = theme.accent;
+      ctx.fillRect(-9, -8, 18, 19);
+      ctx.strokeStyle = theme.ink;
+      ctx.strokeRect(-9, -8, 18, 19);
+    } else if (type.includes("bell")) {
+      ctx.fillStyle = theme.edge;
+      ctx.strokeStyle = theme.ink;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-14, 10); ctx.quadraticCurveTo(-8, -17, 0, -18); ctx.quadraticCurveTo(9, -17, 14, 10); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = theme.ink;
+      ctx.beginPath(); ctx.arc(0, 13, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (type.includes("seal")) {
+      const points = [];
+      for (let i = 0; i < 6; i += 1) points.push([Math.cos(i * Math.PI / 3) * 17, Math.sin(i * Math.PI / 3) * 17]);
+      paperPolygon(points, theme.danger, theme.ink, 3);
+      drawStarShape(0, 0, 8, theme.edge, null, 5);
+    } else if (type.includes("star")) {
+      drawStarShape(0, 0, 18, theme.edge, theme.ink, 5);
+      ctx.fillStyle = theme.paper;
+      ctx.beginPath(); ctx.arc(-3, -3, 3, 0, Math.PI * 2); ctx.fill();
+    } else {
+      drawSeed(0, 0, theme.edge, runtime.time + item.t);
+    }
+    ctx.restore();
+  }
+
+  function drawHeartShape(x, y, size, fill, stroke) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(0, size);
+    ctx.bezierCurveTo(-size * 1.25, size * 0.28, -size * 1.05, -size * 0.75, -size * 0.43, -size * 0.72);
+    ctx.bezierCurveTo(-size * 0.12, -size * 0.7, 0, -size * 0.42, 0, -size * 0.18);
+    ctx.bezierCurveTo(0, -size * 0.42, size * 0.12, -size * 0.7, size * 0.43, -size * 0.72);
+    ctx.bezierCurveTo(size * 1.05, -size * 0.75, size * 1.25, size * 0.28, 0, size);
+    ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 3; ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function drawStarShape(x, y, radius, fill, stroke, points = 6) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i += 1) {
+      const r = i % 2 ? radius * 0.43 : radius;
+      const angle = -Math.PI / 2 + i * Math.PI / points;
+      const px = Math.cos(angle) * r;
+      const py = Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 3; ctx.stroke(); }
+    ctx.restore();
   }
 
   function renderCheckpoints(theme) {
@@ -1703,34 +2662,60 @@
   function renderGoal(theme) {
     if (currentLevel.isBoss) return;
     const goal = currentLevel.goal;
+    if (!inCamera(goal.x, goal.w, 100)) return;
     ctx.save();
     ctx.translate(goal.x + goal.w / 2, goal.y + goal.h / 2);
     ctx.rotate(Math.sin(runtime.time * 0.7) * 0.035);
     ctx.fillStyle = theme.ink;
-    ctx.fillRect(-goal.w / 2, -goal.h / 2, goal.w, goal.h);
-    ctx.fillStyle = theme.edge;
-    ctx.fillRect(-goal.w / 2 + 8, -goal.h / 2 + 8, goal.w - 16, goal.h - 16);
-    ctx.fillStyle = theme.mid;
     ctx.beginPath();
-    ctx.ellipse(0, 4, goal.w * 0.27, goal.h * 0.35, 0, 0, Math.PI * 2);
+    ctx.roundRect(-goal.w / 2 - 6, -goal.h / 2 + 5, goal.w + 12, goal.h + 8, 12);
+    ctx.fill();
+    ctx.fillStyle = theme.edge;
+    ctx.beginPath();
+    ctx.roundRect(-goal.w / 2 + 4, -goal.h / 2 + 8, goal.w - 8, goal.h - 12, 9);
+    ctx.fill();
+    const portal = ctx.createRadialGradient(0, 4, 4, 0, 4, goal.w * 0.42);
+    portal.addColorStop(0, theme.paper);
+    portal.addColorStop(0.34, theme.accent2);
+    portal.addColorStop(1, theme.mid);
+    ctx.fillStyle = portal;
+    ctx.beginPath();
+    ctx.ellipse(0, 4, goal.w * 0.31, goal.h * 0.37, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = theme.paper;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(-18, 16); ctx.quadraticCurveTo(0, -28, 18, 16); ctx.stroke();
+    ctx.ellipse(0, 4, goal.w * 0.23, goal.h * 0.3, Math.sin(runtime.time) * 0.08, runtime.time * 0.22, runtime.time * 0.22 + Math.PI * 1.5);
+    ctx.stroke();
+    ctx.fillStyle = theme.ink;
+    for (let i = 0; i < 6; i += 1) {
+      const angle = i / 6 * Math.PI * 2 + runtime.time * 0.08;
+      const px = Math.cos(angle) * goal.w * 0.39;
+      const py = Math.sin(angle) * goal.h * 0.43;
+      ctx.save(); ctx.translate(px, py); ctx.rotate(angle); ctx.fillRect(-3, -7, 6, 14); ctx.restore();
+    }
     ctx.restore();
   }
 
   function renderWaterAndLava(theme) {
     if (runtime.devices.water) {
       ctx.save();
-      ctx.globalAlpha = 0.58;
+      ctx.globalAlpha = 0.38;
       ctx.fillStyle = theme.skyTop;
       ctx.beginPath();
       ctx.moveTo(cameraX, runtime.waterY);
       for (let x = cameraX; x < cameraX + VIEW_W + 80; x += 40) ctx.lineTo(x, runtime.waterY + Math.sin(x * 0.035 + runtime.time * 3) * 9);
       ctx.lineTo(cameraX + VIEW_W + 80, VIEW_H + 60); ctx.lineTo(cameraX, VIEW_H + 60); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = theme.edge; ctx.lineWidth = 5; ctx.globalAlpha = 0.75; ctx.stroke();
+      if (paperPattern) {
+        ctx.save();
+        ctx.globalCompositeOperation = "soft-light";
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = paperPattern;
+        ctx.fillRect(cameraX, runtime.waterY, VIEW_W + 80, VIEW_H - runtime.waterY + 60);
+        ctx.restore();
+      }
+      ctx.strokeStyle = theme.edge; ctx.lineWidth = 5; ctx.globalAlpha = 0.86; ctx.stroke();
+      ctx.strokeStyle = theme.paper; ctx.lineWidth = 2; ctx.globalAlpha = 0.42; ctx.translate(0, -5); ctx.stroke();
       ctx.restore();
     }
     if (runtime.devices.lava) {
@@ -1739,6 +2724,14 @@
       ctx.beginPath(); ctx.moveTo(cameraX, runtime.lavaY);
       for (let x = cameraX; x < cameraX + VIEW_W + 100; x += 32) ctx.lineTo(x, runtime.lavaY + Math.sin(x * 0.05 + runtime.time * 5) * 8);
       ctx.lineTo(cameraX + VIEW_W + 100, VIEW_H + 80); ctx.lineTo(cameraX, VIEW_H + 80); ctx.closePath(); ctx.fill();
+      if (paperPattern) {
+        ctx.save();
+        ctx.globalCompositeOperation = "soft-light";
+        ctx.globalAlpha = 0.14;
+        ctx.fillStyle = paperPattern;
+        ctx.fillRect(cameraX, runtime.lavaY, VIEW_W + 100, VIEW_H - runtime.lavaY + 80);
+        ctx.restore();
+      }
       ctx.fillStyle = theme.edge; ctx.globalAlpha = 0.7;
       for (let x = cameraX + 20; x < cameraX + VIEW_W; x += 80) ctx.beginPath(), ctx.arc(x, runtime.lavaY + Math.sin(x + runtime.time) * 12, 6, 0, Math.PI * 2), ctx.fill();
       ctx.restore();
@@ -1747,16 +2740,66 @@
 
   function renderForeground(theme) {
     ctx.save();
-    ctx.globalAlpha = 0.24;
+    const id = currentLevel.id;
+    ctx.globalAlpha = 0.22;
     ctx.fillStyle = theme.ink;
-    for (let i = 0; i < 10; i += 1) {
-      const x = mod(i * 171 - cameraX * 0.52, VIEW_W + 180) - 90;
-      const height = 40 + (i % 4) * 27;
-      ctx.beginPath();
-      ctx.moveTo(x - 16, VIEW_H);
-      ctx.quadraticCurveTo(x - 5, VIEW_H - height, x, VIEW_H - height - 22);
-      ctx.quadraticCurveTo(x + 7, VIEW_H - height, x + 20, VIEW_H);
-      ctx.fill();
+    if (id === 1 || id === 3) {
+      for (let i = 0; i < 12; i += 1) {
+        const x = mod(i * 151 - cameraX * 0.52, VIEW_W + 180) - 90;
+        const height = 38 + (i % 5) * 24;
+        ctx.beginPath();
+        ctx.moveTo(x - 16, VIEW_H);
+        ctx.quadraticCurveTo(x - 7, VIEW_H - height, x + Math.sin(runtime.time + i) * 5, VIEW_H - height - 24);
+        ctx.quadraticCurveTo(x + 8, VIEW_H - height, x + 22, VIEW_H);
+        ctx.fill();
+        if (id === 3 && i % 3 === 0) {
+          ctx.globalAlpha = 0.16;
+          drawGear(x + 4, VIEW_H - height, 14, theme.edge, runtime.time * 0.2 + i);
+          ctx.globalAlpha = 0.22;
+        }
+      }
+    } else if (id === 2) {
+      for (let i = 0; i < 10; i += 1) {
+        const x = mod(i * 177 - cameraX * 0.5, VIEW_W + 160) - 80;
+        const h = 50 + (i % 4) * 32;
+        paperPolygon([[x - 22, VIEW_H], [x, VIEW_H - h], [x + 18, VIEW_H]], i % 2 ? theme.ink : theme.far, null);
+        ctx.fillStyle = theme.ink;
+      }
+    } else if (id === 4 || id === 6) {
+      ctx.lineWidth = id === 4 ? 18 : 7;
+      ctx.strokeStyle = theme.ink;
+      for (let i = 0; i < 7; i += 1) {
+        const x = mod(i * 235 - cameraX * 0.55, VIEW_W + 220) - 110;
+        const h = 45 + (i % 3) * 42;
+        ctx.beginPath(); ctx.moveTo(x, VIEW_H + 10); ctx.lineTo(x, VIEW_H - h); ctx.lineTo(x + 45, VIEW_H - h - 20); ctx.stroke();
+        if (id === 4) {
+          ctx.fillStyle = theme.edge;
+          ctx.beginPath(); ctx.arc(x, VIEW_H - h, 8, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    } else if (id === 5) {
+      for (let i = 0; i < 13; i += 1) {
+        const x = mod(i * 127 - cameraX * 0.52, VIEW_W + 140) - 70;
+        const h = 44 + (i % 5) * 18;
+        ctx.beginPath(); ctx.moveTo(x - 8, VIEW_H); ctx.quadraticCurveTo(x + 12, VIEW_H - h * 0.6, x, VIEW_H - h); ctx.quadraticCurveTo(x - 12, VIEW_H - h * 0.55, x + 13, VIEW_H); ctx.fill();
+        ctx.fillStyle = i % 3 ? theme.ink : theme.accent2;
+      }
+    } else if (id === 7) {
+      ctx.strokeStyle = theme.ink;
+      ctx.lineWidth = 9;
+      for (let i = 0; i < 8; i += 1) {
+        const x = mod(i * 190 - cameraX * 0.53, VIEW_W + 170) - 85;
+        ctx.beginPath();
+        for (let y = VIEW_H - 120 - (i % 3) * 35; y < VIEW_H + 20; y += 18) ctx.arc(x + Math.sin(y * 0.12) * 4, y, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else {
+      ctx.strokeStyle = theme.ink;
+      ctx.lineWidth = 13;
+      for (let i = 0; i < 6; i += 1) {
+        const x = mod(i * 260 - cameraX * 0.48, VIEW_W + 240) - 120;
+        ctx.beginPath(); ctx.moveTo(x - 50, VIEW_H); ctx.lineTo(x - 50, VIEW_H - 95); ctx.quadraticCurveTo(x, VIEW_H - 158, x + 50, VIEW_H - 95); ctx.lineTo(x + 50, VIEW_H); ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -1790,6 +2833,30 @@
     const bob = Math.sin(time * (running ? 13 : 3)) * (running ? 3 : 1.8);
     const stretch = state.dashTime > 0 ? 1.18 : 1;
     const squash = state.onGround === false && state.vy > 350 ? 0.92 : 1;
+    let action = "idle";
+    if (state.invulnerable > 0) action = "hurt";
+    else if (state.dashTime > 0) action = "dash";
+    else if (state.downstrike) action = "downstrike";
+    else if (state.onGround === false && Number(state.vy) < 0) action = "jump";
+    else if (state.onGround === false && Number(state.vy) >= 0) action = "fall";
+    else if (running > 0.08) action = Math.floor(time * 10) % 2 ? "runContact" : "runPassing";
+
+    const frame = frameSpec("heroFrames", action, DEFAULT_HERO_FRAMES[action]);
+    if (frame) {
+      ctx.save();
+      ctx.fillStyle = theme.ink;
+      ctx.globalAlpha = state.onGround === false ? 0.08 : 0.2;
+      ctx.beginPath(); ctx.ellipse(x, feetY + 2, 26 * scale, 7 * scale, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      const width = (Number(frame.drawW) || 126) * scale * stretch;
+      const height = (Number(frame.drawH) || 168) * scale * squash;
+      if (drawAtlasFrame(frame, x, feetY + bob, width, height, { flipX: facing < 0, anchorX: 0.5, anchorY: Number(frame.anchorY ?? 0.9) })) return;
+    }
+
+    drawFallbackHero(x, feetY, scale, facing, vx, theme, time, state, running, bob, stretch, squash);
+  }
+
+  function drawFallbackHero(x, feetY, scale, facing, vx, theme, time, state, running, bob, stretch, squash) {
     ctx.save();
     ctx.translate(x, feetY + bob);
     ctx.scale(facing * scale * stretch, scale * squash);
@@ -1818,6 +2885,26 @@
   }
 
   function drawEnemy(enemy, theme) {
+    const type = String(enemy.type || "");
+    const frame = frameSpec("enemyFrames", type, DEFAULT_ENEMY_FRAMES[type]);
+    if (frame) {
+      const scale = clamp(Math.max(enemy.w / 46, enemy.h / 42), 0.82, 1.55);
+      const flying = isFlyingEnemy(type) || ["kite-mite", "paper-jelly", "orbit-eye"].includes(type);
+      const bob = flying ? Math.sin(enemy.t * 6.5) * 5 : Math.sin(enemy.t * 8) * 1.4;
+      const width = (Number(frame.drawW) || 126) * scale;
+      const height = (Number(frame.drawH) || 164) * scale;
+      ctx.save();
+      ctx.fillStyle = theme.ink;
+      ctx.globalAlpha = flying ? 0.08 : 0.18;
+      ctx.beginPath(); ctx.ellipse(enemy.x + enemy.w / 2, enemy.y + enemy.h + 3, 22 * scale, 6 * scale, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      if (drawAtlasFrame(frame, enemy.x + enemy.w / 2, enemy.y + enemy.h + bob, width, height, { flipX: enemy.vx < 0, anchorX: 0.5, anchorY: Number(frame.anchorY ?? 0.85) })) return;
+    }
+
+    drawFallbackEnemy(enemy, theme);
+  }
+
+  function drawFallbackEnemy(enemy, theme) {
     ctx.save();
     ctx.translate(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2);
     if (isFlyingEnemy(enemy.type)) {
@@ -1846,45 +2933,146 @@
   }
 
   function drawBoss(boss, theme) {
+    let frameName;
+    if (currentLevel.id === 4) {
+      if (boss.hitFlash > 0) frameName = "boilerFrozenHit";
+      else if (boss.vulnerable > 0) frameName = "boilerCoreOpen";
+      else if (boss.state === "telegraph" || boss.state === "charge") frameName = "boilerCharge";
+      else frameName = "boilerNormal";
+    } else {
+      if (boss.vulnerable > 0) frameName = "eclipseCoreExposed";
+      else if (boss.hitFlash > 0) frameName = "eclipseShieldBreak";
+      else if (boss.state === "beam-stun") frameName = "eclipseBeamCharge";
+      else frameName = "eclipseNormal";
+    }
+    const frame = frameSpec("bossFrames", frameName, DEFAULT_BOSS_FRAMES[frameName]);
+    if (frame) {
+      const centerX = boss.x + boss.w / 2;
+      const feetY = boss.y + boss.h;
+      const width = Number(frame.drawW) || (currentLevel.id === 4 ? 250 : 260);
+      const height = Number(frame.drawH) || (currentLevel.id === 4 ? 315 : 340);
+      ctx.save();
+      ctx.fillStyle = theme.ink;
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath(); ctx.ellipse(centerX, feetY + 5, boss.w * 0.66, 14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      const jitter = boss.state === "telegraph" ? Math.sin(runtime.time * 48) * 4 : 0;
+      if (drawAtlasFrame(frame, centerX + jitter, feetY, width, height, { flipX: currentLevel.id === 4 && boss.vx < 0, anchorX: 0.5, anchorY: Number(frame.anchorY ?? 0.9) })) return;
+    }
+
     ctx.save();
     ctx.translate(boss.x + boss.w / 2, boss.y + boss.h / 2);
-    if (boss.state === "telegraph") ctx.translate((Math.random() - 0.5) * 7, 0);
+    if (boss.state === "telegraph") ctx.translate(Math.sin(runtime.time * 48) * 4, 0);
     if (boss.hitFlash > 0) ctx.globalAlpha = 0.45 + Math.sin(boss.hitFlash * 70) * 0.35;
     if (currentLevel.id === 4) {
-      ctx.scale(boss.vx < 0 ? -1 : 1, 1);
-      ctx.fillStyle = theme.ink;
-      ctx.beginPath(); ctx.ellipse(0, 0, boss.w * 0.52, boss.h * 0.52, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = boss.vulnerable > 0 ? theme.paper : theme.accent;
-      ctx.beginPath(); ctx.ellipse(-5, 0, boss.w * 0.42, boss.h * 0.4, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = theme.ink; ctx.lineWidth = 8;
-      ctx.beginPath(); ctx.moveTo(0, -45); ctx.lineTo(0, 45); ctx.stroke();
-      ctx.fillStyle = boss.vulnerable > 0 ? theme.edge : theme.ink;
-      ctx.beginPath(); ctx.arc(8, 4, 19, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = theme.ink; ctx.lineWidth = 12; ctx.lineCap = "round";
-      for (let i = -1; i <= 1; i += 1) {
-        ctx.beginPath(); ctx.moveTo(-35, i * 28); ctx.lineTo(-65, i * 34 + 11); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(35, i * 28); ctx.lineTo(65, i * 34 + 11); ctx.stroke();
-      }
-      ctx.fillStyle = theme.edge;
-      ctx.beginPath(); ctx.moveTo(-48, -30); ctx.lineTo(-83, -54); ctx.lineTo(-59, -8); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(-52, 20); ctx.lineTo(-90, 43); ctx.lineTo(-55, 47); ctx.closePath(); ctx.fill();
+      drawBoilerBossFallback(boss, theme);
     } else {
-      const pulse = 1 + Math.sin(runtime.time * 4) * 0.05;
-      ctx.scale(pulse, pulse);
-      ctx.fillStyle = theme.ink;
-      ctx.beginPath(); ctx.ellipse(0, 0, boss.w * 0.5, boss.h * 0.5, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = theme.edge; ctx.lineWidth = 8; ctx.globalAlpha = 0.7;
-      ctx.beginPath(); ctx.arc(0, 0, boss.w * 0.58, -1.1, 1.8); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, boss.w * 0.68, 2.1, 4.8); ctx.stroke();
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = boss.vulnerable > 0 ? theme.edge : theme.accent;
-      ctx.beginPath(); ctx.moveTo(0, -35); ctx.lineTo(29, 8); ctx.lineTo(0, 40); ctx.lineTo(-29, 8); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = theme.paper;
-      ctx.beginPath(); ctx.ellipse(-17, -12, 5, 9, 0.3, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(17, -12, 5, 9, -0.3, 0, Math.PI * 2); ctx.fill();
-      for (let i = 0; i < 5; i += 1) drawLeaf(Math.cos(i * 1.26 + runtime.time) * 82, Math.sin(i * 1.26 + runtime.time) * 88, 11, theme.accent, i);
+      drawEclipseBossFallback(boss, theme);
     }
     ctx.restore();
+  }
+
+  function drawBoilerBossFallback(boss, theme) {
+    ctx.scale(boss.vx < 0 ? -1 : 1, 1);
+    ctx.fillStyle = theme.ink;
+    ctx.globalAlpha *= 0.32;
+    ctx.beginPath(); ctx.ellipse(8, boss.h * 0.48, boss.w * 0.58, 13, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = theme.ink;
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
+    for (let i = -1; i <= 1; i += 1) {
+      const y = i * 27;
+      ctx.beginPath(); ctx.moveTo(-39, y); ctx.lineTo(-67, y + 10); ctx.lineTo(-82, y + 28); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(39, y); ctx.lineTo(68, y + 9); ctx.lineTo(82, y + 27); ctx.stroke();
+      ctx.fillStyle = theme.edge;
+      ctx.beginPath(); ctx.arc(-67, y + 10, 5, 0, Math.PI * 2); ctx.arc(68, y + 9, 5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.ellipse(0, 0, boss.w * 0.56, boss.h * 0.54, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ground;
+    ctx.beginPath(); ctx.ellipse(-7, -1, boss.w * 0.46, boss.h * 0.43, -0.05, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.accent;
+    ctx.beginPath(); ctx.ellipse(-18, -5, boss.w * 0.32, boss.h * 0.36, -0.12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ink;
+    ctx.globalAlpha = 0.28;
+    ctx.beginPath(); ctx.ellipse(-24, 7, boss.w * 0.22, boss.h * 0.22, -0.12, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = theme.ink;
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(1, -46); ctx.lineTo(1, 45); ctx.stroke();
+    for (let i = -1; i <= 1; i += 1) {
+      ctx.fillStyle = theme.paper;
+      ctx.beginPath(); ctx.arc(-25, i * 23, 4.2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.strokeStyle = theme.accent2;
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.arc(18, 2, 27, -1.25, 1.28); ctx.stroke();
+    ctx.fillStyle = boss.vulnerable > 0 ? theme.edge : theme.danger;
+    ctx.beginPath(); ctx.arc(17, 3, 19 + (boss.vulnerable > 0 ? Math.sin(runtime.time * 8) * 3 : 0), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.paper;
+    ctx.beginPath(); ctx.arc(12, -3, 6, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.moveTo(-45, -28); ctx.lineTo(-84, -58); ctx.lineTo(-61, -7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = theme.edge;
+    ctx.beginPath(); ctx.moveTo(-48, 18); ctx.lineTo(-88, 43); ctx.lineTo(-54, 49); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = theme.paper;
+    for (let i = 0; i < 7; i += 1) {
+      const angle = i / 7 * Math.PI * 2;
+      ctx.beginPath(); ctx.arc(Math.cos(angle) * 49, Math.sin(angle) * 39, 3.2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawEclipseBossFallback(boss, theme) {
+    const pulse = 1 + Math.sin(runtime.time * 4) * 0.045;
+    ctx.scale(pulse, pulse);
+    ctx.save();
+    ctx.rotate(runtime.time * 0.28);
+    ctx.strokeStyle = theme.edge;
+    ctx.lineWidth = 7;
+    ctx.globalAlpha = 0.74;
+    ctx.beginPath(); ctx.ellipse(0, 0, boss.w * 0.78, boss.h * 0.48, -0.25, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = theme.accent2;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(0, 0, boss.w * 0.61, boss.h * 0.64, 0.52, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 6; i += 1) {
+      const angle = i / 6 * Math.PI * 2;
+      ctx.save();
+      ctx.translate(Math.cos(angle) * boss.w * 0.75, Math.sin(angle) * boss.h * 0.47);
+      ctx.rotate(-runtime.time * 0.28 - angle);
+      paperPolygon([[-10, 0], [0, -16], [10, 0], [0, 16]], i % 2 ? theme.edge : theme.accent2, theme.ink, 2);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.ellipse(0, 0, boss.w * 0.54, boss.h * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = theme.ground;
+    ctx.lineWidth = 11;
+    ctx.beginPath(); ctx.arc(0, 0, boss.w * 0.43, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = theme.edge;
+    ctx.lineWidth = 6;
+    ctx.globalAlpha = 0.72;
+    ctx.beginPath(); ctx.arc(0, 0, boss.w * 0.34, -1.1, 1.85); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, boss.w * 0.34, 2.05, 4.9); ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    const coreColor = boss.vulnerable > 0 ? theme.edge : theme.accent2;
+    paperPolygon([[0, -42], [31, -2], [22, 37], [0, 50], [-22, 37], [-31, -2]], coreColor, theme.ink, 5);
+    ctx.fillStyle = theme.paper;
+    ctx.beginPath(); ctx.ellipse(-13, -12, 6, 11, 0.25, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(13, -12, 6, 11, -0.25, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.arc(-11, -10, 2.6, 0, Math.PI * 2); ctx.arc(11, -10, 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = theme.paper;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.42;
+    ctx.beginPath(); ctx.arc(0, 10, 16, 0.15, Math.PI - 0.15); ctx.stroke();
   }
 
   function drawValve(valve, theme) {
@@ -1934,13 +3122,31 @@
     ctx.globalAlpha = clamp(particle.life / particle.maxLife, 0, 1);
     ctx.translate(particle.x, particle.y);
     ctx.rotate(particle.life * 7);
-    ctx.fillStyle = particle.color;
     if (particle.shape === "leaf") {
+      ctx.fillStyle = currentLevel?.theme?.ink || "#071c27";
+      ctx.beginPath(); ctx.ellipse(1.5, 1.5, particle.size + 1, particle.size * 0.42 + 1, 0.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = particle.color;
       ctx.beginPath(); ctx.ellipse(0, 0, particle.size, particle.size * 0.38, 0.4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = currentLevel?.theme?.paper || "#f4edda";
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha *= 0.55;
+      ctx.beginPath(); ctx.moveTo(-particle.size * 0.65, particle.size * 0.18); ctx.lineTo(particle.size * 0.62, -particle.size * 0.17); ctx.stroke();
     } else if (particle.shape === "dash") {
-      ctx.fillRect(-particle.size * 2, -1.5, particle.size * 4, 3);
+      ctx.fillStyle = particle.color;
+      paperPolygon([[-particle.size * 2.4, -1], [particle.size * 2.1, -2.8], [particle.size * 2.5, 0], [particle.size * 2.1, 2.8], [-particle.size * 2.4, 1]], particle.color, null);
+    } else if (particle.shape === "shard") {
+      paperPolygon([[0, -particle.size], [particle.size * 0.48, 0], [0, particle.size], [-particle.size * 0.38, 0]], particle.color, currentLevel?.theme?.ink, 1.5);
+    } else if (particle.shape === "star") {
+      drawStarShape(0, 0, particle.size, particle.color, null, 5);
     } else {
+      const ink = currentLevel?.theme?.ink || "#071c27";
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.arc(1.5, 1.5, particle.size + 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = particle.color;
       ctx.beginPath(); ctx.arc(0, 0, particle.size, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = currentLevel?.theme?.paper || "#f4edda";
+      ctx.globalAlpha *= 0.45;
+      ctx.beginPath(); ctx.arc(-particle.size * 0.28, -particle.size * 0.28, Math.max(1, particle.size * 0.24), 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }
@@ -2022,7 +3228,18 @@
   }
 
   function drawOrb(x, y, radius, color, core) {
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = radius * 1.8; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = core; ctx.beginPath(); ctx.arc(x - radius * 0.22, y - radius * 0.22, radius * 0.34, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.16;
+    ctx.beginPath(); ctx.arc(x, y, radius * 1.52, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.38;
+    ctx.beginPath(); ctx.arc(x + radius * 0.16, y + radius * 0.18, radius * 1.08, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = core;
+    ctx.beginPath(); ctx.arc(x - radius * 0.24, y - radius * 0.26, radius * 0.34, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function drawLeaf(x, y, size, color, rotation) {
@@ -2052,6 +3269,10 @@
     requestAnimationFrame(loop);
   }
 
+  function preloadArtAssets() {
+    Object.keys(DEFAULT_ART_ASSETS).forEach((name) => artImage(name));
+  }
+
   function init() {
     syncCanvasViewport();
     $("#mute-icon").textContent = muted ? "静音" : "声音";
@@ -2060,6 +3281,10 @@
     const params = new URLSearchParams(location.search);
     const requested = Number(params.get("level"));
     if (requested >= 1 && requested <= 8) startLevel(requested, params.get("autostart") === "1" || params.get("capture") === "1");
+    artImage("hero");
+    artImage("paper");
+    if ("requestIdleCallback" in window) window.requestIdleCallback(preloadArtAssets, { timeout: 1200 });
+    else setTimeout(preloadArtAssets, 180);
     requestAnimationFrame(loop);
   }
 

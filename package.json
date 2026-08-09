@@ -17,7 +17,7 @@
     "dist:desktop": "electron-builder --win portable",
     "dist:installer": "electron-builder --win nsis",
     "dist:windows": "electron-builder --win portable nsis",
-    "test": "npm run build && node --test tests/game-data.test.mjs tests/game-ui.test.mjs",
+    "test": "npm run build && node --test tests/game-data.test.mjs tests/game-ui.test.mjs tests/game-art.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },
