@@ -1,6 +1,6 @@
 {
   "name": "starsprout-rift-run",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "description": "纸雕风横版闯关游戏《星芽跃界》的在线版与 Windows 桌面版",
   "main": "electron/main.cjs",
