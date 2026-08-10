@@ -866,6 +866,7 @@ kbd {
 .touch-controls {
   --touch-move-size: 4.2rem;
   --touch-action-size: 4.2rem;
+  --touch-shoot-size: 4.2rem;
   --touch-jump-size: 5.3rem;
   --touch-dash-size: 3.7rem;
   --touch-gap: 0.6rem;
@@ -926,6 +927,8 @@ kbd {
 }
 
 .touch-actions .touch-shoot {
+  width: var(--touch-shoot-size);
+  height: var(--touch-shoot-size);
   border-color: var(--sky);
   background: color-mix(in srgb, var(--sky) 22%, var(--ink));
 }
@@ -1267,14 +1270,15 @@ kbd {
 
   .touch-controls {
     --touch-move-size: 4rem;
-    --touch-action-size: 3rem;
-    --touch-jump-size: 4.15rem;
-    --touch-dash-size: 3rem;
-    --touch-gap: 0.55rem;
-    right: max(0.6rem, var(--safe-right));
-    bottom: max(0.8rem, calc(0.35rem + var(--safe-bottom)));
-    left: max(0.6rem, var(--safe-left));
-    min-height: 7.6rem;
+    --touch-action-size: 3.25rem;
+    --touch-shoot-size: 3.25rem;
+    --touch-jump-size: 4.25rem;
+    --touch-dash-size: 3.25rem;
+    --touch-gap: 0.75rem;
+    right: calc(0.75rem + var(--safe-right));
+    bottom: calc(0.75rem + var(--safe-bottom));
+    left: calc(0.75rem + var(--safe-left));
+    min-height: 8.25rem;
   }
 
   .touch-move {
@@ -1284,9 +1288,9 @@ kbd {
   .touch-actions {
     position: relative;
     display: block;
-    flex: 0 0 9.25rem;
-    width: 9.25rem;
-    height: 7.6rem;
+    flex: 0 0 8.25rem;
+    width: 8.25rem;
+    height: 8.25rem;
   }
 
   .touch-actions button {
@@ -1301,7 +1305,7 @@ kbd {
 
   .touch-actions .touch-down {
     top: 0;
-    left: 3rem;
+    left: 0;
   }
 
   .touch-actions .touch-shoot {
