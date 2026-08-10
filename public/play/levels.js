@@ -1141,7 +1141,7 @@
       nameEn: "ECLIPSE OBSERVATORY",
       subtitle: "把黑日的光还给星海",
       briefing: {
-        kicker: "FINAL BOSS · ECLIPSE",
+        kicker: "BOSS 02 · ECLIPSE",
         title: "蚀影观测者",
         subtitle: "把黑日的光还给星海",
         mechanic: "旋转左右星镜，让观测者的光束反射回黑日护盾。",
@@ -1298,6 +1298,570 @@
           defeatEffect: "restore-constellation"
         }
       }
+    },
+
+    {
+      id: 9,
+      key: "stormbell-tower",
+      act: 3,
+      kind: "stage",
+      name: "暴雨铜钟塔",
+      nameEn: "STORMBELL TOWER",
+      subtitle: "踏响雷簧，跃过雨墙",
+      briefing: {
+        kicker: "STAGE 09 · STORMBELL",
+        title: "暴雨铜钟塔",
+        subtitle: "踏响雷簧，跃过雨墙",
+        mechanic: "踩上雷簧线圈会被弹向高塔；在最高点调整方向，接住下一座铜钟台。",
+        hint: "亮起的线圈代表弹射力度，收集三枚雷光火种才能唤醒塔顶大钟。"
+      },
+      theme: {
+        id: "stormbell-tower",
+        palette: {
+          skyTop: "#14283B",
+          skyBottom: "#617D89",
+          ink: "#07151F",
+          paper: "#EFE7D7",
+          ground: "#3C4C55",
+          groundDark: "#1C2A32",
+          platform: "#A36D45",
+          accent: "#F3C94F",
+          accent2: "#65DCE5",
+          danger: "#E45B58",
+          fog: "#8297A0"
+        },
+        material: "rain-darkened-copper",
+        ambient: { type: "slant-rain-bell-sparks", count: 42, speed: 1.08 },
+        landmark: {
+          type: "storm-bell-spire",
+          x: 3480,
+          y: 92,
+          scale: 1.58,
+          accent: "#F3C94F"
+        }
+      },
+      worldWidth: 4600,
+      worldHeight: WORLD_HEIGHT,
+      killY: 800,
+      camera: { mode: "follow", deadZoneX: 0.35, lookAhead: 145 },
+      spawn: { x: 88, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4425,
+        y: 486,
+        w: 96,
+        h: 134,
+        requires: { type: "collect", itemType: "lumen-spore", count: 3, label: "雷光火种" }
+      },
+      platforms: [
+        platform("lg-ground-01", 0, 620, 640, 100, { material: "rain-copper-stone" }),
+        platform("lg-training-step", 245, 505, 175, 24, { kind: "one-way", material: "bell-brass" }),
+        platform("lg-spring-01", 465, 570, 155, 28, { kind: "spring", material: "thunder-coil", bounceY: -760 }),
+        platform("lg-canopy-01", 735, 475, 185, 26, { kind: "one-way", material: "bell-brass" }),
+        platform("lg-ground-02", 920, 620, 390, 100, { material: "rain-copper-stone" }),
+        platform("lg-spring-02", 1095, 570, 165, 28, { kind: "spring", material: "thunder-coil", bounceY: -840 }),
+        platform("lg-canopy-02", 1275, 398, 180, 26, { kind: "one-way", material: "bell-brass" }),
+        platform("lg-drifting-leaf-01", 1490, 478, 165, 22, {
+          kind: "moving",
+          material: "hanging-bell",
+          motion: { axis: "y", distance: 68, speed: 0.72, phase: 0.2 }
+        }),
+        platform("lg-ground-03", 1680, 620, 520, 100, { material: "rain-copper-stone" }),
+        platform("lg-root-ledge-01", 1760, 485, 180, 24, { kind: "one-way", material: "copper-rib" }),
+        platform("lg-spring-03", 2040, 570, 150, 28, { kind: "spring", material: "thunder-coil", bounceY: -820 }),
+        platform("lg-high-cap-01", 2205, 340, 175, 26, { kind: "one-way", material: "bell-brass" }),
+        platform("lg-ground-04", 2400, 620, 460, 100, { material: "rain-copper-stone" }),
+        platform("lg-tunnel-ledge-01", 2490, 505, 170, 24, { kind: "one-way", material: "copper-rib" }),
+        platform("lg-tunnel-ledge-02", 2690, 420, 160, 24, { kind: "one-way", material: "copper-rib" }),
+        platform("lg-spring-04", 2795, 570, 150, 28, { kind: "spring", material: "thunder-coil", bounceY: -805 }),
+        platform("lg-drifting-leaf-02", 3000, 430, 170, 22, {
+          kind: "moving",
+          material: "hanging-bell",
+          motion: { axis: "x", distance: 105, speed: 0.84, phase: 0.58 }
+        }),
+        platform("lg-ground-05", 3200, 620, 500, 100, { material: "rain-copper-stone" }),
+        platform("lg-spring-05", 3370, 570, 160, 28, { kind: "spring", material: "thunder-coil", bounceY: -860 }),
+        platform("lg-canopy-03", 3540, 388, 180, 26, { kind: "one-way", material: "bell-brass" }),
+        platform("lg-cap-bridge", 3790, 475, 175, 26, { kind: "one-way", material: "bell-brass" }),
+        platform("lg-ground-06", 3990, 620, 610, 100, { material: "rain-copper-stone" }),
+        platform("lg-finish-step", 4230, 505, 185, 24, { kind: "one-way", material: "bell-brass" })
+      ],
+      hazards: [
+        hazard("lg-pit-01", "fall", 640, 650, 280, 70, { damage: 99 }),
+        hazard("lg-thorn-01", "electric-coil", 1010, 592, 72, 28),
+        hazard("lg-pit-02", "fall", 1310, 650, 370, 70, { damage: 99 }),
+        hazard("lg-stalactite-01", "stalactite", 1840, 245, 72, 135),
+        hazard("lg-thorn-02", "electric-coil", 1935, 592, 78, 28),
+        hazard("lg-pit-03", "fall", 2200, 650, 200, 70, { damage: 99 }),
+        hazard("lg-thorn-03", "electric-coil", 2545, 592, 84, 28),
+        hazard("lg-stalactite-02", "stalactite", 2695, 215, 74, 130),
+        hazard("lg-pit-04", "fall", 2860, 650, 340, 70, { damage: 99 }),
+        hazard("lg-thorn-04", "electric-coil", 3250, 592, 76, 28),
+        hazard("lg-pit-05", "fall", 3700, 650, 290, 70, { damage: 99 }),
+        hazard("lg-thorn-05", "electric-coil", 4100, 592, 82, 28)
+      ],
+      enemies: [
+        enemy("lg-enemy-01", "steam-tick", 970, 566, 940, 1230, { hp: 2, speed: 52 }),
+        enemy("lg-enemy-02", "propeller-wasp", 1410, 345, 1280, 1610, { hp: 2, yBob: 54, speed: 62 }),
+        enemy("lg-enemy-03", "echo-bat", 1830, 350, 1710, 2100, { hp: 2, yBob: 44, speed: 78 }),
+        enemy("lg-enemy-04", "steam-tick", 2460, 566, 2430, 2760, { hp: 2, speed: 58 }),
+        enemy("lg-enemy-05", "propeller-wasp", 3040, 350, 2910, 3160, { hp: 2, yBob: 60, speed: 68 }),
+        enemy("lg-enemy-06", "echo-bat", 3610, 305, 3470, 3890, { hp: 3, yBob: 48, speed: 86 }),
+        enemy("lg-enemy-07", "steam-tick", 4140, 566, 4040, 4380, { hp: 3, speed: 66 })
+      ],
+      collectibles: [
+        collectible("lg-seed-01", "memory-seed", 310, 450),
+        collectible("lg-seed-02", "memory-seed", 820, 420),
+        collectible("lg-spore-01", "lumen-spore", 1345, 338, { quest: true, order: 1, label: "雷光火种", badge: "雷" }),
+        collectible("lg-wings", "parcel-wings", 1820, 430, { duration: 9 }),
+        collectible("lg-seed-03", "memory-seed", 2260, 285),
+        collectible("lg-heart-01", "heart", 2505, 455),
+        collectible("lg-spore-02", "lumen-spore", 2735, 365, { quest: true, order: 2, label: "雷光火种", badge: "雷" }),
+        collectible("lg-seed-04", "memory-seed", 3075, 372),
+        collectible("lg-spore-03", "lumen-spore", 3605, 328, { quest: true, order: 3, label: "雷光火种", badge: "雷" }),
+        collectible("lg-seed-05", "memory-seed", 3850, 420),
+        collectible("lg-seed-06", "memory-seed", 4290, 450)
+      ],
+      checkpoints: [
+        checkpoint("lg-check-01", 1715, 528, 1735, 536),
+        checkpoint("lg-check-02", 3235, 528, 3255, 536)
+      ],
+      mechanics: {
+        type: "storm-spring",
+        springs: [
+          { platform: "lg-spring-01", bounceY: -760 },
+          { platform: "lg-spring-02", bounceY: -840 },
+          { platform: "lg-spring-03", bounceY: -820 },
+          { platform: "lg-spring-04", bounceY: -805 },
+          { platform: "lg-spring-05", bounceY: -860 }
+        ],
+        springGrace: 0.12
+      },
+      boss: null
+    },
+
+    {
+      id: 10,
+      key: "dreamfold-library",
+      act: 3,
+      kind: "stage",
+      name: "折纸梦境图书馆",
+      nameEn: "DREAMFOLD LIBRARY",
+      subtitle: "在灯相与墨相之间续写阶梯",
+      briefing: {
+        kicker: "STAGE 10 · DREAMFOLD",
+        title: "折纸梦境图书馆",
+        subtitle: "在灯相与墨相之间续写阶梯",
+        mechanic: "脉冲击打翻页灯可切换灯相与墨相，只有对应纹样的折纸书页能够承重。",
+        hint: "白色书脊永远不会折叠，先站稳再换相，并收齐三枚时页碎片。"
+      },
+      theme: {
+        id: "dreamfold-library",
+        palette: {
+          skyTop: "#272044",
+          skyBottom: "#8F6DA6",
+          ink: "#120D25",
+          paper: "#F4E9D4",
+          ground: "#54466F",
+          groundDark: "#2B2546",
+          platform: "#C7A878",
+          accent: "#FFD56E",
+          accent2: "#79D5D8",
+          danger: "#D55472",
+          fog: "#A38FAE"
+        },
+        material: "folded-archive-paper",
+        ambient: { type: "floating-pages-ink", count: 36, speed: 0.38 },
+        landmark: {
+          type: "folded-dream-library",
+          x: 3560,
+          y: 86,
+          scale: 1.52,
+          accent: "#FFD56E"
+        }
+      },
+      worldWidth: 4700,
+      worldHeight: WORLD_HEIGHT,
+      killY: 800,
+      camera: { mode: "follow", deadZoneX: 0.35, lookAhead: 140 },
+      spawn: { x: 88, y: 536, facing: 1 },
+      goal: {
+        type: "storybook-gate",
+        x: 4525,
+        y: 472,
+        w: 100,
+        h: 148,
+        requires: { type: "collect", itemType: "time-shard", count: 3, label: "时页碎片" }
+      },
+      platforms: [
+        platform("sh-ground-01", 0, 620, 650, 100, { material: "archive-shelves" }),
+        platform("sh-neutral-01", 350, 500, 185, 24, { kind: "one-way", material: "fixed-book-spine" }),
+        platform("sh-sun-01", 690, 500, 180, 24, { kind: "polarity", polarity: "sun", material: "lamp-fold" }),
+        platform("sh-moon-01", 910, 435, 180, 24, { kind: "polarity", polarity: "moon", material: "ink-fold" }),
+        platform("sh-ground-02", 1160, 620, 520, 100, { material: "archive-shelves" }),
+        platform("sh-neutral-02", 1280, 480, 170, 24, { kind: "one-way", material: "fixed-book-spine" }),
+        platform("sh-sun-02", 1590, 405, 175, 24, { kind: "polarity", polarity: "sun", material: "lamp-fold" }),
+        platform("sh-moon-02", 1810, 505, 175, 24, { kind: "polarity", polarity: "moon", material: "ink-fold" }),
+        platform("sh-neutral-03", 2015, 455, 155, 24, { kind: "one-way", material: "fixed-book-spine" }),
+        platform("sh-ground-03", 2170, 620, 420, 100, { material: "archive-shelves" }),
+        platform("sh-neutral-04", 2260, 480, 170, 24, { kind: "one-way", material: "fixed-book-spine" }),
+        platform("sh-sun-03", 2600, 510, 175, 24, { kind: "polarity", polarity: "sun", material: "lamp-fold" }),
+        platform("sh-moon-03", 2825, 435, 175, 24, { kind: "polarity", polarity: "moon", material: "ink-fold" }),
+        platform("sh-sun-04", 3040, 325, 165, 24, { kind: "polarity", polarity: "sun", material: "lamp-fold" }),
+        platform("sh-ground-04", 3220, 620, 500, 100, { material: "archive-shelves" }),
+        platform("sh-neutral-05", 3370, 485, 175, 24, { kind: "one-way", material: "fixed-book-spine" }),
+        platform("sh-moon-04", 3690, 475, 175, 24, { kind: "polarity", polarity: "moon", material: "ink-fold" }),
+        platform("sh-drifter", 3890, 395, 165, 22, {
+          kind: "moving",
+          material: "fixed-book-spine",
+          motion: { axis: "y", distance: 82, speed: 0.7, phase: 0.35 }
+        }),
+        platform("sh-sun-05", 4100, 480, 175, 24, { kind: "polarity", polarity: "sun", material: "lamp-fold" }),
+        platform("sh-ground-05", 4300, 620, 400, 100, { material: "archive-shelves" }),
+        platform("sh-finish-step", 4380, 505, 175, 24, { kind: "one-way", material: "fixed-book-spine" })
+      ],
+      hazards: [
+        hazard("sh-pit-01", "fall", 650, 650, 510, 70, { damage: 99 }),
+        hazard("sh-spike-01", "crystal-spike", 1210, 590, 78, 30),
+        hazard("sh-pit-02", "star-void", 1680, 650, 490, 70, { damage: 99 }),
+        hazard("sh-spike-02", "crystal-spike", 2330, 590, 82, 30),
+        hazard("sh-pit-03", "fall", 2590, 650, 630, 70, { damage: 99 }),
+        hazard("sh-star-01", "falling-star", 2955, 236, 42, 42, { phase: 0.4 }),
+        hazard("sh-spike-03", "crystal-spike", 3470, 590, 80, 30),
+        hazard("sh-pit-04", "star-void", 3720, 650, 580, 70, { damage: 99 }),
+        hazard("sh-star-02", "falling-star", 3980, 285, 44, 44, { phase: 1.1 }),
+        hazard("sh-spike-04", "crystal-spike", 4350, 590, 74, 30)
+      ],
+      enemies: [
+        enemy("sh-enemy-01", "shard-crawler", 1210, 566, 1180, 1510, { hp: 2, speed: 48 }),
+        enemy("sh-enemy-02", "orbit-eye", 1730, 330, 1600, 2020, { hp: 2, yBob: 42, speed: 76 }),
+        enemy("sh-enemy-03", "shadow-sprout", 2220, 566, 2190, 2510, { hp: 2, speed: 62 }),
+        enemy("sh-enemy-04", "orbit-eye", 2860, 300, 2700, 3110, { hp: 3, yBob: 48, speed: 86 }),
+        enemy("sh-enemy-05", "shard-crawler", 3280, 566, 3250, 3610, { hp: 3, speed: 58 }),
+        enemy("sh-enemy-06", "shadow-sprout", 4370, 566, 4330, 4590, { hp: 3, speed: 72 })
+      ],
+      collectibles: [
+        collectible("sh-seed-01", "memory-seed", 385, 445),
+        collectible("sh-shard-01", "time-shard", 990, 380, { quest: true, order: 1, polarity: "moon", label: "时页碎片", badge: "页" }),
+        collectible("sh-seed-02", "memory-seed", 1340, 425),
+        collectible("sh-star-charge", "star-charge", 2035, 400, { charges: 2 }),
+        collectible("sh-seed-03", "memory-seed", 2310, 425),
+        collectible("sh-shard-02", "time-shard", 2875, 375, { quest: true, order: 2, polarity: "moon", label: "时页碎片", badge: "页" }),
+        collectible("sh-heart-01", "heart", 3420, 430),
+        collectible("sh-seed-04", "memory-seed", 3745, 420),
+        collectible("sh-shard-03", "time-shard", 4145, 425, { quest: true, order: 3, polarity: "sun", label: "时页碎片", badge: "页" }),
+        collectible("sh-seed-05", "memory-seed", 4430, 450)
+      ],
+      checkpoints: [
+        checkpoint("sh-check-01", 1210, 528, 1230, 536),
+        checkpoint("sh-check-02", 3270, 528, 3290, 536)
+      ],
+      mechanics: {
+        type: "polarity",
+        polarity: { initial: "sun", values: ["sun", "moon"], grace: 0.5 },
+        switches: [
+          { id: "sh-dial-01", x: 515, y: 460, w: 54, h: 70, mode: "toggle-polarity" },
+          { id: "sh-dial-02", x: 1395, y: 410, w: 54, h: 70, mode: "toggle-polarity" },
+          { id: "sh-dial-03", x: 2365, y: 410, w: 54, h: 70, mode: "toggle-polarity" },
+          { id: "sh-dial-04", x: 3460, y: 415, w: 54, h: 70, mode: "toggle-polarity" },
+          { id: "sh-dial-05", x: 4410, y: 435, w: 54, h: 70, mode: "toggle-polarity" }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 11,
+      key: "aurora-crystal-garden",
+      act: 3,
+      kind: "stage",
+      name: "极光冰晶花园",
+      nameEn: "AURORA CRYSTAL GARDEN",
+      subtitle: "点亮热塔，让花园重新解冻",
+      briefing: {
+        kicker: "STAGE 11 · AURORA",
+        title: "极光冰晶花园",
+        subtitle: "点亮热塔，让花园重新解冻",
+        mechanic: "击亮热能灯塔后冰门只会融开数秒；沿暖流带和冰叶台冲到另一侧。",
+        hint: "热塔熄灭后可以再次充能，收集三枚暖光电池才能唤醒极光花冠。"
+      },
+      theme: {
+        id: "aurora-crystal-garden",
+        palette: {
+          skyTop: "#17304B",
+          skyBottom: "#8BC5C9",
+          ink: "#071827",
+          paper: "#EDF4E7",
+          ground: "#436A77",
+          groundDark: "#203B4D",
+          platform: "#88BFC3",
+          accent: "#F5D46A",
+          accent2: "#8FE7D2",
+          danger: "#D95D76",
+          fog: "#B5D7D3"
+        },
+        material: "aurora-ice-crystal",
+        ambient: { type: "aurora-snow-petals", count: 38, speed: 0.52 },
+        landmark: {
+          type: "aurora-crystal-bloom",
+          x: 3820,
+          y: 72,
+          scale: 1.65,
+          accent: "#F5D46A"
+        }
+      },
+      worldWidth: 4900,
+      worldHeight: WORLD_HEIGHT,
+      killY: 790,
+      camera: { mode: "follow", deadZoneX: 0.34, lookAhead: 165 },
+      spawn: { x: 88, y: 536, facing: 1 },
+      goal: {
+        type: "aurora-flower-gate",
+        x: 4720,
+        y: 445,
+        w: 112,
+        h: 175,
+        requires: { type: "collect", itemType: "storm-cell", count: 3, label: "暖光电池" }
+      },
+      platforms: [
+        platform("ta-ground-01", 0, 620, 750, 100, { material: "glacier-crystal" }),
+        platform("ta-conveyor-01", 360, 505, 250, 28, { kind: "conveyor", material: "thermal-ribbon", conveyor: { speed: 105 } }),
+        platform("ta-hook-01", 790, 470, 170, 24, {
+          kind: "moving",
+          material: "ice-leaf",
+          motion: { axis: "y", distance: 85, speed: 0.82, phase: 0.15 }
+        }),
+        platform("ta-ground-02", 1010, 620, 500, 100, { material: "glacier-crystal" }),
+        platform("ta-relay-deck-01", 1110, 470, 180, 24, { kind: "one-way", material: "heat-beacon-glass" }),
+        platform("ta-ground-03", 1560, 620, 590, 100, { material: "glacier-crystal" }),
+        platform("ta-conveyor-02", 1710, 500, 270, 28, { kind: "conveyor", material: "thermal-ribbon", conveyor: { speed: -115 } }),
+        platform("ta-hook-02", 2200, 430, 175, 24, {
+          kind: "moving",
+          material: "ice-leaf",
+          motion: { axis: "x", distance: 105, speed: 0.9, phase: 0.48 }
+        }),
+        platform("ta-ground-04", 2410, 620, 650, 100, { material: "glacier-crystal" }),
+        platform("ta-relay-deck-02", 2510, 455, 180, 24, { kind: "one-way", material: "heat-beacon-glass" }),
+        platform("ta-lift-01", 2825, 390, 165, 24, {
+          kind: "moving",
+          material: "crystal-stem",
+          motion: { axis: "y", distance: 120, speed: 0.88, phase: 0.72 }
+        }),
+        platform("ta-ground-05", 3110, 620, 690, 100, { material: "glacier-crystal" }),
+        platform("ta-conveyor-03", 3260, 500, 280, 28, { kind: "conveyor", material: "thermal-ribbon", conveyor: { speed: 130 } }),
+        platform("ta-relay-deck-03", 3480, 390, 175, 24, { kind: "one-way", material: "heat-beacon-glass" }),
+        platform("ta-hook-03", 3870, 455, 175, 24, {
+          kind: "moving",
+          material: "ice-leaf",
+          motion: { axis: "x", distance: 120, speed: 1.02, phase: 0.25 }
+        }),
+        platform("ta-ground-06", 4100, 620, 800, 100, { material: "glacier-crystal" }),
+        platform("ta-finish-step", 4480, 500, 190, 24, { kind: "one-way", material: "heat-beacon-glass" })
+      ],
+      hazards: [
+        hazard("ta-electric-01", "crystal-spike", 635, 582, 92, 38),
+        hazard("ta-pit-01", "fall", 750, 650, 260, 70, { damage: 99 }),
+        hazard("ta-electric-02", "crystal-spike", 1320, 582, 108, 38),
+        hazard("ta-pit-02", "fall", 2150, 650, 260, 70, { damage: 99 }),
+        hazard("ta-electric-03", "crystal-spike", 2720, 582, 92, 38),
+        hazard("ta-electric-04", "crystal-spike", 2950, 582, 84, 38),
+        hazard("ta-pit-03", "fall", 3800, 650, 300, 70, { damage: 99 }),
+        hazard("ta-electric-05", "crystal-spike", 4210, 582, 105, 38),
+        hazard("ta-electric-06", "crystal-spike", 4560, 582, 90, 38)
+      ],
+      enemies: [
+        enemy("ta-enemy-01", "cargo-bot", 1060, 566, 1030, 1430, { hp: 2, speed: 58 }),
+        enemy("ta-enemy-02", "propeller-wasp", 1800, 355, 1650, 2070, { hp: 2, yBob: 45, speed: 92 }),
+        enemy("ta-enemy-03", "storm-cannon", 2500, 552, 2500, 2500, { hp: 3, speed: 0 }),
+        enemy("ta-enemy-04", "cargo-bot", 3170, 566, 3140, 3460, { hp: 3, speed: 68 }),
+        enemy("ta-enemy-05", "propeller-wasp", 3510, 315, 3380, 3730, { hp: 3, yBob: 48, speed: 102 }),
+        enemy("ta-enemy-06", "storm-cannon", 4170, 552, 4170, 4170, { hp: 3, speed: 0 }),
+        enemy("ta-enemy-07", "cargo-bot", 4520, 566, 4400, 4680, { hp: 3, speed: 74 })
+      ],
+      collectibles: [
+        collectible("ta-seed-01", "memory-seed", 285, 450),
+        collectible("ta-seed-02", "memory-seed", 870, 410),
+        collectible("ta-cell-01", "storm-cell", 1521, 550, { quest: true, order: 1, label: "暖光电池", badge: "暖" }),
+        collectible("ta-heart-01", "heart", 1910, 445),
+        collectible("ta-clock", "clock-spring", 2570, 395, { duration: 9 }),
+        collectible("ta-seed-03", "memory-seed", 2870, 330),
+        collectible("ta-cell-02", "storm-cell", 3071, 550, { quest: true, order: 2, label: "暖光电池", badge: "暖" }),
+        collectible("ta-seed-04", "memory-seed", 3520, 335),
+        collectible("ta-star", "star-charge", 3950, 390, { charges: 2 }),
+        collectible("ta-cell-03", "storm-cell", 3811, 550, { quest: true, order: 3, label: "暖光电池", badge: "暖" }),
+        collectible("ta-seed-05", "memory-seed", 4540, 445)
+      ],
+      checkpoints: [
+        checkpoint("ta-check-01", 1600, 528, 1620, 536),
+        checkpoint("ta-check-02", 3150, 528, 3170, 536),
+        checkpoint("ta-check-03", 4140, 528, 4160, 536)
+      ],
+      mechanics: {
+        type: "thermal-relay",
+        switches: [
+          { id: "ta-relay-a", x: 535, y: 440, w: 54, h: 62, mode: "timed", duration: 8.5 },
+          { id: "ta-relay-b", x: 1900, y: 430, w: 54, h: 62, mode: "timed", duration: 8 },
+          { id: "ta-relay-c", x: 3380, y: 430, w: 54, h: 62, mode: "timed", duration: 7.5 }
+        ],
+        gates: [
+          { id: "ta-gate-a", x: 1510, y: 350, w: 48, h: 270, openBy: "ta-relay-a" },
+          { id: "ta-gate-b", x: 3060, y: 340, w: 48, h: 280, openBy: "ta-relay-b" },
+          { id: "ta-gate-c", x: 3800, y: 350, w: 48, h: 270, openBy: "ta-relay-c" }
+        ],
+        relayWarning: { flashAt: 2.2, soundAt: 1.2 }
+      },
+      boss: null
+    },
+
+    {
+      id: 12,
+      key: "riftweave-sanctum",
+      act: 3,
+      kind: "boss",
+      finale: true,
+      name: "裂界织殿",
+      nameEn: "RIFTWEAVE SANCTUM",
+      subtitle: "让断裂的星线重新相连",
+      briefing: {
+        kicker: "BOSS 03 · WEAVE",
+        title: "裂界织母",
+        subtitle: "让断裂的星线重新相连",
+        mechanic: "借菌伞跃上相位平台，限时击亮继电器；织母落地时集中攻击纺星核心。",
+        hint: "三个阶段分别需要一、二、三个继电器同时发光，最后阶段要先切换日月相位。"
+      },
+      theme: {
+        id: "riftweave-sanctum",
+        palette: {
+          skyTop: "#11162E",
+          skyBottom: "#67446F",
+          ink: "#050817",
+          paper: "#F0E7D6",
+          ground: "#2E304C",
+          groundDark: "#14172A",
+          platform: "#746989",
+          accent: "#FFD45C",
+          accent2: "#73E1DC",
+          danger: "#EC5268",
+          fog: "#504B6A"
+        },
+        material: "woven-star-brass",
+        ambient: { type: "rift-threads", count: 46, speed: 0.72 },
+        landmark: {
+          type: "cosmic-loom-palace",
+          x: 2240,
+          y: 62,
+          scale: 1.74,
+          accent: "#FFD45C"
+        }
+      },
+      worldWidth: 3500,
+      worldHeight: WORLD_HEIGHT,
+      killY: 790,
+      camera: { mode: "boss-lock", deadZoneX: 0.42, lookAhead: 85 },
+      spawn: { x: 88, y: 536, facing: 1 },
+      goal: {
+        type: "rift-core",
+        x: 3280,
+        y: 435,
+        w: 120,
+        h: 185,
+        requires: "boss-defeated"
+      },
+      platforms: [
+        platform("rw-ground-entry", 0, 620, 720, 100, { material: "woven-stone" }),
+        platform("rw-entry-step", 280, 500, 185, 24, { kind: "one-way", material: "star-thread" }),
+        platform("rw-entry-bridge", 720, 555, 330, 65, { material: "woven-star-brass" }),
+        platform("rw-arena-floor", 1050, 620, 2100, 100, { material: "woven-stone" }),
+        platform("rw-spring-left", 1175, 570, 165, 28, { kind: "spring", material: "lumen-fungus", bounceY: -810 }),
+        platform("rw-sun-left", 1420, 420, 185, 24, { kind: "polarity", polarity: "sun", material: "sun-glass" }),
+        platform("rw-moon-left", 1640, 325, 175, 24, { kind: "polarity", polarity: "moon", material: "moon-glass" }),
+        platform("rw-core-dais", 1940, 500, 340, 28, { kind: "one-way", material: "loom-brass" }),
+        platform("rw-sun-right", 2390, 345, 180, 24, { kind: "polarity", polarity: "sun", material: "sun-glass" }),
+        platform("rw-moon-right", 2605, 445, 180, 24, { kind: "polarity", polarity: "moon", material: "moon-glass" }),
+        platform("rw-spring-right", 2830, 570, 165, 28, { kind: "spring", material: "lumen-fungus", bounceY: -810 }),
+        platform("rw-ground-exit", 3150, 620, 350, 100, { material: "woven-stone" }),
+        platform("rw-core-step", 3240, 500, 185, 24, { kind: "one-way", material: "star-thread" })
+      ],
+      hazards: [
+        hazard("rw-void-entry", "star-void", 720, 655, 330, 65, { damage: 99 }),
+        hazard("rw-electric-left", "electric-coil", 1350, 582, 105, 38),
+        hazard("rw-rift-left", "void-rift", 1815, 586, 112, 34),
+        hazard("rw-rift-right", "void-rift", 2295, 586, 112, 34),
+        hazard("rw-electric-right", "electric-coil", 2735, 582, 88, 38),
+        hazard("rw-star-01", "falling-star", 1515, 168, 44, 44, { phase: 0.2 }),
+        hazard("rw-star-02", "falling-star", 2540, 148, 44, 44, { phase: 1.1 })
+      ],
+      enemies: [
+        enemy("rw-minion-01", "propeller-wasp", 1510, 300, 1320, 1800, { hp: 2, yBob: 44, speed: 92, spawnOnBossPhase: 2 }),
+        enemy("rw-minion-02", "shadow-sprout", 1850, 566, 1640, 2050, { hp: 2, speed: 72, spawnOnBossPhase: 2 }),
+        enemy("rw-minion-03", "orbit-eye", 2550, 270, 2320, 2820, { hp: 3, yBob: 50, speed: 104, spawnOnBossPhase: 3 }),
+        enemy("rw-minion-04", "storm-cannon", 2960, 552, 2960, 2960, { hp: 3, speed: 0, spawnOnBossPhase: 3 })
+      ],
+      collectibles: [
+        collectible("rw-seed-01", "memory-seed", 350, 445),
+        collectible("rw-heart-entry", "heart", 920, 500),
+        collectible("rw-star-01", "star-charge", 1485, 365, { charges: 2 }),
+        collectible("rw-heart-phase-03", "heart", 2680, 390, { spawnOnBossPhase: 3 }),
+        collectible("rw-core", "rift-core-seed", 2110, 455, { quest: true, spawnOnBossDefeat: true })
+      ],
+      checkpoints: [checkpoint("rw-check-01", 970, 478, 995, 536)],
+      mechanics: {
+        type: "rift-weaver",
+        arenaTrigger: { x: 1050, lockLeft: 1050, lockRight: 3150 },
+        polarity: { initial: "sun", values: ["sun", "moon"], grace: 0.18 },
+        springs: [
+          { platform: "rw-spring-left", bounceY: -810 },
+          { platform: "rw-spring-right", bounceY: -810 }
+        ],
+        switches: [
+          { id: "rw-phase-dial", x: 2085, y: 430, w: 54, h: 70, mode: "toggle-polarity", role: "polarity" },
+          { id: "rw-relay-a", x: 1260, y: 315, w: 54, h: 68, mode: "timed", role: "boss-relay", duration: 12 },
+          { id: "rw-relay-b", x: 2460, y: 275, w: 54, h: 68, mode: "timed", role: "boss-relay", duration: 12, polarity: "sun" },
+          { id: "rw-relay-c", x: 2665, y: 375, w: 54, h: 68, mode: "timed", role: "boss-relay", duration: 12, polarity: "moon" }
+        ],
+        bossRelay: {
+          requiredByPhase: {
+            1: ["rw-relay-a"],
+            2: ["rw-relay-a", "rw-relay-b"],
+            3: ["rw-relay-a", "rw-relay-b", "rw-relay-c"]
+          },
+          exposedTime: 3.5,
+          hitsPerExposure: 2,
+          resetOnExposure: true
+        },
+        defeatRecipe: ["bounce-to-relays", "match-sun-moon-platforms", "activate-required-relays", "attack-exposed-core"]
+      },
+      boss: {
+        id: "rift-weaver",
+        archetype: "rift-weaver",
+        name: "裂界织母 · 纺星核心",
+        hp: 6,
+        maxHealth: 6,
+        arena: { x: 1050, y: 180, w: 2100, h: 440 },
+        spawn: { x: 2140, y: 255 },
+        body: { w: 176, h: 154 },
+        weakPoint: {
+          type: "spun-star-core",
+          offsetX: 0,
+          offsetY: 8,
+          vulnerableState: "relay-stunned",
+          damagePerHit: 1,
+          hitsPerExposure: 2,
+          exposedTime: 3.5
+        },
+        phases: [
+          { atHealth: 6, name: "牵丝", requiredRelayCount: 1, requiredRelays: ["rw-relay-a"], attack: "thread-fan", attackCooldown: 2.25 },
+          { atHealth: 4, name: "双相", requiredRelayCount: 2, requiredRelays: ["rw-relay-a", "rw-relay-b"], attack: "phase-needles", attackCooldown: 1.85 },
+          { atHealth: 2, name: "裂织", requiredRelayCount: 3, requiredRelays: ["rw-relay-a", "rw-relay-b", "rw-relay-c"], attack: "storm-loom", attackCooldown: 1.35 }
+        ],
+        mechanism: {
+          shielded: true,
+          exposeBy: "timed-relays",
+          relayConfig: "bossRelay",
+          resetRelaysOnExposure: true,
+          defeatEffect: "rewoven-rift"
+        }
+      }
     }
   ];
 
@@ -1324,7 +1888,7 @@
   }
 
   window.StarSproutLevels = {
-    version: 2,
+    version: 3,
     schema: {
       coordinateSystem: "1280x720 logical canvas; x grows right, y grows down",
       level: [
@@ -1352,7 +1916,9 @@
         "boss"
       ],
       entityRect: "x, y, w, h use world pixels; platform y is its top edge",
-      bossLevels: [4, 8]
+      goalRequirement: "requires may be a legacy string or { type: 'collect', itemType, count, label }",
+      act3Mechanics: ["spring/bounceY", "polarity/sun-moon", "timed relay", "rift-weaver"],
+      bossLevels: levels.filter(function (level) { return level.kind === "boss" || level.boss; }).map(function (level) { return level.id; })
     },
     levels: levels,
     list: levels,

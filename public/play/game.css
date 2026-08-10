@@ -164,7 +164,7 @@ button:active {
 }
 
 .brand-block::after {
-  content: "FIELD PASS / 08";
+  content: "FIELD PASS / 12";
   position: absolute;
   right: 0.1rem;
   bottom: -0.9rem;
@@ -338,7 +338,7 @@ button:active {
 }
 
 .panel-heading::after {
-  content: "01  ·  02  ·  03  ·  ◆  ·  05  ·  06  ·  07  ·  ◆";
+  content: "01 · 02 · 03 · ◆ · 05 · 06 · 07 · ◆ · 09 · 10 · 11 · ◆";
   position: absolute;
   right: 6.8rem;
   bottom: -0.52rem;
@@ -437,8 +437,7 @@ button:active {
   opacity: 0.72;
 }
 
-.level-card[data-level="4"],
-.level-card[data-level="8"] {
+.level-card.is-boss {
   border-top-color: var(--coral);
   background:
     linear-gradient(105deg, rgba(240, 93, 78, 0.18), transparent 56%),
@@ -1042,6 +1041,14 @@ kbd {
 
   .panel-heading h2 {
     font-size: clamp(2.35rem, 9vh, 3.35rem);
+  }
+
+  .level-card {
+    min-height: 7.1rem;
+  }
+
+  .level-card .card-number {
+    margin-bottom: 0.8rem;
   }
 
   .guide-layout {

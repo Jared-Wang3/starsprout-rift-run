@@ -8,6 +8,9 @@
     collectibles: { src: "./assets/art-v2/collectibles.png", cols: 4, rows: 2 },
     environmentsA: { src: "./assets/art-v2/environments-a.webp", cols: 2, rows: 2 },
     environmentsB: { src: "./assets/art-v2/environments-b.webp", cols: 2, rows: 2 },
+    environmentsC: { src: "./assets/art-v3/environments-c.webp", cols: 2, rows: 2 },
+    bossWeaver: { src: "./assets/art-v3/boss-weaver.png", cols: 4, rows: 2 },
+    act3Collectibles: { src: "./assets/art-v3/act3-collectibles.png", cols: 2, rows: 2 },
   };
 
   const heroFrames = {
@@ -48,6 +51,7 @@
     "orbit-eye": { sheet: "enemiesB", col: 1, row: 1 },
     "shadow-sprout": { sheet: "enemiesB", col: 2, row: 1 },
     "eclipse-core-drone": { sheet: "enemiesB", col: 3, row: 1 },
+    "storm-cannon": { sheet: "enemiesB", col: 3, row: 1 },
   };
 
   const bossFrames = {
@@ -59,6 +63,14 @@
     eclipseBeamCharge: { sheet: "boss", col: 1, row: 1 },
     eclipseShieldBreak: { sheet: "boss", col: 2, row: 1 },
     eclipseCoreExposed: { sheet: "boss", col: 3, row: 1 },
+    weaverIdle: { sheet: "bossWeaver", col: 0, row: 0 },
+    weaverThreadCharge: { sheet: "bossWeaver", col: 1, row: 0 },
+    weaverThreadDash: { sheet: "bossWeaver", col: 2, row: 0 },
+    weaverCocoon: { sheet: "bossWeaver", col: 3, row: 0 },
+    weaverBeam: { sheet: "bossWeaver", col: 0, row: 1 },
+    weaverStunned: { sheet: "bossWeaver", col: 1, row: 1 },
+    weaverCoreOpen: { sheet: "bossWeaver", col: 2, row: 1 },
+    weaverDefeated: { sheet: "bossWeaver", col: 3, row: 1 },
   };
 
   const collectibleFrames = {
@@ -78,11 +90,17 @@
     "forge-seal": { sheet: "collectibles", col: 2, row: 1 },
     "star-charge": { sheet: "collectibles", col: 2, row: 1 },
     "world-core-seed": { sheet: "collectibles", col: 3, row: 1 },
+    "lumen-spore": { sheet: "act3Collectibles", col: 0, row: 0 },
+    "thunder-spark": { sheet: "act3Collectibles", col: 0, row: 0 },
+    "time-shard": { sheet: "act3Collectibles", col: 1, row: 0 },
+    "storm-cell": { sheet: "act3Collectibles", col: 0, row: 1 },
+    "rift-core-seed": { sheet: "act3Collectibles", col: 1, row: 1 },
   };
 
   const environmentAtlases = {
     environmentsA: { asset: "environmentsA", cols: 2, rows: 2, levels: [1, 2, 3, 4] },
     environmentsB: { asset: "environmentsB", cols: 2, rows: 2, levels: [5, 6, 7, 8] },
+    environmentsC: { asset: "environmentsC", cols: 2, rows: 2, levels: [9, 10, 11, 12] },
   };
 
   const levelBackgroundFrames = {
@@ -94,10 +112,14 @@
     6: { sheet: "environmentsB", col: 1, row: 0 },
     7: { sheet: "environmentsB", col: 0, row: 1 },
     8: { sheet: "environmentsB", col: 1, row: 1 },
+    9: { sheet: "environmentsC", col: 0, row: 0 },
+    10: { sheet: "environmentsC", col: 1, row: 0 },
+    11: { sheet: "environmentsC", col: 0, row: 1 },
+    12: { sheet: "environmentsC", col: 1, row: 1 },
   };
 
   window.StarSproutArt = Object.freeze({
-    version: "2.0.0",
+    version: "3.0.0",
     assets,
     heroFrames,
     enemyFrames,

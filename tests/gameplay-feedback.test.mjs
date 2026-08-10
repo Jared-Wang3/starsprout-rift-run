@@ -82,7 +82,7 @@ function createFakeElement(id = "", context = createNoopCanvasContext()) {
   };
 }
 
-async function loadGameQaHook() {
+async function loadGameQaHook(options = {}) {
   const [levelsSource, gameSource] = await Promise.all([
     readProjectFile("public/play/levels.js"),
     readProjectFile("public/play/game.js"),
@@ -94,6 +94,9 @@ async function loadGameQaHook() {
     return elements.get(id);
   };
   const storage = new Map();
+  if (options.save !== undefined) {
+    storage.set("starsprout-save-v2", JSON.stringify(options.save));
+  }
   const document = {
     hidden: false,
     fullscreenElement: null,
@@ -120,7 +123,7 @@ async function loadGameQaHook() {
     URLSearchParams,
     structuredClone,
     performance: { now: () => 0 },
-    location: { search: "" },
+    location: { search: options.locationSearch || "" },
     localStorage: {
       getItem: (key) => storage.get(key) ?? null,
       setItem: (key, value) => storage.set(key, String(value)),
@@ -142,11 +145,16 @@ async function loadGameQaHook() {
     filename: "public/play/levels.js",
     timeout: 1_000,
   });
+  options.mutateLevels?.(browserGlobal.StarSproutLevels);
   vm.runInContext(gameSource, context, {
     filename: "public/play/game.js",
     timeout: 3_000,
   });
   assert.ok(browserGlobal.__STARSPROUT_TEST__, "game.js must expose the existing QA hook");
+  Object.defineProperties(browserGlobal.__STARSPROUT_TEST__, {
+    __elements: { value: elements },
+    __storage: { value: storage },
+  });
   return browserGlobal.__STARSPROUT_TEST__;
 }
 
@@ -250,6 +258,287 @@ test("level normalization preserves goal type and requirement metadata", async (
       `normalizeLevel() drops goal.${field}; goal gameplay metadata must survive normalization`,
     );
   }
+});
+
+test("campaign limits drive unlock-all and direct stage 12 URLs", async () => {
+  const qa = await loadGameQaHook();
+  qa.unlockAll();
+
+  assert.equal(qa.snapshot().unlocked, 12, "unlockAll() must use the campaign maximum, not a literal 8");
+  const grid = qa.__elements.get("level-grid").innerHTML;
+  const cardIds = Array.from(grid.matchAll(/\bdata-level=["'](\d+)["']/g), (match) => Number(match[1]));
+  assert.deepEqual(cardIds, Array.from({ length: 12 }, (_, index) => index + 1));
+
+  const direct = await loadGameQaHook({ locationSearch: "?level=12&autostart=1" });
+  assert.equal(direct.snapshot().level, 12, "?level=12 must open the new final stage");
+  assert.equal(direct.snapshot().scene, "playing");
+});
+
+test("an old completed-eight save migrates forward without losing progress", async () => {
+  const completed = Array.from({ length: 8 }, (_, index) => index + 1);
+  const qa = await loadGameQaHook({
+    save: {
+      unlocked: 8,
+      completed,
+      seeds: 17,
+      collectedSeeds: ["1:w-seed-01", "8:e-seed-01"],
+      deaths: 4,
+      muted: true,
+    },
+  });
+  const snapshot = qa.snapshot();
+
+  assert.equal(snapshot.unlocked, 9, "players who cleared the old finale must receive stage 9");
+  assert.deepEqual(Array.from(snapshot.completed), completed);
+  assert.equal(snapshot.seeds, 17);
+  assert.equal(qa.__elements.get("continue-label").textContent, "继续第 9 关");
+});
+
+test("stage 8 completes its act while only stage 12 completes the campaign", async () => {
+  const makeReachable = (id, finale) => (bundle) => {
+    const level = bundle.get(id);
+    level.kind = "stage";
+    level.boss = null;
+    level.finale = finale;
+    delete level.isBoss;
+    level.hazards = [];
+    level.enemies = [];
+    level.goal = { x: 220, y: 470, w: 100, h: 160, requires: "reach" };
+  };
+
+  const qa8 = await loadGameQaHook({
+    save: { unlocked: 8, completed: [1, 2, 3, 4, 5, 6, 7] },
+    mutateLevels: makeReachable(8, false),
+  });
+  qa8.startLevel(8);
+  qa8.teleport(230, 500);
+  qa8.step(1);
+  assert.equal(qa8.snapshot().scene, "complete", "stage 8 must use the ordinary act-complete screen");
+  assert.equal(qa8.snapshot().unlocked, 9, "clearing stage 8 must unlock stage 9");
+
+  const qa12 = await loadGameQaHook({
+    save: { unlocked: 12, completed: Array.from({ length: 11 }, (_, index) => index + 1) },
+    mutateLevels: makeReachable(12, true),
+  });
+  qa12.startLevel(12);
+  qa12.teleport(230, 500);
+  qa12.step(1);
+  assert.equal(qa12.snapshot().scene, "victory", "only the campaign's final stage should open the victory screen");
+  assert.match(qa12.__elements.get("victory-stats").textContent, /^12\s*\/\s*12\s*关/);
+});
+
+test("unknown goal requirements fail closed instead of silently opening the exit", async () => {
+  const qa = await loadGameQaHook({
+    mutateLevels(bundle) {
+      const level = bundle.get(1);
+      level.goal = {
+        x: 220,
+        y: 470,
+        w: 100,
+        h: 160,
+        requires: { type: "misspelled-requirement", label: "broken fixture" },
+      };
+      level.hazards = [];
+      level.enemies = [];
+    },
+  });
+  qa.startLevel(1);
+  qa.teleport(230, 500);
+  qa.step(1);
+
+  assert.equal(qa.snapshot().scene, "playing", "an unsupported requirement must keep the goal locked");
+  assert.equal(qa.snapshot().goalReady, false);
+});
+
+test("object collection goals remain locked until all three act 3 quest items are collected", async () => {
+  const levels = await loadLevels();
+  const level = levels.find((entry) => entry.id === 9);
+  const questItems = level.collectibles.filter((item) => item.type === "lumen-spore");
+  const qa = await loadGameQaHook();
+  qa.startLevel(9);
+
+  qa.teleport(level.goal.x, level.goal.y);
+  qa.step(1);
+  assert.equal(qa.snapshot().scene, "playing", "the exit must be locked before collecting lumen spores");
+  assert.equal(qa.snapshot().goalReady, false);
+
+  for (const item of questItems) {
+    qa.teleport(item.x, item.y);
+    qa.step(1);
+  }
+  assert.match(qa.snapshot().pickupStatus, /3\s*\/\s*3/, "HUD must keep the completed quest count visible");
+  assert.equal(qa.snapshot().goalReady, true);
+
+  qa.teleport(level.goal.x, level.goal.y);
+  qa.step(1);
+  assert.equal(qa.snapshot().scene, "complete");
+});
+
+test("crossed checkpoints do not retrigger after a later checkpoint becomes active", async () => {
+  const levels = await loadLevels();
+  const level9 = levels.find((entry) => entry.id === 9);
+  const [firstCheckpoint, secondCheckpoint] = level9.checkpoints;
+  assert.ok(firstCheckpoint && secondCheckpoint, "stage 9 needs two checkpoints for this regression");
+
+  const qa = await loadGameQaHook({
+    mutateLevels(bundle) {
+      const level = bundle.get(9);
+      level.platforms = [{ id: "qa-ground", x: 0, y: 620, w: level.worldWidth, h: 100 }];
+      level.hazards = [];
+      level.enemies = [];
+      level.collectibles = [];
+    },
+  });
+  qa.startLevel(9);
+
+  qa.teleport(firstCheckpoint.x + 10, 500);
+  qa.step(1);
+  const toast = qa.__elements.get("toast");
+  assert.equal(toast.classList.contains("is-visible"), true, "the first checkpoint should announce once");
+  qa.step(100);
+  assert.equal(toast.classList.contains("is-visible"), false, "the first checkpoint must not announce again while crossed");
+
+  qa.teleport(secondCheckpoint.x + 10, 500);
+  qa.step(1);
+  assert.equal(toast.classList.contains("is-visible"), true, "the second checkpoint should announce once");
+  qa.step(100);
+  assert.equal(
+    toast.classList.contains("is-visible"),
+    false,
+    "crossing checkpoint two must not reactivate checkpoint one every frame",
+  );
+  const checkpointState = qa.snapshot().checkpoints;
+  const firstState = checkpointState.find((point) => point.id === firstCheckpoint.id);
+  const secondState = checkpointState.find((point) => point.id === secondCheckpoint.id);
+  assert.equal(firstState.reached, true);
+  assert.equal(firstState.active, false, "the earlier checkpoint must stay reached without becoming active again");
+  assert.equal(secondState.reached, true);
+  assert.equal(secondState.active, true, "the latest checkpoint must remain the active respawn point");
+
+  qa.teleport(secondCheckpoint.x + 100, 2_000);
+  qa.step(1);
+  assert.equal(qa.snapshot().player.x, secondCheckpoint.respawn.x, "respawn should remain at the latest checkpoint");
+});
+
+test("spring, polarity, and timed-relay metadata survive normalization and drive play", async () => {
+  const levels = await loadLevels();
+
+  const level9 = levels.find((entry) => entry.id === 9);
+  const springData = level9.platforms.find((platform) => Number(platform.bounceY) < 0);
+  const qa9 = await loadGameQaHook();
+  qa9.startLevel(9);
+  const springRuntime = qa9.snapshot().platforms.find((platform) => platform.id === springData.id);
+  assert.equal(springRuntime.bounceY, springData.bounceY, "makeRuntime() must retain platform.bounceY");
+  assert.equal(springRuntime.enabled, true);
+  qa9.teleport(springData.x + springData.w / 2 - 18, springData.y - 62);
+  qa9.step(10);
+  assert.ok(qa9.snapshot().player.vy < -100, `landing on a spring must launch upward; vy=${qa9.snapshot().player.vy}`);
+
+  const level10 = levels.find((entry) => entry.id === 10);
+  const toggle = level10.mechanics.switches.find((device) => device.mode === "toggle-polarity");
+  const qa10 = await loadGameQaHook();
+  qa10.startLevel(10);
+  const beforePolarity = qa10.snapshot();
+  assert.equal(beforePolarity.polarity, level10.mechanics.polarity.initial);
+  const polarPlatformsBefore = beforePolarity.platforms.filter((platform) => platform.polarity);
+  assert.ok(polarPlatformsBefore.some((platform) => platform.enabled));
+  assert.ok(polarPlatformsBefore.some((platform) => !platform.enabled));
+  qa10.teleport(toggle.x - 90, toggle.y - 18);
+  qa10.press("shoot");
+  qa10.step(1);
+  qa10.release("shoot");
+  qa10.step(30);
+  const afterPolarity = qa10.snapshot();
+  assert.notEqual(afterPolarity.polarity, beforePolarity.polarity, "shooting the toggle must swap sun/moon polarity");
+  for (const platform of afterPolarity.platforms.filter((entry) => entry.polarity)) {
+    assert.equal(platform.enabled, platform.polarity === afterPolarity.polarity,
+      `${platform.id} enabled state must follow the live polarity`);
+  }
+
+  const level11 = levels.find((entry) => entry.id === 11);
+  const relayData = level11.mechanics.switches.find((device) => Number(device.duration) > 0);
+  const qa11 = await loadGameQaHook();
+  qa11.startLevel(11);
+  qa11.teleport(relayData.x - 90, relayData.y - 18);
+  qa11.press("shoot");
+  qa11.step(1);
+  qa11.release("shoot");
+  qa11.step(12);
+  const activeRelay = qa11.snapshot().switches.find((device) => device.id === relayData.id);
+  assert.equal(activeRelay.active, true, "shooting a timed relay must activate it");
+  assert.ok(activeRelay.timer > 0 && activeRelay.timer <= relayData.duration);
+  qa11.step(Math.ceil(relayData.duration * 60) + 5);
+  const expiredRelay = qa11.snapshot().switches.find((device) => device.id === relayData.id);
+  assert.equal(expiredRelay.active, false, "timed relay must turn off after its duration");
+  assert.equal(expiredRelay.timer, 0);
+});
+
+test("stage 12 preserves max health and dispatches an explicit third boss archetype", async () => {
+  const [source, qa] = await Promise.all([
+    readProjectFile("public/play/game.js"),
+    loadGameQaHook(),
+  ]);
+  qa.startLevel(12);
+  const snapshot = qa.snapshot();
+
+  assert.equal(snapshot.boss.maxHp, 6, "runtime boss health must come from level boss maxHealth/hp data");
+  assert.equal(snapshot.boss.archetype, "rift-weaver");
+  assert.equal(snapshot.boss.phase, 1);
+
+  const weaverHandler = declaredFunctions(source).find(({ name, body }) =>
+    /(?:storm|kite|weaver)/i.test(name)
+      && /requiredRelays|relay/i.test(body)
+      && /vulnerable/i.test(body),
+  );
+  assert.ok(weaverHandler, "stage 12 needs a dedicated rift-weaver boss update handler");
+  assert.match(weaverHandler.body, /boss\.phase|phaseConfig|currentPhase/,
+    `${weaverHandler.name}() must vary its relay requirement by boss phase`);
+
+  const updateBoss = namedFunction(source, "updateBoss");
+  assert.match(updateBoss, /archetype|rift-weaver/,
+    "updateBoss() must dispatch by archetype instead of treating every non-stage-4 boss as eclipse");
+});
+
+test("rift-weaver relays cannot be preloaded for a future phase or during core exposure", async () => {
+  const levels = await loadLevels();
+  const level12 = levels.find((entry) => entry.id === 12);
+  const relays = level12.mechanics.switches.filter((device) => device.role === "boss-relay");
+  const [relayA, relayB] = relays;
+  assert.ok(relayA && relayB, "stage 12 needs current- and future-phase relay fixtures");
+
+  const qa = await loadGameQaHook();
+  qa.startLevel(12);
+  qa.enterBossArena();
+
+  qa.teleport(relayB.x - 90, relayB.y - 18);
+  qa.press("shoot");
+  qa.step(1);
+  qa.release("shoot");
+  qa.step(20);
+  assert.equal(
+    qa.snapshot().switches.find((device) => device.id === relayB.id).active,
+    false,
+    "phase 1 must reject a phase 2 relay instead of carrying it across the health threshold",
+  );
+
+  qa.teleport(relayA.x - 90, relayA.y - 18);
+  qa.press("shoot");
+  qa.step(1);
+  qa.release("shoot");
+  qa.step(20);
+  assert.ok(qa.snapshot().boss.vulnerable > 0, "the phase 1 relay should expose the core");
+  assert.equal(qa.snapshot().switches.find((device) => device.id === relayA.id).active, false,
+    "the relay that opened the core should reset immediately");
+
+  qa.press("shoot");
+  qa.step(1);
+  qa.release("shoot");
+  qa.step(12);
+  assert.equal(
+    qa.snapshot().switches.find((device) => device.id === relayA.id).active,
+    false,
+    "a relay must not be re-armed while the core is already exposed",
+  );
 });
 
 test("touch direction taps are buffered and pointer-capture failures cannot swallow presses", async () => {

@@ -23,6 +23,9 @@
     collectibles: { src: "./assets/art-v2/collectibles.png", cols: 4, rows: 2 },
     environmentsA: { src: "./assets/art-v2/environments-a.webp", cols: 2, rows: 2, gutter: 0 },
     environmentsB: { src: "./assets/art-v2/environments-b.webp", cols: 2, rows: 2, gutter: 0 },
+    environmentsC: { src: "./assets/art-v3/environments-c.webp", cols: 2, rows: 2, gutter: 0 },
+    bossWeaver: { src: "./assets/art-v3/boss-weaver.png", cols: 4, rows: 2 },
+    act3Collectibles: { src: "./assets/art-v3/act3-collectibles.png", cols: 2, rows: 2 },
   };
   const DEFAULT_HERO_FRAMES = {
     idle: { sheet: "hero", col: 0, row: 0 },
@@ -50,6 +53,7 @@
     "cinder-bat": { sheet: "enemiesB", col: 0, row: 1 },
     "orbit-eye": { sheet: "enemiesB", col: 1, row: 1 },
     "shadow-sprout": { sheet: "enemiesB", col: 2, row: 1 },
+    "storm-cannon": { sheet: "enemiesB", col: 3, row: 1 },
   };
   const DEFAULT_BOSS_FRAMES = {
     boilerNormal: { sheet: "boss", col: 0, row: 0 },
@@ -60,6 +64,14 @@
     eclipseBeamCharge: { sheet: "boss", col: 1, row: 1 },
     eclipseShieldBreak: { sheet: "boss", col: 2, row: 1 },
     eclipseCoreExposed: { sheet: "boss", col: 3, row: 1 },
+    weaverIdle: { sheet: "bossWeaver", col: 0, row: 0 },
+    weaverThreadCharge: { sheet: "bossWeaver", col: 1, row: 0 },
+    weaverThreadDash: { sheet: "bossWeaver", col: 2, row: 0 },
+    weaverCocoon: { sheet: "bossWeaver", col: 3, row: 0 },
+    weaverBeam: { sheet: "bossWeaver", col: 0, row: 1 },
+    weaverStunned: { sheet: "bossWeaver", col: 1, row: 1 },
+    weaverCoreOpen: { sheet: "bossWeaver", col: 2, row: 1 },
+    weaverDefeated: { sheet: "bossWeaver", col: 3, row: 1 },
   };
   const DEFAULT_COLLECTIBLE_FRAMES = {
     "memory-seed": { sheet: "collectibles", col: 0, row: 0 },
@@ -78,6 +90,10 @@
     "forge-seal": { sheet: "collectibles", col: 2, row: 1 },
     "guardian-core": { sheet: "collectibles", col: 3, row: 1 },
     "world-core-seed": { sheet: "collectibles", col: 3, row: 1 },
+    "lumen-spore": { sheet: "act3Collectibles", col: 0, row: 0 },
+    "time-shard": { sheet: "act3Collectibles", col: 1, row: 0 },
+    "storm-cell": { sheet: "act3Collectibles", col: 0, row: 1 },
+    "rift-core-seed": { sheet: "act3Collectibles", col: 1, row: 1 },
   };
   const COLLECTIBLE_EFFECTS = Object.freeze({
     "memory-seed": { label: "记忆种子", badge: "种", mode: "memory", description: "永久计入探索收藏" },
@@ -95,7 +111,11 @@
     "quench-bell": { label: "淬火钟", badge: "钟", mode: "quench", description: "让熔潮大幅退却" },
     "forge-seal": { label: "锻炉印记", badge: "印", mode: "quest", description: "开启锻炉出口" },
     "star-charge": { label: "星能充能", badge: "星", mode: "charges", charges: 2, description: "获得两发强化脉冲" },
-    "world-core-seed": { label: "世界核心种", badge: "界", mode: "boss-core", description: "带走核心并完成最终挑战" },
+    "world-core-seed": { label: "世界核心种", badge: "界", mode: "boss-core", description: "带走核心并完成观测站守门挑战" },
+    "lumen-spore": { label: "雷光火种", badge: "雷", mode: "quest", description: "集齐三枚，解除铜钟塔出口封印" },
+    "time-shard": { label: "时页碎片", badge: "页", mode: "quest", description: "集齐三枚，稳定梦境书库并开启出口" },
+    "storm-cell": { label: "暖光电池", badge: "暖", mode: "quest", description: "集齐三枚，为终点灯塔充满暖光" },
+    "rift-core-seed": { label: "裂界核心种", badge: "织", mode: "boss-core", description: "带走织界核心并完成最终挑战" },
   });
   const PROCEDURAL_COLLECTIBLE_TYPES = new Set([
     "memory-seed", "clock-spring", "tide-rune", "parcel-wings", "quench-bell", "forge-seal",
@@ -109,6 +129,9 @@
     collectibles: ["collectibles", "collectibleSprites", "collectible-sprites"],
     environmentsA: ["environmentsA", "environmentAtlasA", "environment-atlas-a"],
     environmentsB: ["environmentsB", "environmentAtlasB", "environment-atlas-b"],
+    environmentsC: ["environmentsC", "environmentAtlasC", "environment-atlas-c"],
+    bossWeaver: ["bossWeaver", "riftWeaverBoss", "boss-weaver", "boss-weaver-sprites"],
+    act3Collectibles: ["act3Collectibles", "act3-collectibles", "act-three-collectibles"],
   };
   const artImageCache = new Map();
   let paperPattern = null;
@@ -124,6 +147,32 @@
   const deepClone = (value) => JSON.parse(JSON.stringify(value));
   const cssColor = (value, fallback) => typeof value === "string" && value ? value : fallback;
   const pad = (value) => String(value).padStart(2, "0");
+
+  const CAMPAIGN_LEVELS = listLevels()
+    .filter((level) => Number.isFinite(Number(level?.id)))
+    .slice()
+    .sort((a, b) => Number(a.id) - Number(b.id));
+  const CAMPAIGN_LEVEL_IDS = new Set(CAMPAIGN_LEVELS.map((level) => Number(level.id)));
+  const FIRST_LEVEL_ID = Number(CAMPAIGN_LEVELS[0]?.id) || 1;
+  const MAX_LEVEL_ID = Number(CAMPAIGN_LEVELS.at(-1)?.id) || FIRST_LEVEL_ID;
+  const FINAL_LEVEL_ID = Number(
+    CAMPAIGN_LEVELS.slice().reverse().find((level) => level.finale === true || level.isFinal === true)?.id
+      || CAMPAIGN_LEVELS.at(-1)?.id,
+  ) || MAX_LEVEL_ID;
+  const BOSS_LEVEL_IDS = new Set(
+    CAMPAIGN_LEVELS
+      .filter((level) => level.kind === "boss" || level.type === "boss" || Boolean(level.boss))
+      .map((level) => Number(level.id)),
+  );
+
+  function nextCampaignLevelId(id) {
+    const current = Number(id);
+    return Number(CAMPAIGN_LEVELS.find((level) => Number(level.id) > current)?.id) || null;
+  }
+
+  function campaignCompletedCount(completed) {
+    return new Set((completed || []).map(Number).filter((id) => CAMPAIGN_LEVEL_IDS.has(id))).size;
+  }
 
   function artManifest() {
     return window.StarSproutArt || {};
@@ -237,7 +286,6 @@
   let player = null;
   let cameraX = 0;
   let autoCameraX = 0;
-  let elapsed = 0;
   let menuTime = 0;
   let accumulator = 0;
   let previousTime = performance.now();
@@ -280,9 +328,16 @@
       const collectedSeeds = Array.isArray(parsed.collectedSeeds)
         ? [...new Set(parsed.collectedSeeds.filter((key) => typeof key === "string"))]
         : [];
+      const completed = Array.isArray(parsed.completed)
+        ? [...new Set(parsed.completed.map(Number).filter((id) => CAMPAIGN_LEVEL_IDS.has(id)))].sort((a, b) => a - b)
+        : [];
+      let unlocked = clamp(Number(parsed.unlocked) || FIRST_LEVEL_ID, FIRST_LEVEL_ID, MAX_LEVEL_ID);
+      // v2 originally ended at stage 8 and therefore persisted unlocked=8 even
+      // after victory. Preserve that progress while opening the first new act.
+      if (completed.includes(8)) unlocked = Math.max(unlocked, nextCampaignLevelId(8) || unlocked);
       return {
-        unlocked: clamp(Number(parsed.unlocked) || 1, 1, 8),
-        completed: Array.isArray(parsed.completed) ? parsed.completed : [],
+        unlocked,
+        completed,
         // Older v2 saves counted repeat pickups. Preserve that historical total
         // while collectedSeeds prevents any new duplicate farming.
         seeds: Math.max(0, Number(parsed.seeds) || 0, collectedSeeds.length),
@@ -291,7 +346,7 @@
         muted: Boolean(parsed.muted),
       };
     } catch {
-      return { unlocked: 1, completed: [], seeds: 0, collectedSeeds: [], deaths: 0, muted: false };
+      return { unlocked: FIRST_LEVEL_ID, completed: [], seeds: 0, collectedSeeds: [], deaths: 0, muted: false };
     }
   }
 
@@ -351,7 +406,7 @@
       subtitle: raw.briefing?.subtitle || raw.subtitle || raw.tagline || "让星芽穿过新的生态裂界",
       mechanic: raw.briefing?.mechanic || raw.mechanic || raw.hint || mechanics.hint || "观察环境，再决定路线",
       theme: normalizeTheme(raw.theme, id),
-      worldWidth: Math.max(VIEW_W, Number(raw.worldWidth || raw.width) || (id === 4 || id === 8 ? 1600 : 3900)),
+      worldWidth: Math.max(VIEW_W, Number(raw.worldWidth || raw.width) || (BOSS_LEVEL_IDS.has(id) ? 1600 : 3900)),
       worldHeight: Number(raw.worldHeight || raw.height) || VIEW_H,
       spawn: { x: Number(spawn.x) || 96, y: Number(spawn.y) || 480 },
       goal: { ...goal, x: Number(goal.x) || 3400, y: Number(goal.y) || 470, w: Number(goal.w) || 72, h: Number(goal.h) || 130 },
@@ -361,7 +416,7 @@
       collectibles: Array.isArray(raw.collectibles) ? raw.collectibles : [],
       checkpoints: Array.isArray(raw.checkpoints) ? raw.checkpoints : [],
       mechanics,
-      isBoss: Boolean(raw.isBoss || raw.kind === "boss" || raw.boss || id === 4 || id === 8),
+      isBoss: Boolean(raw.isBoss || raw.kind === "boss" || raw.boss || BOSS_LEVEL_IDS.has(id)),
     };
   }
 
@@ -418,10 +473,22 @@
     return merged;
   }
 
+  function polarityValue(value) {
+    const normalized = String(value || "").toLowerCase();
+    return normalized === "sun" || normalized === "moon" ? normalized : null;
+  }
+
   function makeRuntime(level) {
     const devices = mergedDevices(level);
+    const springSpecs = new Map(
+      (Array.isArray(devices.springs) ? devices.springs : [])
+        .filter((spring) => spring?.platform)
+        .map((spring) => [spring.platform, spring]),
+    );
     const platforms = level.platforms.map((platform, index) => {
+      const spring = springSpecs.get(platform.id) || {};
       const p = {
+        ...platform,
         id: platform.id || `p-${index}`,
         x: Number(platform.x) || 0,
         y: Number(platform.y) || 0,
@@ -434,6 +501,8 @@
         fragile: platform.type === "fragile" || platform.kind === "fragile" || Boolean(platform.fragile),
         hidden: platform.type === "hidden" || platform.kind === "hidden" || platform.kind === "resonant" || platform.kind === "temporary" || Boolean(platform.hidden) || Boolean(platform.enabledBy),
         enabledBy: platform.enabledBy || null,
+        polarity: polarityValue(platform.polarity),
+        bounceY: Number(platform.bounceY ?? spring.bounceY) || 0,
         phase: Number(platform.phase) || index * 0.7,
         originX: Number(platform.x) || 0,
         originY: Number(platform.y) || 0,
@@ -505,7 +574,32 @@
       y: Number(point.y) || 500,
       respawn: point.respawn || null,
       active: false,
+      reached: false,
     }));
+
+    const rawSwitches = Array.isArray(devices.switches) ? devices.switches : [];
+    const makeDevice = (device, index, defaults) => ({
+      ...device,
+      id: device.id || `${defaults.prefix}-${index}`,
+      x: Number(device.x) || 0,
+      y: Number(device.y) || 0,
+      w: Number(device.w || device.width) || defaults.w,
+      h: Number(device.h || device.height) || defaults.h,
+      active: false,
+      timer: 0,
+      index,
+    });
+    const polaritySwitches = rawSwitches
+      .filter((device) => device.mode === "toggle-polarity")
+      .map((device, index) => makeDevice(device, index, { prefix: "polarity", w: 54, h: 70 }));
+    const relays = rawSwitches
+      .filter((device) => device.mode === "timed" || device.role === "boss-relay")
+      .map((device, index) => makeDevice(device, index, { prefix: "relay", w: 54, h: 62 }));
+    const switches = rawSwitches
+      .filter((device) => device.mode !== "toggle-polarity" && device.mode !== "timed" && device.role !== "boss-relay")
+      .map((device, index) => makeDevice(device, index, { prefix: "switch", w: 54, h: 54 }));
+    const polarityConfig = devices.polarity && typeof devices.polarity === "object" ? devices.polarity : {};
+    const initialPolarity = polarityValue(polarityConfig.initial) || "sun";
 
     const rt = {
       time: 0,
@@ -526,7 +620,9 @@
       seedTotal: collectibles.filter((item) => item.type === "memory-seed" || item.type === "seed").length,
       goalToastCooldown: 0,
       crystals: (devices.crystals || []).map((d, i) => ({ ...d, w: d.w || 44, h: d.h || 72, active: false, index: i })),
-      switches: (devices.switches || []).map((d, i) => ({ ...d, w: d.w || 54, h: d.h || 54, active: false, index: i })),
+      switches,
+      polaritySwitches,
+      relays,
       gates: (devices.gates || []).map((d, i) => ({ ...d, w: d.w || 42, h: d.h || 250, index: i })),
       valves: (devices.valves || []).map((d, i) => ({ ...d, w: d.w || 54, h: d.h || 76, active: false, timer: 0, index: i })),
       mirrors: (devices.mirrors || []).map((d, i) => ({ ...d, w: d.w || 66, h: d.h || 96, active: false, timer: 0, index: i })),
@@ -534,6 +630,13 @@
       waterY: devices.water?.baseY || 900,
       lavaY: devices.lava?.startY || 900,
       hiddenRevealed: false,
+      polarity: {
+        current: initialPolarity,
+        previous: null,
+        grace: 0,
+        graceDuration: Math.max(0, Number(polarityConfig.grace) || 0.18),
+      },
+      bossRelay: devices.bossRelay && typeof devices.bossRelay === "object" ? deepClone(devices.bossRelay) : {},
       boss: null,
       goalOpen: !level.isBoss,
       completed: false,
@@ -543,7 +646,12 @@
       const bossData = level.boss || {};
       const arena = bossData.arena || { x: 80, y: 180, w: level.worldWidth - 160, h: 430 };
       const body = bossData.body || {};
+      const archetype = bossData.archetype
+        || (bossData.id === "boiler-beetle" || level.mechanics?.type === "coolant-trap" ? "boiler-beetle" : "eclipse-observer");
+      const maxHp = Math.max(1, Number(bossData.maxHealth ?? bossData.hp) || 3);
       rt.boss = {
+        id: bossData.id || `boss-${level.id}`,
+        archetype,
         name: bossData.name || (level.id === 4 ? "沸压甲虫 · 赫克斯" : "日蚀守门者 · 诺克斯"),
         x: Number(bossData.x || bossData.spawn?.x || arena.x + arena.w * 0.7),
         y: Number(bossData.y) || (level.id === 4 ? 458 : Number(bossData.spawn?.y) || 300),
@@ -551,8 +659,8 @@
         h: Number(bossData.h || body.h) || (level.id === 4 ? 118 : 168),
         vx: -80,
         vy: 0,
-        hp: Number(bossData.hp) || 3,
-        maxHp: Number(bossData.hp) || 3,
+        hp: Math.min(maxHp, Math.max(1, Number(bossData.hp) || maxHp)),
+        maxHp,
         state: "watching",
         timer: 1.4,
         vulnerable: 0,
@@ -560,6 +668,10 @@
         arena,
         phase: 1,
         beamTimer: 0,
+        phases: Array.isArray(bossData.phases) ? deepClone(bossData.phases) : [],
+        mechanism: bossData.mechanism && typeof bossData.mechanism === "object" ? deepClone(bossData.mechanism) : {},
+        weakPoint: bossData.weakPoint && typeof bossData.weakPoint === "object" ? deepClone(bossData.weakPoint) : {},
+        exposureHits: 0,
         active: false,
       };
     }
@@ -617,7 +729,7 @@
     cameraX = 0;
     setGameUi(false);
     showOnly("start-screen");
-    $("#continue-label").textContent = save.unlocked > 1 ? `继续第 ${save.unlocked} 关` : "开始远征";
+    $("#continue-label").textContent = save.unlocked > FIRST_LEVEL_ID ? `继续第 ${save.unlocked} 关` : "开始远征";
   }
 
   function openLevels() {
@@ -640,7 +752,6 @@
     player = makePlayer(currentLevel);
     cameraX = clamp(currentLevel.spawn.x - 180, 0, Math.max(0, currentLevel.worldWidth - VIEW_W));
     autoCameraX = cameraX;
-    elapsed = 0;
     shake = 0;
     flash = 0;
     captureReady = false;
@@ -695,7 +806,7 @@
       const level = normalizeLevel(deepClone(entry));
       const unlocked = level.id <= save.unlocked;
       const cleared = save.completed.includes(level.id);
-      return `<button class="level-card" data-level="${level.id}" ${unlocked ? "" : "disabled"} style="--card-bg:${level.theme.mid};--card-accent:${level.theme.edge}">
+      return `<button class="level-card${level.isBoss ? " is-boss" : ""}" data-level="${level.id}" ${unlocked ? "" : "disabled"} style="--card-bg:${level.theme.mid};--card-accent:${level.theme.edge}">
         <span class="card-number">${level.isBoss ? "BOSS" : "STAGE"} ${pad(level.id)} ${cleared ? "· 已修复" : unlocked ? "· 可进入" : "· 未解锁"}</span>
         <strong>${level.name}</strong>
         <small>${level.mechanic}</small>
@@ -706,15 +817,17 @@
   function completeLevel() {
     if (!runtime || runtime.completed) return;
     runtime.completed = true;
-    scene = currentLevel.id === 8 ? "victory" : "complete";
+    const isFinalLevel = currentLevel.id === FINAL_LEVEL_ID;
+    scene = isFinalLevel ? "victory" : "complete";
     setGameUi(false);
     save.completed = [...new Set([...save.completed, currentLevel.id])].sort((a, b) => a - b);
-    save.unlocked = Math.max(save.unlocked, Math.min(8, currentLevel.id + 1));
+    const nextLevelId = nextCampaignLevelId(currentLevel.id);
+    if (nextLevelId) save.unlocked = Math.max(save.unlocked, nextLevelId);
     persist();
     burst(player.x + player.w / 2, player.y + player.h / 2, currentLevel.theme.edge, 42, 420);
     playTone("complete");
-    if (currentLevel.id === 8) {
-      $("#victory-stats").textContent = `${save.completed.length} / 8 关 · ${save.seeds} 枚记忆种子 · ${save.deaths} 次重整`;
+    if (isFinalLevel) {
+      $("#victory-stats").textContent = `${campaignCompletedCount(save.completed)} / ${CAMPAIGN_LEVELS.length} 关 · ${save.seeds} 枚记忆种子 · ${save.deaths} 次重整`;
       showOnly("victory-screen");
     } else {
       $("#complete-title").textContent = `${currentLevel.name} · 修复完成`;
@@ -751,6 +864,10 @@
     }
 
     const requirement = currentLevel.goal?.requires;
+    if (requirement && typeof requirement === "object" && requirement.type === "collect") {
+      const progress = collectRequirementProgress(requirement);
+      parts.push(`${requirement.label || COLLECTIBLE_EFFECTS[requirement.itemType]?.label || "任务物"} ${progress.count}/${progress.required}`);
+    }
     if (requirement === "crystal-crown") parts.push(runtime.inventory.has("crystal-crown") ? "晶冠 ✓" : "任务：寻找晶冠");
     if (requirement === "all-gear-doors") parts.push(`齿轮 ${runtime.switches.filter((device) => device.active).length}/${runtime.switches.length}`);
     if (requirement === "three-tide-runes") {
@@ -761,6 +878,11 @@
     if (currentLevel.isBoss && runtime.boss?.hp <= 0) {
       const core = runtime.collectibles.find((item) => item.spawnOnBossDefeat && !item.collected);
       if (core) parts.push("任务：拾取守门核心");
+    }
+    if (runtime.relays.length > 0 && !currentLevel.isBoss) {
+      const activeRelays = runtime.relays.filter((relay) => relay.active);
+      const countdown = activeRelays.length ? ` · ${Math.ceil(Math.min(...activeRelays.map((relay) => relay.timer)))}秒` : "";
+      parts.push(`继电器 ${activeRelays.length}/${runtime.relays.length}${countdown}`);
     }
 
     const active = Object.entries(runtime.activeEffects)
@@ -798,11 +920,45 @@
     }
   }
 
+  function bossPhaseForHealth(boss) {
+    if (!Array.isArray(boss?.phases) || boss.phases.length === 0) {
+      return Math.max(1, boss?.maxHp - boss?.hp + 1 || 1);
+    }
+    let phase = 1;
+    boss.phases.forEach((entry, index) => {
+      if (boss.hp <= Number(entry.atHealth)) phase = index + 1;
+    });
+    return clamp(phase, 1, boss.phases.length);
+  }
+
+  function weaverRequiredRelayIds(boss = runtime?.boss) {
+    const configured = runtime?.bossRelay?.requiredByPhase?.[boss?.phase];
+    if (Array.isArray(configured) && configured.length) return configured;
+    const phaseData = boss?.phases?.[Math.max(0, Number(boss?.phase) - 1)];
+    if (Array.isArray(phaseData?.requiredRelays) && phaseData.requiredRelays.length) return phaseData.requiredRelays;
+    return runtime?.relays?.filter((relay) => relay.role === "boss-relay").slice(0, Math.max(1, Number(boss?.phase) || 1)).map((relay) => relay.id) || [];
+  }
+
+  function weaverRelayProgress(boss = runtime?.boss) {
+    const ids = weaverRequiredRelayIds(boss);
+    const relays = ids.map((id) => runtime.relays.find((relay) => relay.id === id)).filter(Boolean);
+    const active = relays.filter((relay) => relay.active && relay.timer > 0);
+    const countdown = active.length ? Math.min(...active.map((relay) => relay.timer)) : 0;
+    return { ids, relays, active, countdown, ready: relays.length === ids.length && ids.length > 0 && active.length === ids.length };
+  }
+
   function bossStatus() {
     if (!runtime?.boss) return "";
     const boss = runtime.boss;
+    if (boss.archetype === "rift-weaver") {
+      const hitsPerExposure = Math.max(1, Number(runtime.bossRelay.hitsPerExposure || boss.weakPoint.hitsPerExposure) || 2);
+      if (boss.vulnerable > 0) return `织界核心暴露 · 本轮可命中 ${Math.max(0, hitsPerExposure - boss.exposureHits)} 次`;
+      const relay = weaverRelayProgress(boss);
+      const countdown = relay.countdown > 0 ? ` · ${Math.ceil(relay.countdown)}秒` : "";
+      return `第 ${boss.phase} 相 · 继电器 ${relay.active.length}/${relay.ids.length}${countdown}`;
+    }
     if (boss.vulnerable > 0) return "核心暴露 · 现在攻击！";
-    if (currentLevel.id === 4) {
+    if (boss.archetype === "boiler-beetle") {
       const active = runtime.valves.filter((valve) => valve.active).length;
       return active === runtime.valves.length && active > 0 ? "冷凝喷口已启动 · 引诱冲锋" : `冷却阀 ${active} / ${runtime.valves.length}`;
     }
@@ -1005,7 +1161,11 @@
     if (action === "resume") togglePause(true);
     if (action === "pause") togglePause();
     if (action === "restart" && currentLevel) startLevel(currentLevel.id);
-    if (action === "next") startLevel(Math.min(8, currentLevel.id + 1));
+    if (action === "next") {
+      const nextLevelId = nextCampaignLevelId(currentLevel.id);
+      if (nextLevelId) startLevel(nextLevelId);
+      else openLevels();
+    }
     if (action === "mute") {
       muted = !muted;
       $("#mute-icon").textContent = muted ? "静音" : "声音";
@@ -1031,7 +1191,6 @@
       return;
     }
 
-    elapsed += dt;
     runtime.time += dt;
     updatePlatforms(dt);
     updateDevices(dt);
@@ -1102,6 +1261,15 @@
         if (coolant.respawn <= 0) coolant.active = true;
       }
     });
+    runtime.relays.forEach((relay) => {
+      if (!relay.active) return;
+      relay.timer = Math.max(0, relay.timer - dt);
+      if (relay.timer <= 0) relay.active = false;
+    });
+    if (runtime.polarity.grace > 0) {
+      runtime.polarity.grace = Math.max(0, runtime.polarity.grace - dt);
+      if (runtime.polarity.grace <= 0) runtime.polarity.previous = null;
+    }
     const water = runtime.devices.water;
     if (water) runtime.waterY = water.baseY + Math.sin(runtime.time * (water.speed || 0.7)) * (water.amplitude || 55);
     const lava = runtime.devices.lava;
@@ -1110,17 +1278,27 @@
     }
   }
 
+  function isPlatformActive(platform) {
+    if (platform.brokenTimer > 0) return false;
+    if (platform.hidden && platform.enabledBy && !runtime.enabled[platform.enabledBy] && !effectActive("resonance-orb")) return false;
+    if (platform.hidden && !platform.enabledBy && !(runtime.hiddenRevealed || effectActive("resonance-orb") || runtime.crystals.some((crystal) => crystal.active))) return false;
+    if (platform.polarity) {
+      if (platform.polarity === runtime.polarity.current) return true;
+      return runtime.polarity.grace > 0 && platform.polarity === runtime.polarity.previous;
+    }
+    return true;
+  }
+
   function activePlatforms() {
-    return runtime.platforms.filter((platform) => {
-      if (platform.brokenTimer > 0) return false;
-      if (platform.hidden && platform.enabledBy && !runtime.enabled[platform.enabledBy] && !effectActive("resonance-orb")) return false;
-      if (platform.hidden && !platform.enabledBy && !(runtime.hiddenRevealed || effectActive("resonance-orb") || runtime.crystals.some((crystal) => crystal.active))) return false;
-      return true;
-    });
+    return runtime.platforms.filter(isPlatformActive);
   }
 
   function isGateActive(gate) {
-    if (gate.openBy) return !runtime.switches.find((device) => device.id === gate.openBy)?.active;
+    if (gate.openBy) {
+      const relay = runtime.relays.find((device) => device.id === gate.openBy);
+      if (relay) return !relay.active;
+      return !runtime.switches.find((device) => device.id === gate.openBy)?.active;
+    }
     const index = Number(gate.switchIndex ?? gate.switch ?? gate.index);
     return !runtime.switches[index]?.active;
   }
@@ -1270,12 +1448,22 @@
       if (!overlap(player, solid)) continue;
       if (player.vy >= 0 && previousBottom <= solid.y + Math.max(10, Math.abs(solid.dy || 0) + 5)) {
         player.y = solid.y - player.h;
-        player.vy = 0;
-        player.onGround = true;
-        player.ground = solid;
+        const bounceY = Number(solid.bounceY) || 0;
+        if (bounceY) {
+          player.vy = bounceY < 0 ? bounceY : -bounceY;
+          player.onGround = false;
+          player.ground = null;
+          player.coyote = 0;
+          playTone("jump");
+          burst(player.x + player.w / 2, solid.y, currentLevel.theme.edge, 9, 180);
+        } else {
+          player.vy = 0;
+          player.onGround = true;
+          player.ground = solid;
+        }
         player.downstrike = false;
-        if (solid.conveyor) player.x += solid.conveyor * dt;
-        if (solid.fragile && solid.breakTimer <= 0) solid.breakTimer = 0.55;
+        if (!bounceY && solid.conveyor) player.x += solid.conveyor * dt;
+        if (!bounceY && solid.fragile && solid.breakTimer <= 0) solid.breakTimer = 0.55;
       } else if (player.vy < 0 && player.y >= solid.y + solid.h - 22) {
         player.y = solid.y + solid.h;
         player.vy = 30;
@@ -1379,8 +1567,9 @@
     });
 
     runtime.checkpoints.forEach((point) => {
-      if (!point.active && player.x + player.w > point.x) {
+      if (!point.reached && player.x + player.w > point.x) {
         runtime.checkpoints.forEach((other) => { other.active = false; });
+        point.reached = true;
         point.active = true;
         player.respawnX = Number(point.respawn?.x) || point.x + 30;
         player.respawnY = (Number(point.respawn?.y) || point.y) - player.h;
@@ -1420,15 +1609,37 @@
   function goalRequirementMet() {
     const requirement = currentLevel.goal?.requires;
     if (!requirement || requirement === "reach") return true;
+    if (requirement && typeof requirement === "object") {
+      if (requirement.type === "collect") {
+        const progress = collectRequirementProgress(requirement);
+        return progress.count >= progress.required;
+      }
+      return false;
+    }
     if (requirement === "crystal-crown") return runtime.inventory.has("crystal-crown");
     if (requirement === "all-gear-doors") return runtime.switches.length === 0 || runtime.switches.every((device) => device.active);
     if (requirement === "three-tide-runes") return runtime.collectibles.filter((item) => item.collected && item.type === "tide-rune").length >= 3;
     if (requirement === "forge-seal") return runtime.inventory.has("forge-seal");
-    return true;
+    if (requirement === "boss-defeated") return Boolean(runtime.boss && runtime.boss.hp <= 0);
+    return false;
+  }
+
+  function collectRequirementProgress(requirement) {
+    const itemType = String(requirement?.itemType || requirement?.item || "");
+    const required = Math.max(1, Number(requirement?.count) || 1);
+    const count = runtime.collectibles.filter((item) => item.collected && item.type === itemType).length;
+    return { itemType, required, count };
   }
 
   function goalRequirementHint() {
     const requirement = currentLevel.goal?.requires;
+    if (requirement && typeof requirement === "object") {
+      if (requirement.type === "collect") {
+        const progress = collectRequirementProgress(requirement);
+        return `${requirement.label || COLLECTIBLE_EFFECTS[progress.itemType]?.label || "任务物"}尚未集齐 · ${progress.count}/${progress.required}`;
+      }
+      return "未知的出口条件 · 航线保持封闭";
+    }
     if (requirement === "crystal-crown") return "出口还在沉睡 · 找到晶洞深处的回声晶冠";
     if (requirement === "all-gear-doors") return "温室主轴尚未同步 · 还有齿轮开关未咬合";
     if (requirement === "three-tide-runes") return "潮门需要三枚符文同时共鸣";
@@ -1463,6 +1674,7 @@
     runtime.shockwaves.length = 0;
     runtime.valves.forEach((valve) => { valve.active = false; valve.timer = 0; });
     runtime.mirrors.forEach((mirror) => { mirror.active = false; mirror.timer = 0; });
+    runtime.relays.forEach((relay) => { relay.active = false; relay.timer = 0; });
     if (runtime.boss) {
       runtime.boss.vulnerable = 0;
       runtime.boss.state = "watching";
@@ -1522,6 +1734,57 @@
     return ["turret", "spitter", "cannon", "caster"].some((token) => String(type).includes(token));
   }
 
+  function togglePolarity(device) {
+    const previous = runtime.polarity.current;
+    const configuredValues = Array.isArray(runtime.devices.polarity?.values)
+      ? runtime.devices.polarity.values.map(polarityValue).filter(Boolean)
+      : ["sun", "moon"];
+    const target = polarityValue(device?.polarity || device?.target)
+      || configuredValues.find((value) => value !== previous)
+      || (previous === "sun" ? "moon" : "sun");
+    if (target === previous) return;
+    runtime.polarity.previous = previous;
+    runtime.polarity.current = target;
+    runtime.polarity.grace = runtime.polarity.graceDuration;
+    runtime.polaritySwitches.forEach((entry) => { entry.active = true; });
+    toast(`${target === "sun" ? "灯相" : "墨相"}接管书库 · 旧书台保留片刻`, 1.45);
+    announce(`相位切换为${target === "sun" ? "灯相" : "墨相"}`);
+    playTone("switch");
+  }
+
+  function activateRelay(relay) {
+    if (relay.role === "boss-relay") {
+      const boss = runtime?.boss;
+      const required = boss?.archetype === "rift-weaver" ? weaverRequiredRelayIds(boss) : [];
+      if (!boss?.active || boss.vulnerable > 0 || !required.includes(relay.id)) {
+        toast(boss?.vulnerable > 0 ? "核心已经暴露 · 先集中攻击" : "这枚继电器尚未接入当前相织", 1.15);
+        return false;
+      }
+    }
+    const requiredPolarity = polarityValue(relay.polarity);
+    if (requiredPolarity && requiredPolarity !== runtime.polarity.current) {
+      const label = requiredPolarity === "sun" ? "灯相" : "墨相";
+      toast(`这枚继电器只响应${label} · 先切换相位`, 1.35);
+      return false;
+    }
+    const duration = Math.max(0.5, Number(relay.duration) || 8);
+    relay.active = true;
+    relay.timer = duration;
+    toast(`${relay.role === "boss-relay" ? "织界继电器" : "热能灯塔"} ${relay.index + 1} 已点亮 · ${Math.ceil(duration)} 秒`, 1.4);
+    announce(`限时继电器 ${relay.index + 1} 已启动`);
+    playTone("switch");
+    return true;
+  }
+
+  function bossDefenseHint() {
+    if (runtime?.boss?.archetype === "boiler-beetle") return "装甲弹开了脉冲——先开冷却阀，再诱导冲锋";
+    if (runtime?.boss?.archetype === "rift-weaver") {
+      const relay = weaverRelayProgress(runtime.boss);
+      return `织网偏转了脉冲——同时点亮本相的 ${relay.ids.length} 个继电器`;
+    }
+    return "暗核吞掉了脉冲——让两面日光镜同时共鸣";
+  }
+
   function updateProjectiles(dt) {
     const projectiles = runtime.projectiles;
     projectiles.forEach((projectile) => {
@@ -1564,6 +1827,20 @@
         }
       });
 
+      runtime.polaritySwitches.forEach((device) => {
+        if (overlap(projectile, device)) {
+          togglePolarity(device);
+          consumed = true;
+        }
+      });
+
+      runtime.relays.forEach((relay) => {
+        if (overlap(projectile, relay)) {
+          activateRelay(relay);
+          consumed = true;
+        }
+      });
+
       runtime.valves.forEach((valve) => {
         if (overlap(projectile, valve)) {
           const boosted = Number(runtime.charges["coolant-charge"]) > 0 && valve.timer < 8;
@@ -1591,7 +1868,7 @@
         if (runtime.boss.vulnerable > 0) damageBoss(Number(projectile.power) || 1);
         else {
           burst(projectile.x, projectile.y, currentLevel.theme.paper, 6, 150);
-          toast(currentLevel.id === 4 ? "装甲弹开了脉冲——先开冷却阀，再诱导冲锋" : "暗核吞掉了脉冲——让两面日光镜同时共鸣", 1.3);
+          toast(bossDefenseHint(), 1.3);
         }
       }
 
@@ -1635,7 +1912,8 @@
     boss.beamTimer = Math.max(0, boss.beamTimer - dt);
     const arena = boss.arena;
 
-    if (currentLevel.id === 4) updateBeetleBoss(boss, arena, dt);
+    if (boss.archetype === "boiler-beetle") updateBeetleBoss(boss, arena, dt);
+    else if (boss.archetype === "rift-weaver") updateRiftWeaverBoss(boss, arena, dt);
     else updateEclipseBoss(boss, arena, dt);
 
     if (overlap(player, boss) && boss.vulnerable <= 0) hurtPlayer(boss.x + boss.w / 2);
@@ -1742,13 +2020,83 @@
     }
   }
 
+  function updateRiftWeaverBoss(boss, arena, dt) {
+    boss.phase = bossPhaseForHealth(boss);
+    const relay = weaverRelayProgress(boss);
+    if (relay.ready && boss.vulnerable <= 0 && boss.state !== "relay-stunned") {
+      boss.vulnerable = Math.max(1, Number(runtime.bossRelay.exposedTime || boss.weakPoint.exposedTime) || 3.5);
+      boss.exposureHits = 0;
+      boss.state = "relay-stunned";
+      boss.vx = 0;
+      if (runtime.bossRelay.resetOnExposure !== false || boss.mechanism.resetRelaysOnExposure) {
+        relay.relays.forEach((entry) => { entry.active = false; entry.timer = 0; });
+      }
+      shake = 14;
+      burst(boss.x + boss.w / 2, boss.y + boss.h / 2, currentLevel.theme.edge, 34, 390);
+      toast(`第 ${boss.phase} 相织网断裂 · 核心暴露！`, 1.8);
+      announce("裂界织母核心暴露");
+    }
+
+    if (boss.vulnerable > 0) {
+      boss.state = "relay-stunned";
+      boss.y = 275 + Math.sin(runtime.time * 5.2) * 8;
+      return;
+    }
+    if (boss.state === "relay-stunned") {
+      boss.state = "weaving";
+      boss.timer = 0.8;
+      boss.exposureHits = 0;
+    }
+
+    const phaseData = boss.phases[Math.max(0, boss.phase - 1)] || {};
+    const left = arena.x + 360;
+    const right = arena.x + arena.w - boss.w - 300;
+    boss.y = 255 + Math.sin(runtime.time * (1.45 + boss.phase * 0.18)) * (48 + boss.phase * 7);
+    boss.x = clamp(boss.x + Math.sin(runtime.time * 0.75 + boss.phase) * (28 + boss.phase * 5) * dt, left, right);
+
+    if (boss.timer > 0) return;
+    if (boss.state !== "thread-charge") {
+      boss.state = "thread-charge";
+      boss.timer = Math.max(0.35, Number(phaseData.telegraph) || 0.55);
+      toast(boss.phase >= 3 ? "裂界织母正在编织星暴 · 准备换位" : "星线正在收束 · 留意弹幕缝隙", 0.9);
+      return;
+    }
+    boss.state = "weaving";
+    const centerX = boss.x + boss.w / 2;
+    const centerY = boss.y + boss.h / 2;
+    const spread = boss.phase === 1 ? 1 : boss.phase === 2 ? 2 : 3;
+    for (let i = -spread; i <= spread; i += 1) {
+      const angle = Math.atan2(player.y + player.h / 2 - centerY, player.x + player.w / 2 - centerX) + i * 0.18;
+      const speed = 285 + boss.phase * 28;
+      runtime.enemyShots.push({ x: centerX, y: centerY, w: 18, h: 18, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 4.2 });
+    }
+    if (boss.phase >= 2) {
+      runtime.shockwaves.push(
+        { x: centerX, y: 578, w: 62, h: 24, vx: -300 - boss.phase * 25, life: 2.7 },
+        { x: centerX, y: 578, w: 62, h: 24, vx: 300 + boss.phase * 25, life: 2.7 },
+      );
+    }
+    if (boss.phase >= 3) {
+      for (let i = 0; i < 4; i += 1) {
+        runtime.enemyShots.push({ x: arena.x + 260 + i * 470, y: 105, w: 22, h: 22, vx: 0, vy: 390 + i * 18, life: 2.2 });
+      }
+    }
+    boss.timer = Math.max(0.8, Number(phaseData.attackCooldown) || (2.55 - boss.phase * 0.38));
+    playTone("boss");
+  }
+
   function damageBoss(amount = 1) {
     const boss = runtime.boss;
     if (!boss || boss.hitFlash > 0 || boss.vulnerable <= 0) return;
-    boss.hp = Math.max(0, boss.hp - Math.max(1, Number(amount) || 1));
+    // Boss cores own their per-hit damage so a charged pulse cannot skip an
+    // entire relay phase (the rift-weaver must still teach 1 / 2 / 3 relays).
+    const configuredDamage = Number(boss.weakPoint?.damagePerHit);
+    const damage = configuredDamage > 0 ? configuredDamage : Math.max(1, Number(amount) || 1);
+    boss.hp = Math.max(0, boss.hp - damage);
     boss.hitFlash = 0.35;
-    boss.vulnerable = 0;
-    boss.phase = boss.maxHp - boss.hp + 1;
+    if (boss.archetype === "rift-weaver") boss.exposureHits += 1;
+    else boss.vulnerable = 0;
+    boss.phase = bossPhaseForHealth(boss);
     shake = 18;
     flash = 0.45;
     playTone("boss");
@@ -1762,9 +2110,22 @@
       if (hasCoreReward) toast("守门核心已经显现 · 拾取它完成挑战", 2.2);
       else setTimeout(() => completeLevel(), 650);
     } else {
-      toast(`核心受损 · 还剩 ${boss.hp} 层`, 1.6);
-      boss.state = "watching";
-      boss.timer = 1.15;
+      if (boss.archetype === "rift-weaver") {
+        const hitsPerExposure = Math.max(1, Number(runtime.bossRelay.hitsPerExposure || boss.weakPoint.hitsPerExposure) || 2);
+        if (boss.exposureHits >= hitsPerExposure) {
+          boss.vulnerable = 0;
+          boss.state = "weaving";
+          boss.timer = 1;
+          toast(`织界核心闭合 · 还剩 ${boss.hp} 层`, 1.6);
+        } else {
+          boss.state = "relay-stunned";
+          toast(`核心受损 · 本轮还能命中 ${hitsPerExposure - boss.exposureHits} 次`, 1.35);
+        }
+      } else {
+        toast(`核心受损 · 还剩 ${boss.hp} 层`, 1.6);
+        boss.state = "watching";
+        boss.timer = 1.15;
+      }
     }
   }
 
@@ -1839,7 +2200,7 @@
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     drawSun(menuX(1040), 152, 98, "#f6c453", 0.88);
-    drawMenuRifts(theme);
+    drawMenuRifts();
     drawParallaxHills(theme, menuTime * 16, 0);
     drawWindmill(menuX(885), 280, 1.45, theme, menuTime);
     drawPaperCloud(menuX(720) + Math.sin(menuTime * 0.25) * 25, 105, 1.25, theme.paper, 0.58);
@@ -1854,7 +2215,7 @@
     }
   }
 
-  function drawMenuRifts(theme) {
+  function drawMenuRifts() {
     const colors = ["#71c7d4", "#d78cff", "#f05d4e", "#5fe0c2"];
     for (let i = 0; i < 4; i += 1) {
       const x = (660 + i * 165) * VIEW_W / WIDE_VIEW_W;
@@ -1881,7 +2242,7 @@
     renderBackground(theme);
     // Keep the cavern atmosphere in the backdrop while leaving hazards,
     // enemies and pickups readable on small screens.
-    renderDarkness(theme);
+    renderDarkness();
     ctx.save();
     ctx.translate(-cameraX, 0);
     renderWindZones(theme);
@@ -1953,10 +2314,9 @@
   }
 
   function drawEnvironmentBackdrop(theme) {
-    const fallback = currentLevel.id <= 4
-      ? { sheet: "environmentsA", col: (currentLevel.id - 1) & 1, row: Math.floor((currentLevel.id - 1) / 2) }
-      : { sheet: "environmentsB", col: (currentLevel.id - 5) & 1, row: Math.floor((currentLevel.id - 5) / 2) };
-    const frame = frameSpec("levelBackgroundFrames", String(currentLevel.id), fallback);
+    // Background atlases are finite. Only use an explicitly declared level
+    // frame so adding a stage can never sample outside an older 2x2 sheet.
+    const frame = frameSpec("levelBackgroundFrames", String(currentLevel.id), null);
     if (!frame?.sheet) return false;
     const record = artImage(frame.sheet);
     if (!record) return false;
@@ -2218,19 +2578,23 @@
   }
 
   function renderPlatforms(theme) {
-    activePlatforms().forEach((platform, index) => {
+    runtime.platforms.forEach((platform, index) => {
+      const active = isPlatformActive(platform);
+      const polarityPreview = Boolean(platform.polarity) && !active && platform.brokenTimer <= 0;
+      if (!active && !polarityPreview) return;
       if (!inCamera(platform.x, platform.w)) return;
       ctx.save();
       if (platform.fragile && platform.breakTimer > 0) {
         ctx.translate(Math.sin(runtime.time * 52 + platform.phase) * 2.2, 0);
       }
-      drawPlatformMaterial(platform, theme, index);
+      drawPlatformMaterial(polarityPreview ? { ...platform, renderAlpha: 0.32 } : platform, theme, index);
       ctx.restore();
     });
   }
 
   function platformFamily(platform) {
     const value = `${platform.material || ""} ${platform.type || ""}`.toLowerCase();
+    if (["spring", "fungus", "lumen"].some((token) => value.includes(token))) return "spring";
     if (value.includes("cloud")) return "cloud";
     if (["kite", "cloth", "red-cargo"].some((token) => value.includes(token))) return "cloth";
     if (["crystal", "mica", "glass", "ghost"].some((token) => value.includes(token))) return "crystal";
@@ -2258,13 +2622,15 @@
       wood: [theme.ground, theme.mid, theme.paper],
       volcanic: [theme.ink, theme.ground, theme.accent],
       metal: [theme.ink, theme.far, theme.edge],
+      spring: [theme.mid, theme.ground, theme.edge],
       stone: [theme.ground, theme.mid, theme.edge],
     }[family];
+    const renderAlpha = clamp(Number(platform.renderAlpha) || 1, 0.08, 1);
 
     ctx.fillStyle = theme.ink;
-    ctx.globalAlpha = 0.42;
+    ctx.globalAlpha = 0.42 * renderAlpha;
     ctx.fillRect(x + 7, y + 9, w, h);
-    ctx.globalAlpha = platform.hidden && !runtime.hiddenRevealed ? 0.48 : 1;
+    ctx.globalAlpha = (platform.hidden && !runtime.hiddenRevealed ? 0.48 : 1) * renderAlpha;
     ctx.fillStyle = palette[0];
     ctx.fillRect(x, y, w, h);
     ctx.fillStyle = palette[1];
@@ -2277,13 +2643,29 @@
     if (paperPattern && h > 14) {
       ctx.save();
       ctx.globalCompositeOperation = "soft-light";
-      ctx.globalAlpha = 0.13;
+      ctx.globalAlpha = 0.13 * renderAlpha;
       ctx.fillStyle = paperPattern;
       ctx.fillRect(x, y, w, h);
       ctx.restore();
     }
 
-    if (family === "grass") {
+    if (family === "spring") {
+      ctx.fillStyle = theme.edge;
+      for (let px = x + 16; px < x + w - 8; px += 28) {
+        const pulse = Math.sin(runtime.time * 5 + px * 0.03) * 3;
+        ctx.beginPath();
+        ctx.ellipse(px, y + 2 + pulse, 12, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = theme.paper;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let px = x + 10; px <= x + w - 10; px += 12) {
+        const py = y + capH + (Math.floor((px - x) / 12) % 2 ? 11 : 2);
+        if (px === x + 10) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    } else if (family === "grass") {
       ctx.fillStyle = palette[2];
       for (let px = x + 8; px < x + w - 4; px += 16) {
         const tuft = 5 + mod(Math.floor(px / 16) + index, 4);
@@ -2330,7 +2712,7 @@
         const shardW = Math.min(26, x + w - px);
         paperPolygon([[px, y + capH], [px + shardW * 0.45, y + h - 3], [px + shardW, y + capH], [px + shardW * 0.62, y + 4]], theme.paper, null);
       }
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = renderAlpha;
       ctx.strokeStyle = theme.accent2;
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x + 4, y + capH); ctx.lineTo(x + w - 4, y + capH); ctx.stroke();
@@ -2368,10 +2750,10 @@
       }
     }
 
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = renderAlpha;
     if (platform.type === "conveyor" || platform.conveyor) {
       ctx.fillStyle = theme.paper;
-      ctx.globalAlpha = 0.62;
+      ctx.globalAlpha = 0.62 * renderAlpha;
       for (let px = x + 15; px < x + w - 10; px += 42) {
         ctx.beginPath();
         ctx.moveTo(px, y + 13);
@@ -2389,6 +2771,21 @@
       ctx.lineTo(x + w * 0.44, y + h * 0.7);
       ctx.lineTo(x + w * 0.67, y + 9);
       ctx.stroke();
+    }
+    if (platform.polarity) {
+      ctx.globalAlpha = 0.78 * renderAlpha;
+      ctx.fillStyle = platform.polarity === "sun" ? theme.edge : theme.ink;
+      const markerX = x + Math.min(w - 15, 22);
+      const markerY = y + Math.min(h - 8, 18);
+      ctx.beginPath();
+      ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
+      ctx.fill();
+      if (platform.polarity === "moon") {
+        ctx.fillStyle = theme.paper;
+        ctx.beginPath();
+        ctx.arc(markerX + 3, markerY - 2, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -2641,6 +3038,54 @@
       drawGear(device.x + device.w / 2, device.y + device.h / 2, 25, device.active ? theme.edge : theme.paper, runtime.time * (device.active ? 3 : 0.4));
       ctx.restore();
     });
+    runtime.polaritySwitches.forEach((device) => {
+      if (!inCamera(device.x, device.w)) return;
+      const sun = runtime.polarity.current === "sun";
+      ctx.save();
+      ctx.translate(device.x + device.w / 2, device.y + device.h / 2);
+      ctx.fillStyle = theme.ink;
+      ctx.fillRect(-device.w / 2, -device.h / 2, device.w, device.h);
+      ctx.fillStyle = sun ? theme.edge : theme.paper;
+      ctx.beginPath();
+      ctx.arc(0, -5, 16, 0, Math.PI * 2);
+      ctx.fill();
+      if (!sun) {
+        ctx.fillStyle = theme.ink;
+        ctx.beginPath();
+        ctx.arc(7, -10, 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = theme.accent2;
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(-16, 22); ctx.lineTo(16, 22); ctx.stroke();
+      ctx.restore();
+    });
+    runtime.relays.forEach((relay) => {
+      if (!inCamera(relay.x, relay.w)) return;
+      const ratio = relay.active ? clamp(relay.timer / Math.max(0.5, Number(relay.duration) || 8), 0, 1) : 0;
+      ctx.save();
+      ctx.translate(relay.x + relay.w / 2, relay.y + relay.h / 2);
+      ctx.fillStyle = theme.ink;
+      ctx.fillRect(-relay.w / 2, -relay.h / 2, relay.w, relay.h);
+      ctx.fillStyle = relay.active ? theme.edge : theme.far;
+      ctx.fillRect(-relay.w / 2 + 7, -relay.h / 2 + 7, relay.w - 14, relay.h - 14);
+      ctx.strokeStyle = relay.active ? theme.paper : theme.accent2;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(0, -3, 14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio);
+      ctx.stroke();
+      ctx.fillStyle = theme.ink;
+      ctx.font = '900 13px "Microsoft YaHei", sans-serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(relay.active ? String(Math.ceil(relay.timer)) : String(relay.index + 1), 0, -4);
+      if (relay.polarity) {
+        ctx.fillStyle = relay.polarity === runtime.polarity.current ? theme.paper : theme.ink;
+        ctx.font = '900 9px "Microsoft YaHei", sans-serif';
+        ctx.fillText(relay.polarity === "sun" ? "灯" : "墨", 0, relay.h / 2 - 10);
+      }
+      ctx.restore();
+    });
     runtime.gates.filter(isGateActive).forEach((gate) => {
       if (!inCamera(gate.x, gate.w)) return;
       ctx.fillStyle = theme.ink;
@@ -2684,7 +3129,7 @@
       ctx.lineWidth = 4;
       ctx.beginPath(); ctx.arc(altar.x + (altar.w || 200) / 2, altar.y + 5, 28, Math.PI, Math.PI * 2); ctx.stroke();
     }
-    if (currentLevel.id === 8 && runtime.mirrors.every((mirror) => mirror.active)) drawMirrorBeam(theme);
+    if (runtime.boss?.archetype === "eclipse-observer" && runtime.mirrors.every((mirror) => mirror.active)) drawMirrorBeam(theme);
   }
 
   function drawCoolantDevice(coolant, theme) {
@@ -2998,7 +3443,11 @@
         ctx.restore();
       }
       ctx.fillStyle = theme.edge; ctx.globalAlpha = 0.7;
-      for (let x = cameraX + 20; x < cameraX + VIEW_W; x += 80) ctx.beginPath(), ctx.arc(x, runtime.lavaY + Math.sin(x + runtime.time) * 12, 6, 0, Math.PI * 2), ctx.fill();
+      for (let x = cameraX + 20; x < cameraX + VIEW_W; x += 80) {
+        ctx.beginPath();
+        ctx.arc(x, runtime.lavaY + Math.sin(x + runtime.time) * 12, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
   }
@@ -3069,7 +3518,7 @@
     ctx.restore();
   }
 
-  function renderDarkness(theme) {
+  function renderDarkness() {
     if (!runtime.devices.darkness || !player) return;
     const px = player.x - cameraX + player.w / 2;
     const py = player.y + player.h / 2;
@@ -3198,12 +3647,22 @@
   }
 
   function drawBoss(boss, theme) {
+    const archetype = boss.archetype || "eclipse-observer";
     let frameName;
-    if (currentLevel.id === 4) {
+    if (archetype === "boiler-beetle") {
       if (boss.hitFlash > 0) frameName = "boilerFrozenHit";
       else if (boss.vulnerable > 0) frameName = "boilerCoreOpen";
       else if (boss.state === "telegraph" || boss.state === "charge") frameName = "boilerCharge";
       else frameName = "boilerNormal";
+    } else if (archetype === "rift-weaver") {
+      if (boss.hp <= 0 || boss.state === "defeated") frameName = "weaverDefeated";
+      else if (boss.hitFlash > 0) frameName = "weaverStunned";
+      else if (boss.vulnerable > 0) frameName = "weaverCoreOpen";
+      else if (boss.state === "thread-dash") frameName = "weaverThreadDash";
+      else if (boss.state === "cocoon") frameName = "weaverCocoon";
+      else if (boss.state === "thread-charge" && boss.phase >= 3) frameName = "weaverBeam";
+      else if (boss.state === "thread-charge") frameName = "weaverThreadCharge";
+      else frameName = "weaverIdle";
     } else {
       if (boss.vulnerable > 0) frameName = "eclipseCoreExposed";
       else if (boss.hitFlash > 0) frameName = "eclipseShieldBreak";
@@ -3214,27 +3673,95 @@
     if (frame) {
       const centerX = boss.x + boss.w / 2;
       const feetY = boss.y + boss.h;
-      const width = Number(frame.drawW) || (currentLevel.id === 4 ? 250 : 260);
-      const height = Number(frame.drawH) || (currentLevel.id === 4 ? 315 : 340);
+      const width = Number(frame.drawW) || (archetype === "boiler-beetle" ? 250 : archetype === "rift-weaver" ? 330 : 260);
+      const height = Number(frame.drawH) || (archetype === "boiler-beetle" ? 315 : archetype === "rift-weaver" ? 350 : 340);
       ctx.save();
       ctx.fillStyle = theme.ink;
       ctx.globalAlpha = 0.25;
       ctx.beginPath(); ctx.ellipse(centerX, feetY + 5, boss.w * 0.66, 14, 0, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
-      const jitter = boss.state === "telegraph" ? Math.sin(runtime.time * 48) * 4 : 0;
-      if (drawAtlasFrame(frame, centerX + jitter, feetY, width, height, { flipX: currentLevel.id === 4 && boss.vx < 0, anchorX: 0.5, anchorY: Number(frame.anchorY ?? 0.9) })) return;
+      const jitter = boss.state === "telegraph" || boss.state === "thread-charge" ? Math.sin(runtime.time * 48) * 4 : 0;
+      if (drawAtlasFrame(frame, centerX + jitter, feetY, width, height, { flipX: archetype === "boiler-beetle" && boss.vx < 0, anchorX: 0.5, anchorY: Number(frame.anchorY ?? 0.9) })) return;
     }
 
     ctx.save();
     ctx.translate(boss.x + boss.w / 2, boss.y + boss.h / 2);
-    if (boss.state === "telegraph") ctx.translate(Math.sin(runtime.time * 48) * 4, 0);
+    if (boss.state === "telegraph" || boss.state === "thread-charge") ctx.translate(Math.sin(runtime.time * 48) * 4, 0);
     if (boss.hitFlash > 0) ctx.globalAlpha = 0.45 + Math.sin(boss.hitFlash * 70) * 0.35;
-    if (currentLevel.id === 4) {
+    if (archetype === "boiler-beetle") {
       drawBoilerBossFallback(boss, theme);
+    } else if (archetype === "rift-weaver") {
+      drawWeaverBossFallback(boss, theme);
     } else {
       drawEclipseBossFallback(boss, theme);
     }
     ctx.restore();
+  }
+
+  function drawWeaverBossFallback(boss, theme) {
+    const pulse = 1 + Math.sin(runtime.time * 4.6) * 0.035;
+    const open = boss.vulnerable > 0;
+    ctx.scale(pulse, pulse);
+
+    // A small rotating loom and taut radial threads keep the silhouette
+    // readable even if the optional sprite atlas is unavailable.
+    ctx.save();
+    ctx.rotate(runtime.time * (open ? 0.16 : 0.34));
+    ctx.strokeStyle = open ? theme.edge : theme.accent2;
+    ctx.globalAlpha *= 0.58;
+    ctx.lineWidth = 3;
+    for (let ring = 1; ring <= 3; ring += 1) {
+      ctx.beginPath();
+      ctx.arc(0, 0, 38 + ring * 25, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (let spoke = 0; spoke < 8; spoke += 1) {
+      const angle = spoke / 8 * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * 30, Math.sin(angle) * 30);
+      ctx.lineTo(Math.cos(angle) * 113, Math.sin(angle) * 113);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = theme.ink;
+    ctx.lineWidth = 10;
+    ctx.lineCap = "round";
+    for (let side = -1; side <= 1; side += 2) {
+      for (let leg = 0; leg < 4; leg += 1) {
+        const rootY = -40 + leg * 27;
+        const kneeX = side * (72 + leg * 8);
+        const footX = side * (118 + leg * 5);
+        const footY = rootY + (leg < 2 ? -20 : 31);
+        ctx.beginPath();
+        ctx.moveTo(side * 35, rootY);
+        ctx.lineTo(kneeX, rootY + (leg % 2 ? 15 : -12));
+        ctx.lineTo(footX, footY);
+        ctx.stroke();
+        ctx.fillStyle = leg < boss.phase ? theme.edge : theme.accent2;
+        ctx.beginPath(); ctx.arc(kneeX, rootY + (leg % 2 ? 15 : -12), 5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.ellipse(0, 22, 61, 72, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ground;
+    ctx.beginPath(); ctx.ellipse(0, 20, 49, 60, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.ellipse(0, -48, 46, 37, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.paper;
+    ctx.beginPath(); ctx.ellipse(-16, -53, 8, 12, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(16, -53, 8, 12, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.ink;
+    ctx.beginPath(); ctx.arc(-14, -51, 3, 0, Math.PI * 2); ctx.arc(14, -51, 3, 0, Math.PI * 2); ctx.fill();
+
+    const coreRadius = open ? 27 + Math.sin(runtime.time * 10) * 3 : 19;
+    ctx.fillStyle = open ? theme.edge : theme.accent2;
+    ctx.beginPath(); ctx.arc(0, 18, coreRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = theme.paper;
+    ctx.lineWidth = open ? 5 : 3;
+    ctx.beginPath(); ctx.arc(0, 18, coreRadius - 7, 0, Math.PI * 2); ctx.stroke();
+    paperPolygon([[0, -2], [14, 18], [0, 38], [-14, 18]], open ? theme.paper : theme.danger, theme.ink, 3);
   }
 
   function drawBoilerBossFallback(boss, theme) {
@@ -3545,7 +4072,7 @@
     openMenu();
     const params = new URLSearchParams(location.search);
     const requested = Number(params.get("level"));
-    if (requested >= 1 && requested <= 8) startLevel(requested, params.get("autostart") === "1" || params.get("capture") === "1");
+    if (CAMPAIGN_LEVEL_IDS.has(requested)) startLevel(requested, params.get("autostart") === "1" || params.get("capture") === "1");
     artImage("hero");
     artImage("paper");
     if ("requestIdleCallback" in window) window.requestIdleCallback(preloadArtAssets, { timeout: 1200 });
@@ -3562,11 +4089,41 @@
       scene,
       level: currentLevel?.id || null,
       player: player ? { x: player.x, y: player.y, vx: player.vx, vy: player.vy, health: player.health } : null,
-      boss: runtime?.boss ? { hp: runtime.boss.hp, state: runtime.boss.state, vulnerable: runtime.boss.vulnerable } : null,
+      boss: runtime?.boss ? {
+        hp: runtime.boss.hp,
+        maxHp: runtime.boss.maxHp,
+        phase: runtime.boss.phase,
+        archetype: runtime.boss.archetype,
+        state: runtime.boss.state,
+        vulnerable: runtime.boss.vulnerable,
+      } : null,
       cameraX,
       viewport: { width: VIEW_W, height: VIEW_H },
       unlocked: save.unlocked,
+      completed: [...save.completed],
       seeds: save.seeds,
+      goalReady: Boolean(runtime && currentLevel && goalRequirementMet()),
+      polarity: runtime?.polarity?.current || null,
+      platforms: runtime ? runtime.platforms.map((platform) => ({
+        id: platform.id,
+        bounceY: Number(platform.bounceY) || 0,
+        polarity: platform.polarity || null,
+        // QA reports the selected phase; collision still honors the brief
+        // previous-phase grace window through isPlatformActive().
+        enabled: platform.polarity
+          ? platform.polarity === runtime.polarity.current
+          : isPlatformActive(platform),
+      })) : [],
+      switches: runtime ? [...runtime.switches, ...runtime.polaritySwitches, ...runtime.relays].map((device) => ({
+        id: device.id,
+        active: Boolean(device.active),
+        timer: Math.max(0, Number(device.timer) || 0),
+      })) : [],
+      checkpoints: runtime ? runtime.checkpoints.map((point) => ({
+        id: point.id,
+        active: Boolean(point.active),
+        reached: Boolean(point.reached),
+      })) : [],
       input: { held: { ...input.held }, tapBuffer: { ...input.tapBuffer }, pointers: input.pointers.size, lastDirection: input.lastDirection },
       effects: runtime ? { ...runtime.activeEffects } : {},
       charges: runtime ? { ...runtime.charges } : {},
@@ -3575,7 +4132,7 @@
     press: (action, source = "qa") => pressAction(action, source),
     release: (action, source = "qa") => releaseAction(action, source),
     captureReady: () => captureReady || scene === "menu",
-    unlockAll: () => { save.unlocked = 8; persist(); renderLevelGrid(); },
+    unlockAll: () => { save.unlocked = MAX_LEVEL_ID; persist(); renderLevelGrid(); },
     teleport: (x, y = 420) => {
       if (!player || !currentLevel) return false;
       player.x = clamp(Number(x) || 0, 0, currentLevel.worldWidth - player.w);

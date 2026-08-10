@@ -50,17 +50,17 @@ function isBoss(level) {
   return Boolean(level.boss) || level.type === "boss" || level.kind === "boss";
 }
 
-test("level bundle defines a stable eight-stage campaign schema", async () => {
+test("level bundle defines a stable twelve-stage campaign schema", async () => {
   const bundle = await loadLevelBundle();
   const levels = extractLevels(bundle);
 
   assert.equal(typeof bundle.get, "function", "bundle must expose get(id)");
   assert.equal(typeof bundle.clone, "function", "bundle must expose clone(id)");
   assert.ok(Array.isArray(bundle.list), "bundle must expose a list array");
-  assert.equal(levels.length, 8, "campaign must contain exactly eight stages");
+  assert.equal(levels.length, 12, "campaign must contain exactly twelve stages");
   assert.deepEqual(
     Array.from(levels, (level) => level.id),
-    [1, 2, 3, 4, 5, 6, 7, 8],
+    Array.from({ length: 12 }, (_, index) => index + 1),
     "stage ids must be sequential and one-based",
   );
 
@@ -90,14 +90,34 @@ test("level bundle defines a stable eight-stage campaign schema", async () => {
   assert.equal(bundle.get(99), null, "get(id) should return null for an unknown stage");
 });
 
-test("boss cadence is every fourth stage and only stages 4 and 8 are bosses", async () => {
-  const levels = extractLevels(await loadLevelBundle());
+test("each act contains three stages and a fourth-stage boss", async () => {
+  const bundle = await loadLevelBundle();
+  const levels = extractLevels(bundle);
   const bossIds = Array.from(levels).filter(isBoss).map((level) => level.id);
 
-  assert.deepEqual(bossIds, [4, 8]);
+  assert.deepEqual(bossIds, [4, 8, 12]);
+  assert.deepEqual(
+    Array.from(bundle.schema?.bossLevels ?? []),
+    bossIds,
+    "schema.bossLevels must match the actual boss stages",
+  );
+
+  for (let act = 1; act <= 3; act += 1) {
+    const actLevels = levels.filter((level) => level.act === act);
+    assert.deepEqual(
+      Array.from(actLevels, (level) => level.id),
+      [act * 4 - 3, act * 4 - 2, act * 4 - 1, act * 4],
+      `act ${act} must contain four sequential stages`,
+    );
+    assert.deepEqual(
+      Array.from(actLevels, (level) => level.kind),
+      ["stage", "stage", "stage", "boss"],
+      `act ${act} must contain three regular stages followed by one boss`,
+    );
+  }
 
   for (const level of levels) {
-    if (level.id !== 4 && level.id !== 8) {
+    if (!bossIds.includes(level.id)) {
       assert.equal(level.boss, null, `stage ${level.id} must not contain boss data`);
       continue;
     }
@@ -108,6 +128,87 @@ test("boss cadence is every fourth stage and only stages 4 and 8 are bosses", as
     assert.ok(Array.isArray(level.boss.phases) && level.boss.phases.length > 0, `stage ${level.id} boss needs phases`);
     assert.match(String(level.boss.mechanism ?? ""), /\S/, `stage ${level.id} boss needs a counter mechanic`);
   }
+});
+
+test("only stage 12 is the campaign finale", async () => {
+  const levels = extractLevels(await loadLevelBundle());
+  const finaleIds = Array.from(
+    levels.filter((level) => level.finale === true),
+    (level) => level.id,
+  );
+
+  assert.deepEqual(finaleIds, [12]);
+  assert.equal(levels[7].id, 8);
+  assert.notEqual(levels[7].finale, true, "stage 8 is an act boss, not the campaign finale");
+});
+
+test("act 3 collection goals are explicit objects backed by three quest pickups", async () => {
+  const levels = extractLevels(await loadLevelBundle());
+  const expectedGoals = new Map([
+    [9, "lumen-spore"],
+    [10, "time-shard"],
+    [11, "storm-cell"],
+  ]);
+
+  for (const [levelId, itemType] of expectedGoals) {
+    const level = levels.find((entry) => entry.id === levelId);
+    assert.ok(level, `stage ${levelId} must exist`);
+    assert.equal(typeof level.goal?.requires, "object", `stage ${levelId} needs an object goal requirement`);
+    assert.deepEqual(
+      {
+        type: level.goal.requires.type,
+        itemType: level.goal.requires.itemType,
+        count: level.goal.requires.count,
+      },
+      { type: "collect", itemType, count: 3 },
+    );
+    assert.match(String(level.goal.requires.label ?? ""), /\S/, `stage ${levelId} goal needs a player-facing label`);
+
+    const questItems = level.collectibles.filter((item) => item.type === itemType);
+    assert.equal(questItems.length, 3, `stage ${levelId} must place exactly three ${itemType} pickups`);
+    assert.ok(questItems.every((item) => item.quest === true), `${itemType} pickups must be marked as quest items`);
+  }
+});
+
+test("act 3 mechanic data is complete enough for runtime behavior", async () => {
+  const levels = extractLevels(await loadLevelBundle());
+  const level9 = levels.find((level) => level.id === 9);
+  const level10 = levels.find((level) => level.id === 10);
+  const level11 = levels.find((level) => level.id === 11);
+  const level12 = levels.find((level) => level.id === 12);
+
+  const springs = level9.platforms.filter((platform) => Number(platform.bounceY) < 0);
+  assert.ok(springs.length >= 3, "stage 9 needs multiple upward spring platforms");
+
+  assert.ok(["sun", "moon"].includes(level10.mechanics?.polarity?.initial), "stage 10 needs an initial sun/moon polarity");
+  const polarities = new Set(level10.platforms.map((platform) => platform.polarity).filter(Boolean));
+  assert.deepEqual([...polarities].sort(), ["moon", "sun"]);
+  assert.ok(
+    (level10.mechanics?.switches ?? []).some((device) => device.mode === "toggle-polarity"),
+    "stage 10 needs a polarity toggle switch",
+  );
+
+  const relays = level11.mechanics?.switches ?? [];
+  assert.ok(relays.length >= 3, "stage 11 needs at least three timed relays");
+  assert.ok(relays.every((relay) => Number(relay.duration) > 0), "every timed relay needs a positive duration");
+
+  assert.equal(level12.boss?.archetype, "rift-weaver");
+  assert.equal(level12.boss?.maxHealth, 6);
+  assert.equal(level12.boss?.hp, 6);
+  assert.deepEqual(
+    Array.from(level12.boss?.phases ?? [], (phase) => phase.atHealth),
+    [6, 4, 2],
+    "rift-weaver phases must start at 6/4/2 health",
+  );
+  assert.deepEqual(
+    Array.from(level12.boss?.phases ?? [], (phase) => phase.requiredRelays?.length),
+    [1, 2, 3],
+    "rift-weaver phases must require one, two, then three timed relays",
+  );
+  assert.ok(
+    level12.collectibles.some((item) => item.type === "rift-core-seed" && item.spawnOnBossDefeat === true),
+    "stage 12 must spawn rift-core-seed only after the boss is defeated",
+  );
 });
 
 test("all stages have distinct worlds instead of palette-swapped repetition", async () => {

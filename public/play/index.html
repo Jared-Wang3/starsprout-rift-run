@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#071c27" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <title>星芽跃界 · Starsprout Rift Run</title>
-    <meta name="description" content="原创纸雕风横版动作闯关游戏，支持键盘与手机触控。" />
+    <meta name="description" content="原创纸雕风横版动作闯关游戏：12 个特色关卡、3 场机关 Boss 战，支持键盘与手机触控。" />
     <link rel="stylesheet" href="./game.css" />
   </head>
   <body>
@@ -19,7 +19,7 @@
           <p class="eyebrow">ORIGINAL PAPER-CUT PLATFORM ADVENTURE</p>
           <h1><span>星芽</span><span>跃界</span></h1>
           <p class="roman-title">STARSPROUT · RIFT RUN</p>
-          <p class="tagline">穿过六片失衡生态，拆解两位核心守门者。</p>
+          <p class="tagline">穿过九片失衡生态，拆解三位核心守门者。</p>
           <nav class="menu-actions" aria-label="游戏菜单">
             <button class="primary-action" data-action="continue">
               <span class="button-kicker">ENTER</span>
@@ -30,7 +30,7 @@
           </nav>
         </div>
         <div class="start-meta">
-          <span>8 个关卡</span><span>2 场 BOSS</span><span>自动存档</span>
+          <span>12 个关卡</span><span>3 场 BOSS</span><span>自动存档</span>
         </div>
       </section>
 
@@ -60,8 +60,9 @@
           <div class="guide-notes">
             <p><strong>触屏：</strong>左侧方向区移动，右侧按钮对应冲刺、下砸、脉冲和跳跃；竖屏与横屏都能游玩。</p>
             <p><strong>拾取物：</strong>“种”是永久收藏，“心”恢复生命；风羽、发条、珍珠和羽翼会提供限时能力，冷却与星能显示剩余次数。</p>
-            <p><strong>任务物：</strong>晶冠、潮汐符文和锻炉印记用于开启出口；拾取后效果、倒计时和任务进度会持续显示在左上角。</p>
-            <p><strong>BOSS：</strong>正面强攻无效。先观察场地机关，再寻找发光核心。</p>
+            <p><strong>任务物：</strong>晶冠、潮汐符文、锻炉印记、雷光火种、时页碎片和暖光电池用于开启出口；进度会持续显示在左上角。</p>
+            <p><strong>新机关：</strong>弹簧台会把星芽高高弹起；灯相 / 墨相平台可切换；热能灯塔与织界继电器会显示剩余秒数。</p>
+            <p><strong>BOSS：</strong>三位守门者都不能正面强攻。先观察场地机关，再寻找发光核心。</p>
             <p><strong>进度：</strong>到达检查点和完成关卡时自动保存。</p>
           </div>
         </div>
@@ -98,8 +99,8 @@
       <section id="victory-screen" class="screen center-screen victory-screen" aria-hidden="true">
         <p class="eyebrow">WORLD CORE ONLINE</p>
         <h2>世界重新发芽</h2>
-        <p>六片生态已经恢复，两位守门者的核心也重归星海。</p>
-        <p id="victory-stats" class="victory-stats">8 / 8 关 · 0 枚记忆种子</p>
+        <p>九片生态已经恢复，三位守门者的核心也重归星海。</p>
+        <p id="victory-stats" class="victory-stats">12 / 12 关 · 0 枚记忆种子</p>
         <button class="primary-action" data-action="levels">再次挑战</button>
         <button data-action="home">返回主菜单</button>
       </section>
@@ -110,7 +111,7 @@
           <div class="stage-copy">
             <span id="hud-stage">STAGE 01</span>
             <strong id="hud-name">风铃草原</strong>
-            <small id="pickup-status" class="pickup-status" aria-live="polite">种子 0/8 · 道具效果会显示在这里</small>
+            <small id="pickup-status" class="pickup-status" aria-live="polite">任务状态与道具效果会显示在这里</small>
           </div>
         </div>
         <div id="boss-hud" class="boss-hud" hidden>

@@ -114,6 +114,9 @@ test("art manifest is offline-only and every declared raster asset is packaged",
     "collectibles",
     "environmentsA",
     "environmentsB",
+    "environmentsC",
+    "bossWeaver",
+    "act3Collectibles",
   ];
   const declaredUrls = new Set();
   for (const sheetName of requiredSheets) {
@@ -121,9 +124,15 @@ test("art manifest is offline-only and every declared raster asset is packaged",
     assert.ok(config, `manifest.assets is missing ${sheetName}`);
     assert.match(
       String(config.src ?? ""),
-      /^\.\/assets\/art-v2\/[a-z0-9][a-z0-9._-]*$/i,
-      `${sheetName} must use a packaged ./assets/art-v2 path`,
+      /^\.\/assets\/art-v[23]\/[a-z0-9][a-z0-9._-]*$/i,
+      `${sheetName} must use a packaged ./assets/art-v2 or ./assets/art-v3 path`,
     );
+  }
+
+  for (const [sheetName, value] of Object.entries(manifest.assets)) {
+    const config = assetConfig(value);
+    assert.match(String(config?.src ?? ""), /^\.\/assets\/art-v[23]\/[a-z0-9][a-z0-9._-]*$/i,
+      `${sheetName} must use a packaged ./assets/art-v2 or ./assets/art-v3 path`);
     declaredUrls.add(config.src);
   }
 
@@ -150,7 +159,7 @@ test("art manifest is offline-only and every declared raster asset is packaged",
   assert.deepEqual(chromaFiles, [], "runtime assets must not include chroma-key intermediates");
 });
 
-test("sprite and background maps cover the complete eight-stage campaign", async () => {
+test("sprite and background maps cover the complete twelve-stage campaign", async () => {
   const manifest = await loadBrowserBundle("public/play/art-assets.js", "StarSproutArt");
   const levels = extractLevels(await loadBrowserBundle("public/play/levels.js", "StarSproutLevels"));
 
@@ -179,6 +188,22 @@ test("sprite and background maps cover the complete eight-stage campaign", async
     "eclipseShieldBreak",
     "eclipseCoreExposed",
   ]);
+  const weaverFrames = Object.entries(manifest.bossFrames)
+    .filter(([, value]) => frameConfig(value)?.sheet === "bossWeaver");
+  assert.equal(weaverFrames.length, 8, "bossWeaver needs a complete 4x2 animation set");
+  const weaverNames = weaverFrames.map(([name]) => name.toLowerCase());
+  for (const state of ["idle", "charge", "dash", "cocoon", "beam", "stun", "core", "defeat"]) {
+    assert.ok(
+      weaverNames.some((name) => name.includes(state)),
+      `bossWeaver is missing a ${state} frame`,
+    );
+  }
+  assertFrameCoverage(manifest, "bossFrames", weaverFrames.map(([name]) => name));
+  const weaverCells = new Set(weaverFrames.map(([, value]) => {
+    const frame = frameConfig(value);
+    return `${frame.sheet}:${frame.col}:${frame.row}`;
+  }));
+  assert.equal(weaverCells.size, 8, "bossWeaver animation states must use eight distinct cells");
 
   const collectibleTypes = new Set([
     "heart",
@@ -193,18 +218,21 @@ test("sprite and background maps cover the complete eight-stage campaign", async
   );
 
   const stageIds = Array.from(levels, (level) => String(level.id));
-  assert.deepEqual(stageIds, ["1", "2", "3", "4", "5", "6", "7", "8"]);
+  assert.deepEqual(stageIds, Array.from({ length: 12 }, (_, index) => String(index + 1)));
   assertFrameCoverage(manifest, "levelBackgroundFrames", stageIds);
   const backgroundCells = new Set(stageIds.map((id) => {
     const frame = frameConfig(manifest.levelBackgroundFrames[id]);
     return `${frame.sheet}:${frame.col}:${frame.row}`;
   }));
-  assert.equal(backgroundCells.size, 8, "all eight stages need distinct background cells");
+  assert.equal(backgroundCells.size, 12, "all twelve stages need distinct background cells");
   for (const id of stageIds.slice(0, 4)) {
     assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsA");
   }
   for (const id of stageIds.slice(4)) {
-    assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsB");
+    if (Number(id) <= 8) assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsB");
+  }
+  for (const id of stageIds.slice(8)) {
+    assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsC");
   }
 });
 
@@ -227,6 +255,7 @@ test("renderer falls back to procedural art and never fetches runtime images", a
     "drawFallbackEnemy",
     "drawBoilerBossFallback",
     "drawEclipseBossFallback",
+    "bossWeaver",
   ]) {
     assert.match(source, new RegExp(`\\b${symbol}\\b`), `renderer is missing ${symbol}`);
   }
@@ -234,6 +263,11 @@ test("renderer falls back to procedural art and never fetches runtime images", a
   assert.match(source, /function\s+drawHero\b[\s\S]*?drawFallbackHero\(/);
   assert.match(source, /function\s+drawEnemy\b[\s\S]*?drawFallbackEnemy\(/);
   assert.match(source, /function\s+drawBoss\b[\s\S]*?drawBoilerBossFallback\([\s\S]*?drawEclipseBossFallback\(/);
+  assert.match(
+    source,
+    /function\s+drawBoss\b[\s\S]*?draw(?:(?:Rift)?Weaver|StormKite)BossFallback\(/,
+    "drawBoss() must have an explicit procedural fallback for the third boss",
+  );
   assert.match(source, /function\s+drawCollectible\b[\s\S]*?drawAtlasFrame\([\s\S]*?drawSeed\(/);
   assert.match(source, /function\s+renderBackground\b[\s\S]*?drawEnvironmentBackdrop\([\s\S]*?if\s*\(!illustrated\)/);
   assert.match(source, /function\s+drawEnvironmentBackdrop\b[\s\S]*?if\s*\(!record\)\s*return false/);

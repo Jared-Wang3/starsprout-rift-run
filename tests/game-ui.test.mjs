@@ -94,6 +94,32 @@ test("touch UI supports portrait play without a blocking rotate notice", async (
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
 });
 
+test("campaign copy and level selection scale to twelve stages", async () => {
+  const [html, css, source] = await Promise.all([
+    readProjectFile("public/play/index.html"),
+    readProjectFile("public/play/game.css"),
+    readProjectFile("public/play/game.js"),
+  ]);
+
+  assert.match(html, />\s*12\s*个关卡\s*</);
+  assert.match(html, />\s*3\s*场\s*BOSS\s*</i);
+  assert.match(html, /12\s*\/\s*12\s*关/);
+  assert.doesNotMatch(html, />\s*8\s*个关卡\s*</);
+  assert.doesNotMatch(html, />\s*2\s*场\s*BOSS\s*</i);
+  assert.doesNotMatch(html, /8\s*\/\s*8\s*关/);
+
+  assert.match(css, /\.panel-screen\s*\{[^}]*\boverflow-y:\s*auto\s*;/s,
+    "the twelve-card route screen must remain vertically scrollable");
+  assert.match(css, /\.level-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s,
+    "desktop route selection should fit twelve cards in three rows");
+  assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*?\.level-grid\s*\{[^}]*repeat\(2,/i,
+    "mobile route selection should use two columns and scroll");
+  assert.match(source, /level-card[^`\n]*\$\{[^}]*\.isBoss[^}]*is-boss/,
+    "boss card styling must be driven by level semantics");
+  assert.doesNotMatch(css, /\.level-card\[data-level=["'](?:4|8|12)["']\]/,
+    "boss card styling must not be tied to fixed stage ids");
+});
+
 test("game engine parses and exposes a deterministic QA hook", async () => {
   const gameUrl = projectFile("public/play/game.js");
   const gamePath = fileURLToPath(gameUrl);
@@ -112,11 +138,30 @@ test("game engine parses and exposes a deterministic QA hook", async () => {
   assert.match(source, /PORTRAIT_VIEW_W\s*=\s*960/);
   assert.match(source, /window\.addEventListener\(["']resize["'],\s*syncCanvasViewport/);
 
-  for (const api of ["snapshot", "startLevel", "step", "captureReady"]) {
+  for (const api of ["snapshot", "startLevel", "step", "captureReady", "unlockAll"]) {
     assert.match(
       source,
       new RegExp(`\\b${api}\\b`),
       `QA hook is missing ${api}()`,
     );
   }
+});
+
+test("Electron keeps the same offline play tree inside ASAR", async () => {
+  const [packageSource, mainSource] = await Promise.all([
+    readProjectFile("package.json"),
+    readProjectFile("electron/main.cjs"),
+  ]);
+  const packageJson = JSON.parse(packageSource);
+
+  assert.equal(packageJson.main, "electron/main.cjs");
+  assert.equal(packageJson.build?.asar, true);
+  assert.ok(packageJson.build?.files?.includes("public/play/**/*"),
+    "Electron must package every current and future campaign asset under public/play");
+  assert.match(mainSource, /loadFile\(GAME_FILE\)/);
+  assert.match(mainSource, /nodeIntegration:\s*false/);
+  assert.match(mainSource, /contextIsolation:\s*true/);
+  assert.match(mainSource, /sandbox:\s*true/);
+  assert.match(mainSource, /setWindowOpenHandler\(\(\)\s*=>\s*\(\{\s*action:\s*["']deny["']/);
+  assert.match(mainSource, /will-navigate[\s\S]*?preventDefault\(\)/);
 });
