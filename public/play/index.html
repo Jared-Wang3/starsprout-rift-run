@@ -59,6 +59,8 @@
           </div>
           <div class="guide-notes">
             <p><strong>触屏：</strong>左侧方向区移动，右侧按钮对应冲刺、下砸、脉冲和跳跃；竖屏与横屏都能游玩。</p>
+            <p><strong>拾取物：</strong>“种”是永久收藏，“心”恢复生命；风羽、发条、珍珠和羽翼会提供限时能力，冷却与星能显示剩余次数。</p>
+            <p><strong>任务物：</strong>晶冠、潮汐符文和锻炉印记用于开启出口；拾取后效果、倒计时和任务进度会持续显示在左上角。</p>
             <p><strong>BOSS：</strong>正面强攻无效。先观察场地机关，再寻找发光核心。</p>
             <p><strong>进度：</strong>到达检查点和完成关卡时自动保存。</p>
           </div>
@@ -105,7 +107,11 @@
       <div id="hud" class="hud" aria-hidden="true">
         <div class="hud-left">
           <div id="health" class="health" aria-label="生命值"></div>
-          <div class="stage-copy"><span id="hud-stage">STAGE 01</span><strong id="hud-name">风铃草原</strong></div>
+          <div class="stage-copy">
+            <span id="hud-stage">STAGE 01</span>
+            <strong id="hud-name">风铃草原</strong>
+            <small id="pickup-status" class="pickup-status" aria-live="polite">种子 0/8 · 道具效果会显示在这里</small>
+          </div>
         </div>
         <div id="boss-hud" class="boss-hud" hidden>
           <span id="boss-name">守门者</span>

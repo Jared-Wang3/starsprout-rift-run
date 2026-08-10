@@ -655,13 +655,19 @@ kbd {
 .hud-left {
   display: flex;
   width: fit-content;
+  min-width: 0;
   align-items: center;
   gap: 0.85rem;
 }
 
 .health {
   display: flex;
+  flex: 0 0 auto;
   gap: 0.25rem;
+}
+
+.stage-copy {
+  min-width: 0;
 }
 
 .health i {
@@ -692,6 +698,19 @@ kbd {
   margin-top: 0.15rem;
   color: var(--paper);
   font-size: 0.87rem;
+}
+
+.pickup-status {
+  display: block;
+  max-width: min(28rem, 52vw);
+  margin-top: 0.22rem;
+  overflow: hidden;
+  color: var(--sky);
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hud-right {
@@ -877,10 +896,12 @@ kbd {
   box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.46), inset 0 0 0 1px rgba(244, 237, 218, 0.13);
   backdrop-filter: blur(4px);
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .touch-controls button.is-pressed {
-  transform: scale(0.92);
+  transform: translateY(2px);
   background: var(--amber);
   color: var(--ink);
   box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(244, 237, 218, 0.16);
@@ -1164,10 +1185,14 @@ kbd {
   }
 
   .hud-left {
-    width: max-content;
+    width: 100%;
     max-width: 100%;
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
+  }
+
+  .stage-copy {
+    flex: 1 1 auto;
   }
 
   .health i {
@@ -1201,14 +1226,17 @@ kbd {
   }
 
   .touch-controls {
-    right: calc(0.45rem + var(--safe-right));
+    right: calc(0.2rem + var(--safe-right));
     bottom: calc(0.45rem + var(--safe-bottom));
-    left: calc(0.45rem + var(--safe-left));
+    left: calc(0.2rem + var(--safe-left));
   }
 
-  .touch-move,
+  .touch-move {
+    gap: 0.3rem;
+  }
+
   .touch-actions {
-    gap: 0.2rem;
+    gap: 0.16rem;
   }
 
   .touch-controls button,
@@ -1220,8 +1248,24 @@ kbd {
   }
 
   .touch-actions .touch-jump {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .touch-move button {
     width: 3.5rem;
     height: 3.5rem;
+    font-size: 1.3rem;
+  }
+
+  .pickup-status {
+    display: -webkit-box;
+    max-width: 100%;
+    font-size: 0.58rem;
+    line-height: 1.18;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 }
 

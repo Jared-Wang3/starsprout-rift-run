@@ -11,6 +11,7 @@
   const VIEW_H = canvas.height;
   const STEP = 1 / 60;
   const SAVE_KEY = "starsprout-save-v2";
+  const TOUCH_MIN_HOLD_MS = 85;
   const api = window.StarSproutLevels;
 
   const DEFAULT_ART_ASSETS = {
@@ -78,6 +79,27 @@
     "guardian-core": { sheet: "collectibles", col: 3, row: 1 },
     "world-core-seed": { sheet: "collectibles", col: 3, row: 1 },
   };
+  const COLLECTIBLE_EFFECTS = Object.freeze({
+    "memory-seed": { label: "记忆种子", badge: "种", mode: "memory", description: "永久计入探索收藏" },
+    heart: { label: "星芽之心", badge: "心", mode: "health", description: "恢复两格生命" },
+    "wind-feather": { label: "风羽", badge: "风", mode: "timed", duration: 8, description: "冲刺快速充能" },
+    "resonance-orb": { label: "共鸣球", badge: "鸣", mode: "timed", duration: 10, description: "强化脉冲并显现隐藏纸桥" },
+    "crystal-crown": { label: "回声晶冠", badge: "冠", mode: "quest", description: "解除本关出口封印" },
+    "clock-spring": { label: "慢时发条", badge: "时", mode: "timed", duration: 9, description: "敌人与敌方弹幕减速" },
+    "coolant-charge": { label: "冷却充能", badge: "冷", mode: "charges", charges: 3, description: "延长三次冷却阀持续时间" },
+    "guardian-core": { label: "守门核心", badge: "核", mode: "boss-core", description: "带走核心并完成守门挑战" },
+    "tide-rune": { label: "潮汐符文", badge: "潮", mode: "rune", description: "集齐三枚开启潮门" },
+    "air-pearl": { label: "空气珍珠", badge: "珠", mode: "timed", duration: 12, description: "水中移动与上浮能力增强" },
+    "parcel-wings": { label: "货运羽翼", badge: "翼", mode: "timed", duration: 9, description: "空中长按跳跃可以滑翔" },
+    "coolant-pod": { label: "冷凝种子", badge: "凝", mode: "coolant", description: "熔潮退却并生成临时落脚点" },
+    "quench-bell": { label: "淬火钟", badge: "钟", mode: "quench", description: "让熔潮大幅退却" },
+    "forge-seal": { label: "锻炉印记", badge: "印", mode: "quest", description: "开启锻炉出口" },
+    "star-charge": { label: "星能充能", badge: "星", mode: "charges", charges: 2, description: "获得两发强化脉冲" },
+    "world-core-seed": { label: "世界核心种", badge: "界", mode: "boss-core", description: "带走核心并完成最终挑战" },
+  });
+  const PROCEDURAL_COLLECTIBLE_TYPES = new Set([
+    "memory-seed", "clock-spring", "tide-rune", "parcel-wings", "quench-bell", "forge-seal",
+  ]);
   const ART_ALIASES = {
     paper: ["paper", "paperTexture", "paper-texture"],
     hero: ["hero", "heroSprites", "hero-sprites"],
@@ -202,6 +224,9 @@
   const input = {
     held: { left: false, right: false, jump: false, down: false, dash: false, shoot: false },
     pressed: new Set(),
+    sources: Object.fromEntries(["left", "right", "jump", "down", "dash", "shoot"].map((action) => [action, new Set()])),
+    tapBuffer: { left: 0, right: 0 },
+    pointers: new Map(),
   };
 
   let save = loadSave();
@@ -251,15 +276,21 @@
   function loadSave() {
     try {
       const parsed = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
+      const collectedSeeds = Array.isArray(parsed.collectedSeeds)
+        ? [...new Set(parsed.collectedSeeds.filter((key) => typeof key === "string"))]
+        : [];
       return {
         unlocked: clamp(Number(parsed.unlocked) || 1, 1, 8),
         completed: Array.isArray(parsed.completed) ? parsed.completed : [],
-        seeds: Number(parsed.seeds) || 0,
+        // Older v2 saves counted repeat pickups. Preserve that historical total
+        // while collectedSeeds prevents any new duplicate farming.
+        seeds: Math.max(0, Number(parsed.seeds) || 0, collectedSeeds.length),
+        collectedSeeds,
         deaths: Number(parsed.deaths) || 0,
         muted: Boolean(parsed.muted),
       };
     } catch {
-      return { unlocked: 1, completed: [], seeds: 0, deaths: 0, muted: false };
+      return { unlocked: 1, completed: [], seeds: 0, collectedSeeds: [], deaths: 0, muted: false };
     }
   }
 
@@ -322,7 +353,7 @@
       worldWidth: Math.max(VIEW_W, Number(raw.worldWidth || raw.width) || (id === 4 || id === 8 ? 1600 : 3900)),
       worldHeight: Number(raw.worldHeight || raw.height) || VIEW_H,
       spawn: { x: Number(spawn.x) || 96, y: Number(spawn.y) || 480 },
-      goal: { x: Number(goal.x) || 3400, y: Number(goal.y) || 470, w: Number(goal.w) || 72, h: Number(goal.h) || 130 },
+      goal: { ...goal, x: Number(goal.x) || 3400, y: Number(goal.y) || 470, w: Number(goal.w) || 72, h: Number(goal.h) || 130 },
       platforms: Array.isArray(raw.platforms) ? raw.platforms : [],
       hazards: Array.isArray(raw.hazards) ? raw.hazards : [],
       enemies: Array.isArray(raw.enemies) ? raw.enemies : [],
@@ -430,6 +461,7 @@
     }));
 
     const enemies = level.enemies.map((enemy, index) => ({
+      ...enemy,
       id: enemy.id || `e-${index}`,
       x: Number(enemy.x) || 0,
       y: Number(enemy.y) || 500,
@@ -446,18 +478,25 @@
       cooldown: 0.5 + index * 0.22,
     }));
 
-    const collectibles = level.collectibles.map((item, index) => ({
-      ...item,
-      id: item.id || `c-${index}`,
-      x: Number(item.x) || 0,
-      y: Number(item.y) || 0,
-      w: 26,
-      h: 26,
-      type: item.type || "seed",
-      value: Number(item.value) || 1,
-      collected: false,
-      t: index * 0.9,
-    }));
+    const collectibles = level.collectibles.map((item, index) => {
+      const id = item.id || `c-${index}`;
+      const type = item.type || "seed";
+      const persistentKey = `${level.id}:${id}`;
+      const alreadyCollected = (type === "memory-seed" || type === "seed") && save.collectedSeeds.includes(persistentKey);
+      return {
+        ...item,
+        id,
+        x: Number(item.x) || 0,
+        y: Number(item.y) || 0,
+        w: 26,
+        h: 26,
+        type,
+        value: Number(item.value) || 1,
+        collected: alreadyCollected,
+        persistentKey,
+        t: index * 0.9,
+      };
+    });
 
     const checkpoints = level.checkpoints.map((point, index) => ({
       id: point.id || `cp-${index}`,
@@ -481,6 +520,9 @@
       devices,
       enabled: {},
       inventory: new Set(),
+      activeEffects: {},
+      charges: {},
+      seedTotal: collectibles.filter((item) => item.type === "memory-seed" || item.type === "seed").length,
       goalToastCooldown: 0,
       crystals: (devices.crystals || []).map((d, i) => ({ ...d, w: d.w || 44, h: d.h || 72, active: false, index: i })),
       switches: (devices.switches || []).map((d, i) => ({ ...d, w: d.w || 54, h: d.h || 54, active: false, index: i })),
@@ -560,6 +602,7 @@
   }
 
   function setGameUi(visible) {
+    if (!visible) resetInput();
     $("#hud").classList.toggle("is-visible", visible);
     $("#hud").setAttribute("aria-hidden", visible ? "false" : "true");
     $("#touch-controls").classList.toggle("is-visible", visible);
@@ -590,6 +633,7 @@
   }
 
   function startLevel(id, skipBriefing = false) {
+    resetInput();
     currentLevel = normalizeLevel(rawLevel(id));
     runtime = makeRuntime(currentLevel);
     player = makePlayer(currentLevel);
@@ -685,6 +729,48 @@
     toastTimer = duration;
   }
 
+  function effectActive(type) {
+    return Number(runtime?.activeEffects?.[type]) > 0;
+  }
+
+  function isBossSpawnAvailable(entity) {
+    if (!entity?.spawnOnBossPhase && !entity?.spawnOnBossDefeat) return true;
+    const boss = runtime?.boss;
+    if (!boss) return false;
+    if (entity.spawnOnBossDefeat) return boss.hp <= 0 || boss.state === "defeated";
+    return boss.active && boss.phase >= Number(entity.spawnOnBossPhase);
+  }
+
+  function pickupStatusText() {
+    if (!runtime || !currentLevel) return "";
+    const parts = [];
+    if (runtime.seedTotal > 0) {
+      const found = runtime.collectibles.filter((item) => (item.type === "memory-seed" || item.type === "seed") && item.collected).length;
+      parts.push(`种子 ${found}/${runtime.seedTotal} · 总计 ${save.seeds}`);
+    }
+
+    const requirement = currentLevel.goal?.requires;
+    if (requirement === "crystal-crown") parts.push(runtime.inventory.has("crystal-crown") ? "晶冠 ✓" : "任务：寻找晶冠");
+    if (requirement === "all-gear-doors") parts.push(`齿轮 ${runtime.switches.filter((device) => device.active).length}/${runtime.switches.length}`);
+    if (requirement === "three-tide-runes") {
+      const count = runtime.collectibles.filter((item) => item.type === "tide-rune" && item.collected).length;
+      parts.push(`潮汐符文 ${count}/3`);
+    }
+    if (requirement === "forge-seal") parts.push(runtime.inventory.has("forge-seal") ? "锻炉印记 ✓" : "任务：寻找锻炉印记");
+    if (currentLevel.isBoss && runtime.boss?.hp <= 0) {
+      const core = runtime.collectibles.find((item) => item.spawnOnBossDefeat && !item.collected);
+      if (core) parts.push("任务：拾取守门核心");
+    }
+
+    const active = Object.entries(runtime.activeEffects)
+      .filter(([, remaining]) => remaining > 0)
+      .sort((a, b) => b[1] - a[1])[0];
+    if (active) parts.push(`${COLLECTIBLE_EFFECTS[active[0]]?.label || "增益"} ${Math.ceil(active[1])}秒`);
+    const charge = Object.entries(runtime.charges).find(([, count]) => count > 0);
+    if (charge) parts.push(`${COLLECTIBLE_EFFECTS[charge[0]]?.label || "充能"} ×${charge[1]}`);
+    return parts.slice(0, 3).join(" · ");
+  }
+
   function announce(message) {
     $("#announcer").textContent = message;
   }
@@ -695,6 +781,11 @@
     $("#hud-stage").textContent = `STAGE ${pad(currentLevel.id)}`;
     $("#hud-name").textContent = currentLevel.name;
     $("#dash-fill").style.transform = `scaleX(${clamp(1 - player.dashCooldown / 0.8, 0, 1)})`;
+    const pickupNode = $("#pickup-status");
+    if (pickupNode) {
+      pickupNode.textContent = pickupStatusText();
+      pickupNode.title = pickupNode.textContent;
+    }
     const bossHud = $("#boss-hud");
     if (runtime?.boss?.active) {
       bossHud.hidden = false;
@@ -755,14 +846,49 @@
     oscillator.stop(audioContext.currentTime + duration + 0.02);
   }
 
-  function pressAction(action) {
-    if (!input.held[action]) input.pressed.add(action);
+  function pressAction(action, source = `manual:${action}`) {
+    const sources = input.sources[action];
+    if (!sources) return;
+    const wasHeld = sources.size > 0;
+    sources.add(source);
     input.held[action] = true;
+    if (!wasHeld) {
+      input.pressed.add(action);
+      if (action === "left" || action === "right") {
+        const opposite = action === "left" ? "right" : "left";
+        input.tapBuffer[opposite] = 0;
+        input.tapBuffer[action] = TOUCH_MIN_HOLD_MS / 1000;
+      }
+    }
     if (scene === "briefing") beginBriefing();
   }
 
-  function releaseAction(action) {
-    input.held[action] = false;
+  function releaseAction(action, source = `manual:${action}`) {
+    const sources = input.sources[action];
+    if (!sources) return;
+    sources.delete(source);
+    input.held[action] = sources.size > 0;
+  }
+
+  function updateTapBuffers(dt) {
+    input.tapBuffer.left = Math.max(0, input.tapBuffer.left - dt);
+    input.tapBuffer.right = Math.max(0, input.tapBuffer.right - dt);
+  }
+
+  function directionHeld(action) {
+    return Boolean(input.held[action] || input.tapBuffer[action] > 0);
+  }
+
+  function resetInput() {
+    Object.keys(input.held).forEach((action) => {
+      input.held[action] = false;
+      input.sources[action].clear();
+    });
+    input.pressed.clear();
+    input.tapBuffer.left = 0;
+    input.tapBuffer.right = 0;
+    input.pointers.clear();
+    $$("[data-touch].is-pressed").forEach((button) => button.classList.remove("is-pressed"));
   }
 
   const keyMap = {
@@ -778,7 +904,7 @@
     const action = keyMap[event.code];
     if (action) {
       event.preventDefault();
-      pressAction(action);
+      pressAction(action, `key:${event.code}`);
     }
     if (event.code === "Escape") {
       event.preventDefault();
@@ -791,33 +917,57 @@
     const action = keyMap[event.code];
     if (action) {
       event.preventDefault();
-      releaseAction(action);
+      releaseAction(action, `key:${event.code}`);
     }
   });
 
   window.addEventListener("blur", () => {
-    Object.keys(input.held).forEach((key) => { input.held[key] = false; });
+    resetInput();
     if (scene === "playing") togglePause();
   });
 
-  $$('[data-touch]').forEach((button) => {
-    const action = button.dataset.touch;
-    const down = (event) => {
-      event.preventDefault();
-      button.setPointerCapture?.(event.pointerId);
-      button.classList.add("is-pressed");
-      pressAction(action);
-    };
-    const up = (event) => {
-      event.preventDefault();
-      button.classList.remove("is-pressed");
-      releaseAction(action);
-    };
-    button.addEventListener("pointerdown", down);
-    button.addEventListener("pointerup", up);
-    button.addEventListener("pointercancel", up);
-    button.addEventListener("pointerleave", up);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) return;
+    resetInput();
+    if (scene === "playing") togglePause();
   });
+  window.addEventListener("pagehide", resetInput);
+
+  function releaseTouchPointer(pointerId, event) {
+    const active = input.pointers.get(pointerId);
+    if (!active) return;
+    event?.preventDefault?.();
+    input.pointers.delete(pointerId);
+    releaseAction(active.action, active.source);
+    const stillPressed = [...input.pointers.values()].some((entry) => entry.button === active.button);
+    active.button.classList.toggle("is-pressed", stillPressed);
+  }
+
+  function handleTouchPointerDown(event) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    releaseTouchPointer(event.pointerId);
+    const button = event.currentTarget;
+    const action = button.dataset.touch;
+    const source = `pointer:${event.pointerId}`;
+    input.pointers.set(event.pointerId, { action, button, source });
+    button.classList.add("is-pressed");
+    pressAction(action, source);
+    try {
+      button.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Pointer capture is optional in older embedded mobile browsers.
+    }
+  }
+
+  $$('[data-touch]').forEach((button) => {
+    button.addEventListener("pointerdown", handleTouchPointerDown);
+    button.addEventListener("pointerup", (event) => releaseTouchPointer(event.pointerId, event));
+    button.addEventListener("pointercancel", (event) => releaseTouchPointer(event.pointerId, event));
+    button.addEventListener("lostpointercapture", (event) => releaseTouchPointer(event.pointerId, event));
+  });
+  window.addEventListener("pointerup", (event) => releaseTouchPointer(event.pointerId, event), true);
+  window.addEventListener("pointercancel", (event) => releaseTouchPointer(event.pointerId, event), true);
 
   document.addEventListener("click", (event) => {
     const levelButton = event.target.closest("[data-level]");
@@ -859,6 +1009,7 @@
     }
     flash = Math.max(0, flash - dt * 2.7);
     shake = Math.max(0, shake - dt * 22);
+    updateTapBuffers(dt);
     if (scene !== "playing" || !currentLevel || !runtime || !player) {
       input.pressed.clear();
       return;
@@ -908,6 +1059,10 @@
 
   function updateDevices(dt) {
     runtime.goalToastCooldown = Math.max(0, runtime.goalToastCooldown - dt);
+    Object.keys(runtime.activeEffects).forEach((type) => {
+      runtime.activeEffects[type] = Math.max(0, runtime.activeEffects[type] - dt);
+      if (runtime.activeEffects[type] <= 0) delete runtime.activeEffects[type];
+    });
     Object.keys(runtime.enabled).forEach((key) => {
       if (runtime.enabled[key] === true) return;
       runtime.enabled[key] -= dt;
@@ -942,8 +1097,8 @@
   function activePlatforms() {
     return runtime.platforms.filter((platform) => {
       if (platform.brokenTimer > 0) return false;
-      if (platform.hidden && platform.enabledBy && !runtime.enabled[platform.enabledBy]) return false;
-      if (platform.hidden && !platform.enabledBy && !(runtime.hiddenRevealed || runtime.crystals.some((crystal) => crystal.active))) return false;
+      if (platform.hidden && platform.enabledBy && !runtime.enabled[platform.enabledBy] && !effectActive("resonance-orb")) return false;
+      if (platform.hidden && !platform.enabledBy && !(runtime.hiddenRevealed || effectActive("resonance-orb") || runtime.crystals.some((crystal) => crystal.active))) return false;
       return true;
     });
   }
@@ -964,13 +1119,13 @@
   function updatePlayer(dt) {
     player.anim += dt;
     player.invulnerable = Math.max(0, player.invulnerable - dt);
-    player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+    player.dashCooldown = Math.max(0, player.dashCooldown - dt * (effectActive("wind-feather") ? 3.5 : 1));
     player.shootCooldown = Math.max(0, player.shootCooldown - dt);
     player.coyote = player.onGround ? 0.11 : Math.max(0, player.coyote - dt);
     if (input.pressed.has("jump")) player.jumpBuffer = 0.13;
     else player.jumpBuffer = Math.max(0, player.jumpBuffer - dt);
 
-    const move = Number(input.held.right) - Number(input.held.left);
+    const move = Number(directionHeld("right")) - Number(directionHeld("left"));
     if (move) player.facing = move;
     player.inWater = Boolean(runtime.devices.water && player.y + player.h * 0.65 > runtime.waterY);
 
@@ -985,16 +1140,22 @@
     }
 
     if (input.pressed.has("shoot") && player.shootCooldown <= 0) {
-      player.shootCooldown = 0.28;
+      const resonanceBoost = effectActive("resonance-orb");
+      const starCharged = Number(runtime.charges["star-charge"]) > 0;
+      if (starCharged) runtime.charges["star-charge"] -= 1;
+      player.shootCooldown = resonanceBoost || starCharged ? 0.2 : 0.28;
       runtime.projectiles.push({
         x: player.x + player.w / 2 + player.facing * 22,
         y: player.y + 18,
-        w: 18,
-        h: 18,
-        vx: player.facing * 560,
+        w: starCharged ? 34 : resonanceBoost ? 28 : 18,
+        h: starCharged ? 34 : resonanceBoost ? 28 : 18,
+        vx: player.facing * (starCharged ? 680 : resonanceBoost ? 620 : 560),
         vy: 0,
-        life: 1.45,
+        life: resonanceBoost ? 1.85 : 1.45,
+        power: starCharged ? 2 : 1,
+        starCharged,
       });
+      if (starCharged) toast(`星能脉冲已装填 · 剩余 ${runtime.charges["star-charge"]}`, 0.9);
       playTone("shoot");
     }
 
@@ -1013,14 +1174,22 @@
         player.trailTimer = 0.035;
       }
     } else {
-      const acceleration = player.inWater ? 780 : (player.onGround ? 1900 : 1150);
-      const target = move * (player.inWater ? 245 : 350);
-      player.vx = move ? moveToward(player.vx, target, acceleration * dt) : moveToward(player.vx, 0, acceleration * 0.78 * dt);
-      let gravity = player.inWater ? 420 : 1880;
+      const pearlBoost = effectActive("air-pearl");
+      const acceleration = player.inWater ? (pearlBoost ? 980 : 780) : (player.onGround ? 2100 : 1250);
+      const target = move * (player.inWater ? (pearlBoost ? 300 : 245) : 350);
+      const reversing = move !== 0 && player.vx !== 0 && Math.sign(player.vx) !== move;
+      const turnAcceleration = player.inWater ? 3200 : player.onGround ? 6400 : 3400;
+      const braking = player.inWater ? 1450 : player.onGround ? 3600 : 980;
+      player.vx = move
+        ? moveToward(player.vx, target, (reversing ? turnAcceleration : acceleration) * dt)
+        : moveToward(player.vx, 0, braking * dt);
+      let gravity = player.inWater ? (pearlBoost ? 300 : 420) : 1880;
       if (input.held.jump && player.vy < 0) gravity *= 0.58;
-      player.vy = Math.min(player.inWater ? 330 : 980, player.vy + gravity * dt);
+      if (!player.inWater && effectActive("parcel-wings") && input.held.jump && player.vy > 0) gravity *= 0.28;
+      const maxFall = player.inWater ? (pearlBoost ? 250 : 330) : effectActive("parcel-wings") && input.held.jump ? 360 : 980;
+      player.vy = Math.min(maxFall, player.vy + gravity * dt);
       if (player.inWater && input.pressed.has("jump")) {
-        player.vy = -340;
+        player.vy = pearlBoost ? -430 : -340;
         player.jumpBuffer = 0;
         playTone("jump");
         burst(player.x + player.w / 2, player.y + player.h, currentLevel.theme.edge, 5, 90);
@@ -1100,6 +1269,78 @@
     }
   }
 
+  function collectItem(item) {
+    const effect = COLLECTIBLE_EFFECTS[item.type];
+    if (!effect) return false;
+    if (effect.mode === "health" && player.health >= player.maxHealth) {
+      if (!item.fullHealthNotified) toast("生命已满 · 星芽之心会留在这里", 1.1);
+      item.fullHealthNotified = true;
+      return false;
+    }
+
+    item.collected = true;
+    if (effect.mode === "memory") {
+      if (!save.collectedSeeds.includes(item.persistentKey)) {
+        const previousTotal = save.seeds;
+        save.collectedSeeds.push(item.persistentKey);
+        save.seeds = Math.max(save.seeds, save.collectedSeeds.length);
+        persist();
+        toast(save.seeds > previousTotal
+          ? `记忆种子 +1 · 永久收藏共 ${save.seeds} 枚`
+          : `记忆种子已登记 · 永久收藏仍为 ${save.seeds} 枚`, 1.45);
+      } else {
+        toast(`这枚记忆种子已收藏 · 永久收藏共 ${save.seeds} 枚`, 1.25);
+      }
+    } else if (effect.mode === "health") {
+      player.health = Math.min(player.maxHealth, player.health + 2);
+      toast("星芽之心：恢复两格生命", 1.25);
+    } else if (effect.mode === "timed") {
+      const duration = Number(item.duration) || effect.duration;
+      runtime.activeEffects[item.type] = Math.max(Number(runtime.activeEffects[item.type]) || 0, duration);
+      runtime.inventory.add(item.type);
+      if (item.type === "wind-feather") player.dashCooldown = 0;
+      toast(`${effect.label}：${effect.description} · ${duration} 秒`, 1.8);
+    } else if (effect.mode === "charges") {
+      const charges = Number(item.charges) || effect.charges;
+      runtime.charges[item.type] = (Number(runtime.charges[item.type]) || 0) + charges;
+      runtime.inventory.add(item.type);
+      toast(`${effect.label}：${effect.description} · 当前 ×${runtime.charges[item.type]}`, 1.8);
+    } else if (effect.mode === "rune") {
+      runtime.inventory.add(`tide-rune-${item.order || item.id}`);
+      const count = runtime.collectibles.filter((entry) => entry.collected && entry.type === "tide-rune").length;
+      toast(`潮汐符文 ${count} / 3 · 集齐后开启潮门`, 1.55);
+    } else if (effect.mode === "quest") {
+      runtime.inventory.add(item.type);
+      toast(`${effect.label}已取得 · ${effect.description}`, 1.7);
+    } else if (effect.mode === "coolant") {
+      const coolant = runtime.coolants.find((entry) => entry.id === item.mechanismId || entry.id === item.id);
+      if (coolant) {
+        coolant.active = false;
+        coolant.respawn = 7;
+        if (coolant.id) runtime.enabled[coolant.id] = Number(coolant.duration) || 8;
+      }
+      runtime.lavaY = Math.min(720, runtime.lavaY + 95);
+      player.dashCooldown = 0;
+      toast("冷凝种子：熔潮退却、临时平台生成、冲刺充能", 1.85);
+    } else if (effect.mode === "quench") {
+      runtime.lavaY = Math.min(720, runtime.lavaY + (Number(item.dropAmount) || 150));
+      toast("淬火钟鸣响：熔潮大幅退却", 1.6);
+    } else if (effect.mode === "boss-core") {
+      runtime.inventory.add(item.type);
+      toast(`${effect.label}已回收 · 守门挑战完成`, 1.6);
+      const collectedRuntime = runtime;
+      const collectedLevelId = currentLevel.id;
+      setTimeout(() => {
+        if (runtime === collectedRuntime && currentLevel?.id === collectedLevelId && item.collected) completeLevel();
+      }, 420);
+    }
+
+    playTone(effect.mode === "coolant" || effect.mode === "quench" ? "switch" : "seed");
+    burst(item.x + item.w / 2, item.y + item.h / 2, currentLevel.theme.edge, 14, 220);
+    updateHud();
+    return true;
+  }
+
   function handlePlayerWorld() {
     const body = player;
     runtime.hazards.forEach((hazard) => {
@@ -1116,37 +1357,7 @@
     });
 
     runtime.collectibles.forEach((item) => {
-      if (!item.collected && overlap(body, item)) {
-        item.collected = true;
-        if (item.type === "memory-seed" || item.type === "seed") {
-          save.seeds += Number(item.value) || 1;
-          persist();
-          toast(`记忆种子 +1 · 共 ${save.seeds} 枚`, 1.25);
-        } else if (item.type === "heart") {
-          player.health = Math.min(player.maxHealth, player.health + 2);
-          toast("星芽恢复了两格生命", 1.15);
-        } else {
-          runtime.inventory.add(item.type);
-          const itemNames = {
-            "crystal-crown": "晶冠已共鸣 · 终点封印解除",
-            "tide-rune": `潮汐符文 ${[...runtime.inventory].filter((key) => key.startsWith("tide-rune")).length} / 3`,
-            "forge-seal": "熔炉印记已取得 · 出口开启",
-            "quench-bell": "淬火钟鸣响 · 熔潮大幅退却",
-            "wind-feather": "风羽加护 · 冲刺重新充能",
-          };
-          if (item.type === "tide-rune") {
-            const count = runtime.collectibles.filter((entry) => entry.collected && entry.type === "tide-rune").length;
-            runtime.inventory.add(`tide-rune-${count}`);
-            toast(`潮汐符文 ${count} / 3`, 1.25);
-          } else {
-            toast(itemNames[item.type] || "发现一件裂界遗物", 1.25);
-          }
-          if (item.type === "quench-bell") runtime.lavaY = Math.min(720, runtime.lavaY + 150);
-          if (item.type === "wind-feather") player.dashCooldown = 0;
-        }
-        playTone("seed");
-        burst(item.x + 13, item.y + 13, currentLevel.theme.edge, 14, 220);
-      }
+      if (!item.collected && isBossSpawnAvailable(item) && overlap(body, item)) collectItem(item);
     });
 
     runtime.checkpoints.forEach((point) => {
@@ -1246,13 +1457,14 @@
   }
 
   function updateEnemies(dt) {
+    const enemyDt = dt * (effectActive("clock-spring") ? 0.55 : 1);
     runtime.enemies.forEach((enemy) => {
-      if (!enemy.alive) return;
-      enemy.t += dt;
-      enemy.cooldown -= dt;
+      if (!enemy.alive || !isBossSpawnAvailable(enemy)) return;
+      enemy.t += enemyDt;
+      enemy.cooldown -= enemyDt;
       if (isFlyingEnemy(enemy.type)) {
-        enemy.x += enemy.vx * dt;
-        enemy.y += Math.sin(enemy.t * 3.2) * 48 * dt;
+        enemy.x += enemy.vx * enemyDt;
+        enemy.y += Math.sin(enemy.t * 3.2) * 48 * enemyDt;
         if (Math.abs(enemy.x - enemy.originX) > enemy.range) enemy.vx *= -1;
       } else if (isTurretEnemy(enemy.type)) {
         if (enemy.cooldown <= 0 && Math.abs(player.x - enemy.x) < 620) {
@@ -1263,7 +1475,7 @@
           enemy.cooldown = 2.25;
         }
       } else {
-        enemy.x += enemy.vx * dt;
+        enemy.x += enemy.vx * enemyDt;
         if (Math.abs(enemy.x - enemy.originX) > enemy.range) enemy.vx *= -1;
       }
 
@@ -1301,8 +1513,8 @@
       let consumed = false;
 
       for (const enemy of runtime.enemies) {
-        if (!enemy.alive || !overlap(projectile, enemy)) continue;
-        enemy.hp -= 1;
+        if (!enemy.alive || !isBossSpawnAvailable(enemy) || !overlap(projectile, enemy)) continue;
+        enemy.hp -= Number(projectile.power) || 1;
         consumed = true;
         if (enemy.hp <= 0) {
           enemy.alive = false;
@@ -1336,10 +1548,12 @@
 
       runtime.valves.forEach((valve) => {
         if (overlap(projectile, valve)) {
+          const boosted = Number(runtime.charges["coolant-charge"]) > 0 && valve.timer < 8;
+          if (boosted) runtime.charges["coolant-charge"] -= 1;
           valve.active = true;
-          valve.timer = 5.5;
+          valve.timer = Math.max(valve.timer, boosted ? 10 : 5.5);
           consumed = true;
-          toast(`冷却阀 ${valve.index + 1} 开启 · ${runtime.valves.filter((entry) => entry.active).length}/${runtime.valves.length}`, 1.2);
+          toast(`冷却阀 ${valve.index + 1} 开启${boosted ? " · 充能延长至 10 秒" : ""} · ${runtime.valves.filter((entry) => entry.active).length}/${runtime.valves.length}`, 1.35);
           playTone("switch");
         }
       });
@@ -1347,7 +1561,7 @@
       runtime.mirrors.forEach((mirror) => {
         if (overlap(projectile, mirror)) {
           mirror.active = true;
-          mirror.timer = 5.8;
+          mirror.timer = Math.max(mirror.timer, projectile.starCharged ? 9.5 : 5.8);
           consumed = true;
           toast(`日光镜 ${mirror.index + 1} 对准核心`, 1.2);
           playTone("switch");
@@ -1356,7 +1570,7 @@
 
       if (runtime.boss && overlap(projectile, runtime.boss)) {
         consumed = true;
-        if (runtime.boss.vulnerable > 0) damageBoss();
+        if (runtime.boss.vulnerable > 0) damageBoss(Number(projectile.power) || 1);
         else {
           burst(projectile.x, projectile.y, currentLevel.theme.paper, 6, 150);
           toast(currentLevel.id === 4 ? "装甲弹开了脉冲——先开冷却阀，再诱导冲锋" : "暗核吞掉了脉冲——让两面日光镜同时共鸣", 1.3);
@@ -1367,16 +1581,17 @@
     });
     runtime.projectiles = projectiles.filter((projectile) => projectile.life > 0 && projectile.x > -100 && projectile.x < currentLevel.worldWidth + 100);
 
+    const hostileDt = dt * (effectActive("clock-spring") ? 0.55 : 1);
     runtime.enemyShots.forEach((shot) => {
-      shot.life -= dt;
-      shot.x += shot.vx * dt;
-      shot.y += shot.vy * dt;
+      shot.life -= hostileDt;
+      shot.x += shot.vx * hostileDt;
+      shot.y += shot.vy * hostileDt;
     });
     runtime.enemyShots = runtime.enemyShots.filter((shot) => shot.life > 0);
 
     runtime.shockwaves.forEach((wave) => {
-      wave.life -= dt;
-      wave.x += wave.vx * dt;
+      wave.life -= hostileDt;
+      wave.x += wave.vx * hostileDt;
     });
     runtime.shockwaves = runtime.shockwaves.filter((wave) => wave.life > 0);
   }
@@ -1509,10 +1724,10 @@
     }
   }
 
-  function damageBoss() {
+  function damageBoss(amount = 1) {
     const boss = runtime.boss;
     if (!boss || boss.hitFlash > 0 || boss.vulnerable <= 0) return;
-    boss.hp -= 1;
+    boss.hp = Math.max(0, boss.hp - Math.max(1, Number(amount) || 1));
     boss.hitFlash = 0.35;
     boss.vulnerable = 0;
     boss.phase = boss.maxHp - boss.hp + 1;
@@ -1522,9 +1737,12 @@
     burst(boss.x + boss.w / 2, boss.y + boss.h / 2, currentLevel.theme.accent, 30, 430);
     if (boss.hp <= 0) {
       boss.state = "defeated";
+      runtime.goalOpen = true;
       runtime.enemyShots.length = 0;
       runtime.shockwaves.length = 0;
-      setTimeout(() => completeLevel(), 650);
+      const hasCoreReward = runtime.collectibles.some((item) => item.spawnOnBossDefeat && !item.collected);
+      if (hasCoreReward) toast("守门核心已经显现 · 拾取它完成挑战", 2.2);
+      else setTimeout(() => completeLevel(), 650);
     } else {
       toast(`核心受损 · 还剩 ${boss.hp} 层`, 1.6);
       boss.state = "watching";
@@ -1655,10 +1873,12 @@
     renderDevices(theme);
     renderCollectibles(theme);
     renderCheckpoints(theme);
-    runtime.enemies.forEach((enemy) => { if (enemy.alive && inCamera(enemy.x, enemy.w)) drawEnemy(enemy, theme); });
+    runtime.enemies.forEach((enemy) => { if (enemy.alive && isBossSpawnAvailable(enemy) && inCamera(enemy.x, enemy.w)) drawEnemy(enemy, theme); });
     runtime.enemyShots.forEach((shot) => { if (inCamera(shot.x, shot.w, 80)) drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, shot.w * 0.7, theme.accent, theme.ink); });
     runtime.shockwaves.forEach((wave) => { if (inCamera(wave.x, wave.w, 80)) drawShockwave(wave, theme); });
-    runtime.projectiles.forEach((shot) => { if (inCamera(shot.x, shot.w, 80)) drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, 11, theme.edge, theme.paper); });
+    runtime.projectiles.forEach((shot) => {
+      if (inCamera(shot.x, shot.w, 80)) drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, Math.max(11, shot.w * 0.48), shot.starCharged ? theme.accent : theme.edge, theme.paper);
+    });
     if (runtime.boss && runtime.boss.hp > 0) drawBoss(runtime.boss, theme);
     if (player) drawHero(player.x + player.w / 2, player.y + player.h, 1, player.facing, player.vx, theme, player.anim, player);
     runtime.particles.forEach((particle) => { if (inCamera(particle.x, particle.size * 2, 80)) drawParticle(particle); });
@@ -2491,10 +2711,35 @@
 
   function renderCollectibles(theme) {
     runtime.collectibles.forEach((item) => {
-      if (!item.collected && inCamera(item.x, item.w, 80)) {
+      if (!item.collected && isBossSpawnAvailable(item) && inCamera(item.x, item.w, 80)) {
         drawCollectible(item, theme);
       }
     });
+  }
+
+  function drawCollectibleBadge(type, theme) {
+    const effect = COLLECTIBLE_EFFECTS[type];
+    if (!effect?.badge) return;
+    const fill = effect.mode === "health" ? theme.danger
+      : effect.mode === "quest" || effect.mode === "boss-core" || effect.mode === "rune" ? theme.edge
+        : effect.mode === "timed" ? theme.accent2
+          : effect.mode === "charges" ? theme.accent
+            : theme.paper;
+    ctx.save();
+    ctx.translate(21, -24);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = theme.ink;
+    ctx.lineWidth = 2;
+    ctx.fillRect(-10, -10, 20, 20);
+    ctx.strokeRect(-10, -10, 20, 20);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = effect.mode === "memory" ? theme.ink : theme.paper;
+    ctx.font = '900 11px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(effect.badge, 0, 0.5);
+    ctx.restore();
   }
 
   function drawCollectible(item, theme) {
@@ -2510,11 +2755,12 @@
     ctx.beginPath(); ctx.arc(0, 1, 23, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
 
-    const spriteFrame = frameSpec("collectibleFrames", type, DEFAULT_COLLECTIBLE_FRAMES[type]);
+    const spriteFrame = PROCEDURAL_COLLECTIBLE_TYPES.has(type) ? null : frameSpec("collectibleFrames", type, DEFAULT_COLLECTIBLE_FRAMES[type]);
     if (spriteFrame) {
       const spriteW = Number(spriteFrame.drawW) || 64;
       const spriteH = Number(spriteFrame.drawH) || 80;
       if (drawAtlasFrame(spriteFrame, 0, 0, spriteW, spriteH, { anchorX: 0.5, anchorY: Number(spriteFrame.anchorY ?? 0.5) })) {
+        drawCollectibleBadge(type, theme);
         ctx.restore();
         return;
       }
@@ -2614,6 +2860,7 @@
     } else {
       drawSeed(0, 0, theme.edge, runtime.time + item.t);
     }
+    drawCollectibleBadge(type, theme);
     ctx.restore();
   }
 
@@ -3296,13 +3543,19 @@
     snapshot: () => ({
       scene,
       level: currentLevel?.id || null,
-      player: player ? { x: player.x, y: player.y, health: player.health } : null,
+      player: player ? { x: player.x, y: player.y, vx: player.vx, vy: player.vy, health: player.health } : null,
       boss: runtime?.boss ? { hp: runtime.boss.hp, state: runtime.boss.state, vulnerable: runtime.boss.vulnerable } : null,
       cameraX,
       viewport: { width: VIEW_W, height: VIEW_H },
       unlocked: save.unlocked,
       seeds: save.seeds,
+      input: { held: { ...input.held }, tapBuffer: { ...input.tapBuffer }, pointers: input.pointers.size },
+      effects: runtime ? { ...runtime.activeEffects } : {},
+      charges: runtime ? { ...runtime.charges } : {},
+      pickupStatus: runtime ? pickupStatusText() : "",
     }),
+    press: (action) => pressAction(action, "qa"),
+    release: (action) => releaseAction(action, "qa"),
     captureReady: () => captureReady || scene === "menu",
     unlockAll: () => { save.unlocked = 8; persist(); renderLevelGrid(); },
     teleport: (x, y = 420) => {
