@@ -227,6 +227,7 @@
     sources: Object.fromEntries(["left", "right", "jump", "down", "dash", "shoot"].map((action) => [action, new Set()])),
     tapBuffer: { left: 0, right: 0 },
     pointers: new Map(),
+    lastDirection: null,
   };
 
   let save = loadSave();
@@ -849,17 +850,20 @@
   function pressAction(action, source = `manual:${action}`) {
     const sources = input.sources[action];
     if (!sources) return;
+    const isNewSource = !sources.has(source);
+    const isDirection = action === "left" || action === "right";
     const wasHeld = sources.size > 0;
     sources.add(source);
     input.held[action] = true;
-    if (!wasHeld) {
-      input.pressed.add(action);
-      if (action === "left" || action === "right") {
-        const opposite = action === "left" ? "right" : "left";
-        input.tapBuffer[opposite] = 0;
-        input.tapBuffer[action] = TOUCH_MIN_HOLD_MS / 1000;
-      }
+    if (isNewSource && isDirection) {
+      input.lastDirection = action;
+      const opposite = action === "left" ? "right" : "left";
+      input.tapBuffer[opposite] = 0;
     }
+    if (!wasHeld || (isDirection && isNewSource)) {
+      input.pressed.add(action);
+    }
+    if (!wasHeld && isDirection) input.tapBuffer[action] = TOUCH_MIN_HOLD_MS / 1000;
     if (scene === "briefing") beginBriefing();
   }
 
@@ -879,6 +883,17 @@
     return Boolean(input.held[action] || input.tapBuffer[action] > 0);
   }
 
+  function movementAxis() {
+    const left = directionHeld("left");
+    const right = directionHeld("right");
+    if (left && right) {
+      if (input.lastDirection === "left") return -1;
+      if (input.lastDirection === "right") return 1;
+      return 0;
+    }
+    return Number(right) - Number(left);
+  }
+
   function resetInput() {
     Object.keys(input.held).forEach((action) => {
       input.held[action] = false;
@@ -888,6 +903,7 @@
     input.tapBuffer.left = 0;
     input.tapBuffer.right = 0;
     input.pointers.clear();
+    input.lastDirection = null;
     $$("[data-touch].is-pressed").forEach((button) => button.classList.remove("is-pressed"));
   }
 
@@ -1125,7 +1141,7 @@
     if (input.pressed.has("jump")) player.jumpBuffer = 0.13;
     else player.jumpBuffer = Math.max(0, player.jumpBuffer - dt);
 
-    const move = Number(directionHeld("right")) - Number(directionHeld("left"));
+    const move = movementAxis();
     if (move) player.facing = move;
     player.inWater = Boolean(runtime.devices.water && player.y + player.h * 0.65 > runtime.waterY);
 
@@ -1178,8 +1194,10 @@
       const acceleration = player.inWater ? (pearlBoost ? 980 : 780) : (player.onGround ? 2100 : 1250);
       const target = move * (player.inWater ? (pearlBoost ? 300 : 245) : 350);
       const reversing = move !== 0 && player.vx !== 0 && Math.sign(player.vx) !== move;
+      const directionPressed = move < 0 ? input.pressed.has("left") : move > 0 && input.pressed.has("right");
       const turnAcceleration = player.inWater ? 3200 : player.onGround ? 6400 : 3400;
       const braking = player.inWater ? 1450 : player.onGround ? 3600 : 980;
+      if (reversing && directionPressed) player.vx = 0;
       player.vx = move
         ? moveToward(player.vx, target, (reversing ? turnAcceleration : acceleration) * dt)
         : moveToward(player.vx, 0, braking * dt);
@@ -3549,13 +3567,13 @@
       viewport: { width: VIEW_W, height: VIEW_H },
       unlocked: save.unlocked,
       seeds: save.seeds,
-      input: { held: { ...input.held }, tapBuffer: { ...input.tapBuffer }, pointers: input.pointers.size },
+      input: { held: { ...input.held }, tapBuffer: { ...input.tapBuffer }, pointers: input.pointers.size, lastDirection: input.lastDirection },
       effects: runtime ? { ...runtime.activeEffects } : {},
       charges: runtime ? { ...runtime.charges } : {},
       pickupStatus: runtime ? pickupStatusText() : "",
     }),
-    press: (action) => pressAction(action, "qa"),
-    release: (action) => releaseAction(action, "qa"),
+    press: (action, source = "qa") => pressAction(action, source),
+    release: (action, source = "qa") => releaseAction(action, source),
     captureReady: () => captureReady || scene === "menu",
     unlockAll: () => { save.unlocked = 8; persist(); renderLevelGrid(); },
     teleport: (x, y = 420) => {

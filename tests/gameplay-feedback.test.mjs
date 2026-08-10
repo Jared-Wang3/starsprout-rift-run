@@ -31,6 +31,125 @@ async function loadLevels() {
   assert.fail("StarSproutLevels does not expose its campaign levels");
 }
 
+function createNoopCanvasContext() {
+  const gradient = { addColorStop() {} };
+  return new Proxy({
+    createLinearGradient: () => gradient,
+    createRadialGradient: () => gradient,
+    createPattern: () => ({}),
+  }, {
+    get(target, property) {
+      if (property in target) return target[property];
+      return () => {};
+    },
+    set(target, property, value) {
+      target[property] = value;
+      return true;
+    },
+  });
+}
+
+function createFakeElement(id = "", context = createNoopCanvasContext()) {
+  const classes = new Set();
+  return {
+    id,
+    width: id === "game" ? 1280 : 0,
+    height: id === "game" ? 720 : 0,
+    hidden: false,
+    dataset: {},
+    style: { setProperty() {} },
+    classList: {
+      add: (...names) => names.forEach((name) => classes.add(name)),
+      remove: (...names) => names.forEach((name) => classes.delete(name)),
+      toggle(name, force) {
+        if (force === true) classes.add(name);
+        else if (force === false) classes.delete(name);
+        else if (classes.has(name)) classes.delete(name);
+        else classes.add(name);
+        return classes.has(name);
+      },
+      contains: (name) => classes.has(name),
+    },
+    addEventListener() {},
+    setAttribute() {},
+    getContext: () => context,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
+    setPointerCapture() {},
+    releasePointerCapture() {},
+    hasPointerCapture: () => false,
+    requestFullscreen() {},
+    closest: () => null,
+  };
+}
+
+async function loadGameQaHook() {
+  const [levelsSource, gameSource] = await Promise.all([
+    readProjectFile("public/play/levels.js"),
+    readProjectFile("public/play/game.js"),
+  ]);
+  const canvasContext = createNoopCanvasContext();
+  const elements = new Map();
+  const element = (id) => {
+    if (!elements.has(id)) elements.set(id, createFakeElement(id, canvasContext));
+    return elements.get(id);
+  };
+  const storage = new Map();
+  const document = {
+    hidden: false,
+    fullscreenElement: null,
+    querySelector(selector) {
+      if (selector === "#game") return element("game");
+      return element(selector.startsWith("#") ? selector.slice(1) : selector);
+    },
+    querySelectorAll: () => [],
+    createElement: (tagName) => createFakeElement(tagName === "canvas" ? "canvas" : tagName, canvasContext),
+    addEventListener() {},
+    exitFullscreen() {},
+  };
+  class FakeImage {
+    complete = false;
+    naturalWidth = 0;
+    naturalHeight = 0;
+    addEventListener() {}
+    set src(value) { this.currentSrc = value; }
+  }
+  const browserGlobal = {
+    console,
+    document,
+    Image: FakeImage,
+    URLSearchParams,
+    structuredClone,
+    performance: { now: () => 0 },
+    location: { search: "" },
+    localStorage: {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, String(value)),
+    },
+    matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+    addEventListener() {},
+    removeEventListener() {},
+    requestAnimationFrame: () => 0,
+    cancelAnimationFrame() {},
+    requestIdleCallback: () => 0,
+    cancelIdleCallback() {},
+    setTimeout: () => 0,
+    clearTimeout() {},
+  };
+  browserGlobal.window = browserGlobal;
+  browserGlobal.globalThis = browserGlobal;
+  const context = vm.createContext(browserGlobal);
+  vm.runInContext(levelsSource, context, {
+    filename: "public/play/levels.js",
+    timeout: 1_000,
+  });
+  vm.runInContext(gameSource, context, {
+    filename: "public/play/game.js",
+    timeout: 3_000,
+  });
+  assert.ok(browserGlobal.__STARSPROUT_TEST__, "game.js must expose the existing QA hook");
+  return browserGlobal.__STARSPROUT_TEST__;
+}
+
 // Returns a balanced JS object/function/array block while ignoring braces in
 // strings and comments. This keeps the assertions local to an implementation
 // marker without pinning them to whitespace or line layout.
@@ -204,6 +323,89 @@ test("touch direction taps are buffered and pointer-capture failures cannot swal
   const resetInput = namedFunction(source, "resetInput");
   assert.match(resetInput, /pointers\.clear\s*\(/, "resetInput() must clear tracked pointers");
   assert.match(source, /visibilitychange[\s\S]{0,180}?resetInput|pagehide[\s\S]{0,80}?resetInput/);
+});
+
+test("quick right-to-left handoff reverses on the first frame without a 50ms rightward slide", async () => {
+  const qa = await loadGameQaHook();
+  qa.startLevel(1);
+
+  // Let the player settle on the opening ground, then build a representative
+  // held-right running speed before a release + quick left tap handoff.
+  qa.step(15);
+  qa.press("right");
+  qa.step(18);
+  qa.release("right");
+  const beforeSwitch = qa.snapshot();
+  assert.ok(beforeSwitch.player.vx >= 300, `precondition: expected a rightward run, got vx=${beforeSwitch.player.vx}`);
+
+  qa.press("left");
+  qa.release("left");
+  const switchX = beforeSwitch.player.x;
+  qa.step(1);
+  const firstFrame = qa.snapshot();
+  qa.step(2);
+  const after50ms = qa.snapshot();
+  const rightwardDrift = after50ms.player.x - switchX;
+
+  assert.ok(
+    firstFrame.player.vx < 0,
+    `left handoff must reverse velocity on the first 16.7ms frame; got vx=${firstFrame.player.vx.toFixed(2)}, `
+      + `x drift after 50ms=${rightwardDrift.toFixed(2)}px`,
+  );
+  assert.ok(
+    rightwardDrift <= 1,
+    `left handoff must not visibly continue right during the first 50ms; drift=${rightwardDrift.toFixed(2)}px`,
+  );
+  assert.equal(after50ms.input.held.left, false, "the regression scenario must remain a quick tap, not a held input");
+  assert.ok(after50ms.input.tapBuffer.left > 0, "the existing QA hook must observe the buffered left tap");
+});
+
+test("the newest direction wins during overlap and while airborne", async () => {
+  const qa = await loadGameQaHook();
+  qa.startLevel(1);
+  qa.step(15);
+  qa.press("right");
+  qa.step(18);
+
+  // Mobile pointer events can overlap for one or more frames when the player
+  // puts the next finger down before the previous direction is released.
+  qa.press("left");
+  qa.step(1);
+  const overlap = qa.snapshot();
+  assert.equal(overlap.input.held.right, true);
+  assert.equal(overlap.input.held.left, true);
+  assert.equal(overlap.input.lastDirection, "left");
+  assert.ok(overlap.player.vx < 0, `newest overlapping direction must win immediately; vx=${overlap.player.vx}`);
+
+  // A second pointer on an already-held direction is still a fresh intent.
+  // This guards three-finger/mixed keyboard+touch handoffs without turning
+  // auto-repeated keydown events into repeated action edges.
+  qa.press("right", "qa-right-2");
+  qa.step(18);
+  assert.ok(qa.snapshot().player.vx >= 300, "precondition: second right source must regain rightward speed");
+  qa.press("left", "qa-left-2");
+  qa.step(1);
+  assert.ok(qa.snapshot().player.vx < 0, "a fresh source on an already-held left direction must reverse immediately");
+  qa.release("left", "qa-left-2");
+  qa.release("right", "qa-right-2");
+
+  qa.release("left");
+  qa.release("right");
+  qa.startLevel(1);
+  qa.step(15);
+  qa.press("right");
+  qa.step(18);
+  qa.press("jump");
+  qa.step(1);
+  qa.release("jump");
+  qa.release("right");
+  assert.ok(qa.snapshot().player.vy < 0, "precondition: player must be airborne for the reversal check");
+
+  qa.press("left");
+  qa.release("left");
+  qa.step(1);
+  const airborne = qa.snapshot();
+  assert.ok(airborne.player.vx < 0, `airborne quick tap must reverse on its first frame; vx=${airborne.player.vx}`);
 });
 
 test("every campaign collectible maps to an explicit non-generic effect handler", async () => {
