@@ -864,6 +864,11 @@ kbd {
 }
 
 .touch-controls {
+  --touch-move-size: 4.2rem;
+  --touch-action-size: 4.2rem;
+  --touch-jump-size: 5.3rem;
+  --touch-dash-size: 3.7rem;
+  --touch-gap: 0.6rem;
   position: absolute;
   z-index: 18;
   right: calc(1rem + var(--safe-right));
@@ -878,14 +883,14 @@ kbd {
 .touch-move,
 .touch-actions {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--touch-gap);
   align-items: end;
   pointer-events: auto;
 }
 
 .touch-controls button {
-  width: 4.2rem;
-  height: 4.2rem;
+  width: var(--touch-action-size);
+  height: var(--touch-action-size);
   border: 2px solid rgba(244, 237, 218, 0.42);
   border-radius: 50%;
   padding: 0;
@@ -899,6 +904,11 @@ kbd {
   touch-action: none;
 }
 
+.touch-move button {
+  width: var(--touch-move-size);
+  height: var(--touch-move-size);
+}
+
 .touch-controls button.is-pressed {
   transform: translateY(2px);
   background: var(--amber);
@@ -907,8 +917,8 @@ kbd {
 }
 
 .touch-actions .touch-jump {
-  width: 5.3rem;
-  height: 5.3rem;
+  width: var(--touch-jump-size);
+  height: var(--touch-jump-size);
   border-color: var(--amber);
   background: var(--amber);
   color: var(--ink);
@@ -921,8 +931,8 @@ kbd {
 }
 
 .touch-actions .touch-dash {
-  width: 3.7rem;
-  height: 3.7rem;
+  width: var(--touch-dash-size);
+  height: var(--touch-dash-size);
   border-color: var(--coral);
   background: color-mix(in srgb, var(--coral) 24%, var(--ink));
   font-size: 1rem;
@@ -1233,35 +1243,55 @@ kbd {
   }
 
   .touch-controls {
-    right: calc(0.2rem + var(--safe-right));
-    bottom: calc(0.45rem + var(--safe-bottom));
-    left: calc(0.2rem + var(--safe-left));
+    --touch-move-size: 4rem;
+    --touch-action-size: 3rem;
+    --touch-jump-size: 4.15rem;
+    --touch-dash-size: 3rem;
+    --touch-gap: 0.55rem;
+    right: max(0.6rem, var(--safe-right));
+    bottom: max(0.8rem, calc(0.35rem + var(--safe-bottom)));
+    left: max(0.6rem, var(--safe-left));
+    min-height: 7.6rem;
   }
 
   .touch-move {
-    gap: 0.3rem;
+    align-self: end;
   }
 
   .touch-actions {
-    gap: 0.16rem;
+    position: relative;
+    display: block;
+    flex: 0 0 9.25rem;
+    width: 9.25rem;
+    height: 7.6rem;
   }
 
-  .touch-controls button,
-  .touch-actions .touch-dash,
+  .touch-actions button {
+    position: absolute;
+    font-size: 0.95rem;
+  }
+
+  .touch-actions .touch-dash {
+    bottom: 0;
+    left: 0;
+  }
+
   .touch-actions .touch-down {
-    width: 2.75rem;
-    height: 2.75rem;
-    font-size: 0.9rem;
+    top: 0;
+    left: 3rem;
+  }
+
+  .touch-actions .touch-shoot {
+    top: 0;
+    right: 0;
   }
 
   .touch-actions .touch-jump {
-    width: 3.25rem;
-    height: 3.25rem;
+    right: 0;
+    bottom: 0;
   }
 
   .touch-move button {
-    width: 3.5rem;
-    height: 3.5rem;
     font-size: 1.3rem;
   }
 
