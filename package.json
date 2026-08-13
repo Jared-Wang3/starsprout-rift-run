@@ -68,6 +68,7 @@
     },
     "files": [
       "electron/main.cjs",
+      "electron/assets/**/*",
       "public/play/**/*",
       "package.json",
       "!node_modules/**/*",

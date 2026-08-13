@@ -200,7 +200,10 @@ test("Electron keeps the same offline play tree inside ASAR", async () => {
   assert.equal(packageJson.build?.asar, true);
   assert.ok(packageJson.build?.files?.includes("public/play/**/*"),
     "Electron must package every current and future campaign asset under public/play");
+  assert.ok(packageJson.build?.files?.includes("electron/assets/**/*"),
+    "Electron must package the runtime window icon referenced by main.cjs");
   assert.match(mainSource, /loadFile\(GAME_FILE\)/);
+  assert.match(mainSource, /path\.join\(__dirname,\s*["']assets["'],\s*["']icon\.png["']\)/);
   assert.match(mainSource, /nodeIntegration:\s*false/);
   assert.match(mainSource, /contextIsolation:\s*true/);
   assert.match(mainSource, /sandbox:\s*true/);
