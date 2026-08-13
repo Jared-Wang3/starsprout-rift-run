@@ -888,11 +888,14 @@
     cameraX = 0;
     setGameUi(false);
     showOnly("start-screen");
-    $("#continue-label").textContent = save.unlocked > FIRST_LEVEL_ID ? `继续第 ${save.unlocked} 关` : "开始远征";
+    const continueLabel = save.unlocked > FIRST_LEVEL_ID ? `继续第 ${save.unlocked} 关` : "开始远征";
+    $("#continue-label").textContent = continueLabel;
     const expedition = CAMPAIGN_LEVELS.find((level) => Number(level.id) === Number(save.unlocked)) || CAMPAIGN_LEVELS[0];
     setNodeText("#expedition-stage", `STAGE ${pad(expedition?.id || FIRST_LEVEL_ID)}`);
     setNodeText("#expedition-name", expedition?.name || "等待新的裂界");
     setNodeText("#expedition-progress", `${campaignCompletedCount(save.completed)} / ${CAMPAIGN_LEVELS.length} 已修复`);
+    const riftEntry = document.querySelector?.('[data-action="continue"]');
+    if (riftEntry) riftEntry.setAttribute("aria-label", `${continueLabel}：${expedition?.name || "新的裂界"}`);
     const progressFill = $("#expedition-progress-fill");
     if (progressFill) progressFill.style.transform = `scaleX(${campaignProgressPercent() / 100})`;
     renderProfile();
@@ -2590,10 +2593,14 @@
     const sx = shake ? (Math.random() - 0.5) * shake : 0;
     const sy = shake ? (Math.random() - 0.5) * shake : 0;
     ctx.translate(sx, sy);
-    if (!currentLevel || scene === "menu" || scene === "levels" || scene === "help") renderMenuWorld();
-    else renderWorld();
+    // The menu has its own opaque cover art. Skipping the hidden Canvas scene
+    // avoids needlessly redrawing a full animated world on battery-powered phones.
+    if (scene !== "menu") {
+      if (!currentLevel || scene === "levels" || scene === "help") renderMenuWorld();
+      else renderWorld();
+    }
     ctx.restore();
-    if (flash > 0) {
+    if (scene !== "menu" && flash > 0) {
       ctx.fillStyle = `rgba(244,237,218,${flash * 0.32})`;
       ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     }

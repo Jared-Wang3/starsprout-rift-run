@@ -97,6 +97,39 @@ test("expedition shell exposes the hero profile and three unlockable sprout modu
   );
 });
 
+test("main menu is a responsive rift-cover composition instead of a stacked card launcher", async () => {
+  const [html, css, wideArt, portraitArt] = await Promise.all([
+    readProjectFile("public/play/index.html"),
+    readProjectFile("public/play/game.css"),
+    readFile(projectFile("public/play/assets/art-v4/menu-keyart-wide.webp")),
+    readFile(projectFile("public/play/assets/art-v4/menu-keyart-portrait.webp")),
+  ]);
+
+  assert.match(html, /<picture\b[^>]*class=["'][^"']*\bcover-art\b/i);
+  assert.match(html, /menu-keyart-portrait\.webp/i);
+  assert.match(html, /menu-keyart-wide\.webp/i);
+  assert.match(html, /<link\b[^>]*rel=["']icon["'][^>]*href=["']\.\/favicon\.svg["']/i);
+  assert.match(html, /class=["'][^"']*\brift-entry\b[^"']*["'][^>]*data-action=["']continue["']|data-action=["']continue["'][^>]*class=["'][^"']*\brift-entry\b/i);
+  assert.match(html, /class=["'][^"']*\bexpedition-trail\b/i);
+  assert.match(html, /class=["'][^"']*\bfield-dock\b/i);
+  assert.doesNotMatch(html, /\bbrand-block\b|\bexpedition-slot\b/i,
+    "the cover must not regress to a stack of generic dashboard cards");
+
+  assert.match(css, /\.primary-action\.rift-entry\s*\{/);
+  assert.match(css, /@media\s*\(orientation:\s*portrait\)[\s\S]*?\.cover-art\s+img\s*\{/i);
+  assert.match(css, /min-aspect-ratio:\s*6\s*\/\s*7/i,
+    "near-square phones need a dedicated cover composition");
+  assert.match(css, /@media\s*\(orientation:\s*portrait\)[\s\S]*?\.start-meta\s*\{[^}]*display:\s*none/s,
+    "decorative desktop metadata must not cover the mobile navigation dock");
+
+  for (const [name, image] of [["wide", wideArt], ["portrait", portraitArt]]) {
+    assert.equal(image.subarray(0, 4).toString("ascii"), "RIFF", `${name} key art must be WebP`);
+    assert.equal(image.subarray(8, 12).toString("ascii"), "WEBP", `${name} key art has an invalid WebP signature`);
+    assert.ok(image.length >= 100_000 && image.length <= 800_000,
+      `${name} key art must stay within the mobile loading budget`);
+  }
+});
+
 test("route renderer groups the campaign into three acts with mode tags and thumbnails", async () => {
   const source = await readProjectFile("public/play/game.js");
 
@@ -143,8 +176,8 @@ test("campaign copy and level selection scale to twelve stages", async () => {
     readProjectFile("public/play/game.js"),
   ]);
 
-  assert.match(html, />\s*12\s*个关卡\s*</);
-  assert.match(html, />\s*3\s*场\s*BOSS\s*</i);
+  assert.match(html, />\s*12\s*(?:个关卡|片裂界)\s*</);
+  assert.match(html, />\s*3\s*(?:场\s*BOSS|位守门者)\s*</i);
   assert.match(html, /12\s*\/\s*12\s*关/);
   assert.doesNotMatch(html, />\s*8\s*个关卡\s*</);
   assert.doesNotMatch(html, />\s*2\s*场\s*BOSS\s*</i);

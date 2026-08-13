@@ -7,6 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <title>星芽跃界 · Starsprout Rift Run</title>
     <meta name="description" content="原创纸雕风横版动作闯关游戏：12 个特色关卡、3 场机关 Boss 战，支持键盘与手机触控。" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./game.css" />
   </head>
   <body>
@@ -15,38 +16,44 @@
       <div class="paper-grain" aria-hidden="true"></div>
 
       <section id="start-screen" class="screen start-screen is-visible" aria-label="主菜单">
-        <div class="menu-hero-mark" aria-hidden="true"></div>
-        <div class="brand-block">
-          <p class="eyebrow">ORIGINAL PAPER-CUT PLATFORM ADVENTURE</p>
+        <picture class="cover-art" aria-hidden="true">
+          <source media="(orientation: portrait)" srcset="./assets/art-v4/menu-keyart-portrait.webp" />
+          <img src="./assets/art-v4/menu-keyart-wide.webp" alt="" fetchpriority="high" draggable="false" />
+        </picture>
+
+        <header class="cover-lockup">
+          <p class="eyebrow">STARSPROUT · RIFT RUN</p>
           <h1><span>星芽</span><span>跃界</span></h1>
-          <p class="roman-title">STARSPROUT · RIFT RUN</p>
-          <p class="tagline">穿过九片失衡生态，拆解三位核心守门者。</p>
-          <div class="expedition-slot" aria-label="当前远征进度">
-            <div class="expedition-slot-heading">
-              <span>CURRENT EXPEDITION</span>
-              <strong>当前远征</strong>
-            </div>
-            <div class="expedition-slot-route">
-              <span id="expedition-stage">STAGE 01</span>
-              <strong id="expedition-name">风铃草原</strong>
-            </div>
-            <div class="expedition-slot-meter" aria-hidden="true">
-              <i id="expedition-progress-fill"></i>
-            </div>
-            <span id="expedition-progress" class="expedition-slot-count">0 / 12 已修复</span>
+          <p class="roman-title">PAPER-CUT RIFT ADVENTURE</p>
+          <p class="tagline">穿过十二道裂界，让失衡的世界重新发芽。</p>
+        </header>
+
+        <button class="primary-action rift-entry" data-action="continue" aria-label="开始远征">
+          <span class="rift-aura" aria-hidden="true"></span>
+          <span class="rift-ticket">
+            <small id="expedition-stage">STAGE 01</small>
+            <strong id="expedition-name">风铃草原</strong>
+            <span id="continue-label">开始远征</span>
+          </span>
+        </button>
+
+        <div class="expedition-trail" aria-label="当前远征进度">
+          <div class="trail-heading">
+            <span>当前远征</span>
+            <strong id="expedition-progress">0 / 12 已修复</strong>
           </div>
-          <nav class="menu-actions" aria-label="游戏菜单">
-            <button class="primary-action" data-action="continue">
-              <span class="button-kicker">ENTER</span>
-              <span id="continue-label">开始远征</span>
-            </button>
-            <button data-action="levels">跃界航线</button>
-            <button data-action="profile">星芽档案</button>
-            <button class="menu-help" data-action="help"><span>操作提示</span><small>键盘 / 触屏</small></button>
-          </nav>
+          <div class="trail-track" aria-hidden="true">
+            <i id="expedition-progress-fill"></i>
+          </div>
         </div>
+
+        <nav class="menu-actions field-dock" aria-label="游戏菜单">
+          <button data-action="levels"><small>ROUTE / 12</small><strong>跃界航线</strong></button>
+          <button data-action="profile"><small>SPROUT / 04</small><strong>星芽档案</strong></button>
+          <button class="menu-help" data-action="help" aria-label="操作提示"><b aria-hidden="true">?</b><small>操作</small></button>
+        </nav>
         <div class="start-meta">
-          <span>12 个关卡</span><span>3 场 BOSS</span><span>自动存档</span>
+          <span>12 片裂界</span><span>3 位守门者</span><span>4 种芽芯</span>
         </div>
       </section>
 
