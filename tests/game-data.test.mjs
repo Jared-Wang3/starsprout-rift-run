@@ -142,12 +142,11 @@ test("only stage 12 is the campaign finale", async () => {
   assert.notEqual(levels[7].finale, true, "stage 8 is an act boss, not the campaign finale");
 });
 
-test("act 3 collection goals are explicit objects backed by three quest pickups", async () => {
+test("act 3 quest pickups remain explicit while stage 11 uses reactor completion", async () => {
   const levels = extractLevels(await loadLevelBundle());
   const expectedGoals = new Map([
     [9, "lumen-spore"],
     [10, "time-shard"],
-    [11, "storm-cell"],
   ]);
 
   for (const [levelId, itemType] of expectedGoals) {
@@ -168,6 +167,20 @@ test("act 3 collection goals are explicit objects backed by three quest pickups"
     assert.equal(questItems.length, 3, `stage ${levelId} must place exactly three ${itemType} pickups`);
     assert.ok(questItems.every((item) => item.quest === true), `${itemType} pickups must be marked as quest items`);
   }
+
+  const level11 = levels.find((entry) => entry.id === 11);
+  assert.ok(level11, "stage 11 must exist");
+  assert.deepEqual(
+    {
+      type: level11.goal?.requires?.type,
+      count: level11.goal?.requires?.count,
+    },
+    { type: "reflect-reactor", count: 2 },
+    "stage 11 must open its exit by powering both reactors",
+  );
+  const cells = level11.collectibles.filter((item) => item.type === "storm-cell");
+  assert.equal(cells.length, 3, "stage 11 still needs three warm-light cells as reactor route resources");
+  assert.ok(cells.every((item) => item.quest === true), "warm-light cells must remain marked as quest resources");
 });
 
 test("act 3 mechanic data is complete enough for runtime behavior", async () => {

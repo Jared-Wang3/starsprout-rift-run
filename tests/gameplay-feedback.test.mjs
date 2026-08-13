@@ -816,3 +816,253 @@ test("boss phase and defeat spawn metadata gates runtime interaction and renderi
     );
   }
 });
+
+function moduleMetric(snapshot, names) {
+  const containers = [
+    snapshot.moduleState,
+    snapshot.ability,
+    snapshot.module,
+    snapshot.effects,
+  ].filter((entry) => entry && typeof entry === "object");
+  for (const container of containers) {
+    for (const name of names) {
+      if (name in container) return container[name];
+    }
+  }
+  return undefined;
+}
+
+function objectiveSnapshot(snapshot) {
+  return snapshot.objective || snapshot.objectives?.[0] || null;
+}
+
+function repairZoneSnapshot(snapshot) {
+  return snapshot.repairZones || objectiveSnapshot(snapshot)?.zones || [];
+}
+
+function reactorSnapshot(snapshot) {
+  return snapshot.reactors || objectiveSnapshot(snapshot)?.reactors || [];
+}
+
+test("old saves gain a backward-compatible unequipped hero module", async () => {
+  const qa = await loadGameQaHook({
+    save: {
+      unlocked: 3,
+      completed: [1, 2],
+      seeds: 5,
+      deaths: 1,
+    },
+  });
+  const snapshot = qa.snapshot();
+
+  assert.equal(snapshot.heroModule, "none", "a save without heroModule must migrate to none");
+  assert.deepEqual(Array.from(snapshot.unlockedModules), ["none"], "no boss clear means no boss module unlock");
+});
+
+test("boss clears unlock echo/wind/root while locked modules cannot be equipped", async () => {
+  const fresh = await loadGameQaHook({ save: { unlocked: 1, completed: [] } });
+  assert.equal(typeof fresh.equipModule, "function", "QA needs equipModule(id) for module behavior regression tests");
+  assert.equal(fresh.equipModule("echo"), false, "echo must remain locked before boss 4 is cleared");
+  assert.equal(fresh.snapshot().heroModule, "none");
+
+  const echo = await loadGameQaHook({ save: { unlocked: 5, completed: [1, 2, 3, 4] } });
+  assert.deepEqual(Array.from(echo.snapshot().unlockedModules), ["none", "echo"]);
+  assert.equal(echo.equipModule("echo"), true);
+  assert.equal(echo.snapshot().heroModule, "echo");
+
+  const wind = await loadGameQaHook({ save: { unlocked: 9, completed: Array.from({ length: 8 }, (_, i) => i + 1) } });
+  assert.deepEqual(Array.from(wind.snapshot().unlockedModules), ["none", "echo", "wind"]);
+
+  const root = await loadGameQaHook({ save: { unlocked: 12, completed: Array.from({ length: 12 }, (_, i) => i + 1) } });
+  assert.deepEqual(Array.from(root.snapshot().unlockedModules), ["none", "echo", "wind", "root"]);
+  assert.equal(root.equipModule("root"), true);
+  assert.equal(root.snapshot().heroModule, "root");
+});
+
+test("echo, wind, and root augment the existing shoot/dash/down controls", async () => {
+  const echo = await loadGameQaHook({ save: { unlocked: 5, completed: [1, 2, 3, 4] } });
+  echo.equipModule("echo");
+  echo.startLevel(1);
+  const echoBefore = echo.snapshot();
+  echo.press("shoot");
+  echo.step(1);
+  echo.release("shoot");
+  const echoAfter = echo.snapshot();
+  assert.notDeepEqual(
+    moduleMetric(echoAfter, ["echoPulse", "pulse", "echoCharge", "charge"]),
+    moduleMetric(echoBefore, ["echoPulse", "pulse", "echoCharge", "charge"]),
+    "echo shoot must activate its pulse/charge state",
+  );
+
+  const wind = await loadGameQaHook({ save: { unlocked: 9, completed: Array.from({ length: 8 }, (_, i) => i + 1) } });
+  wind.equipModule("wind");
+  wind.startLevel(1);
+  wind.step(15);
+  wind.press("jump");
+  wind.step(1);
+  wind.release("jump");
+  wind.step(2);
+  const windBefore = wind.snapshot();
+  assert.ok(windBefore.player.vy < 0, "fixture must be airborne before the wind dash");
+  wind.press("dash");
+  wind.step(1);
+  wind.release("dash");
+  wind.press("jump");
+  wind.step(1);
+  wind.release("jump");
+  const windAfter = wind.snapshot();
+  assert.ok(
+    Number(moduleMetric(windAfter, ["windLift", "airDash", "lift", "windBurst"])) > 0
+      || windAfter.player.vy < windBefore.player.vy,
+    "wind dash must create observable aerial lift",
+  );
+
+  const root = await loadGameQaHook({
+    save: { unlocked: 12, completed: Array.from({ length: 12 }, (_, i) => i + 1) },
+    mutateLevels(bundle) {
+      const level = bundle.get(1);
+      level.hazards = [];
+      level.enemies = [{ id: "qa-root-shot", type: "storm-cannon", x: 140, y: 536, hp: 99, speed: 0 }];
+    },
+  });
+  root.equipModule("root");
+  root.startLevel(1);
+  root.step(15);
+  root.press("down");
+  root.step(1);
+  root.release("down");
+  const guarded = root.snapshot();
+  assert.ok(
+    Number(moduleMetric(guarded, ["rootShield", "shield", "guard", "rooted"])) > 0,
+    "root down must open a shield/guard state",
+  );
+  root.step(30);
+  const rootAfter = root.snapshot();
+  assert.ok(
+    Number(moduleMetric(rootAfter, ["rootShockwave", "shockwave", "quake"])) > 0,
+    "root down must emit an observable shockwave",
+  );
+});
+
+test("stage 5 completes any two repair zones only after returning to the sanctuary", async () => {
+  const qa = await loadGameQaHook({ save: { unlocked: 5, completed: [1, 2, 3, 4] } });
+  qa.startLevel(5);
+  const start = qa.snapshot();
+  const objective = objectiveSnapshot(start);
+  const zones = repairZoneSnapshot(start);
+
+  assert.equal(objective?.type, "repair-zones");
+  assert.equal(Number(objective?.required ?? objective?.count), 2);
+  assert.ok(zones.length >= 3, "stage 5 needs at least three route choices");
+
+  for (const zone of zones.slice(0, 2)) {
+    // Pulse from just outside the fixture.  This mirrors real play and avoids
+    // spawning the player inside a solid repair prop/platform.
+    qa.teleport(Math.max(0, zone.x - 70), zone.y + Math.max(0, ((zone.h || 54) - 54) / 2));
+    qa.press("shoot");
+    qa.step(1);
+    qa.release("shoot");
+    qa.step(24);
+  }
+  const repaired = qa.snapshot();
+  assert.ok(Number(objectiveSnapshot(repaired)?.progress) >= 2, "any two visited zones must be repaired");
+  assert.equal(repaired.scene, "playing", "repairing two zones away from sanctuary must not auto-complete");
+
+  const level5 = (await loadLevels()).find((level) => level.id === 5);
+  const sanctuary = level5.mechanics?.sanctuary || level5.goal;
+  qa.teleport(sanctuary.x + sanctuary.w / 2, sanctuary.y + sanctuary.h / 2);
+  qa.step(1);
+  assert.equal(qa.snapshot().scene, "complete", "the repaired route must be submitted at the central sanctuary");
+});
+
+test("stage 11 reactors accept normal pulse fallback and cannot soft-lock the exit", async () => {
+  const qa = await loadGameQaHook({ save: { unlocked: 11, completed: Array.from({ length: 10 }, (_, i) => i + 1) } });
+  qa.startLevel(11);
+  const start = qa.snapshot();
+  const objective = objectiveSnapshot(start);
+  const reactors = reactorSnapshot(start);
+  assert.equal(objective?.type, "reflect-reactor");
+  assert.ok(reactors.length >= 2, "stage 11 needs at least two reactors");
+
+  for (const reactor of reactors) {
+    const required = Math.max(1, Number(reactor.required ?? reactor.requiredCharge) || 1);
+    for (let shot = 0; shot < required + 2; shot += 1) {
+      qa.teleport(reactor.x - 80, reactor.y);
+      qa.press("shoot");
+      qa.step(1);
+      qa.release("shoot");
+      qa.step(18);
+    }
+  }
+
+  const charged = qa.snapshot();
+  assert.ok(
+    reactorSnapshot(charged).every((reactor) => reactor.charged === true || Number(reactor.charge) >= Number(reactor.required ?? reactor.requiredCharge)),
+    "ordinary pulses must eventually charge every reactor when no reflected shot is available",
+  );
+  assert.equal(charged.goalReady, true, "a fully charged reactor route must open the exit");
+});
+
+test("stage 11 storm cells add two charge to the nearest unpowered reactor", async () => {
+  const levels = await loadLevels();
+  const level11 = levels.find((level) => level.id === 11);
+  const cells = level11.collectibles.filter((item) => item.type === "storm-cell");
+  const reactors = level11.objectives.find((objective) => objective.type === "reflect-reactor")?.reactors || [];
+  assert.ok(cells.length > 0 && reactors.length >= 2, "stage 11 needs storm cells and two reactor fixtures");
+
+  // Use the campaign's eastern cell: it is safely collectible without crossing
+  // a relay gate and is closest to the eastern reactor in the shipped layout.
+  const cell = cells.reduce((rightmost, item) => item.x > rightmost.x ? item : rightmost);
+  const nearest = reactors.reduce((best, reactor) =>
+    Math.abs(reactor.x - cell.x) < Math.abs(best.x - cell.x) ? reactor : best);
+  const qa = await loadGameQaHook({
+    save: { unlocked: 11, completed: Array.from({ length: 10 }, (_, i) => i + 1) },
+  });
+  qa.startLevel(11);
+  const before = new Map(reactorSnapshot(qa.snapshot()).map((reactor) => [reactor.id, reactor.charge]));
+
+  qa.teleport(cell.x, cell.y);
+  qa.step(1);
+
+  const after = reactorSnapshot(qa.snapshot());
+  const charged = after.find((reactor) => reactor.id === nearest.id);
+  assert.equal(charged.charge, before.get(nearest.id) + 2, "the nearest unpowered reactor must gain exactly two charge");
+  for (const reactor of after.filter((entry) => entry.id !== nearest.id)) {
+    assert.equal(reactor.charge, before.get(reactor.id), `${reactor.id} must not receive the cell's charge`);
+  }
+});
+
+test("stage 11 echo-reflected enemy shots add three reactor charge", async () => {
+  const qa = await loadGameQaHook({
+    save: { unlocked: 11, completed: Array.from({ length: 10 }, (_, i) => i + 1), heroModule: "echo" },
+    mutateLevels(bundle) {
+      const level = bundle.get(11);
+      level.platforms = [{ id: "qa-ground", x: 0, y: 620, w: 2_000, h: 100 }];
+      level.hazards = [];
+      level.collectibles = [];
+      level.enemies = [{ id: "qa-echo-cannon", type: "storm-cannon", x: 800, y: 536, hp: 99, speed: 0 }];
+      const objective = level.objectives.find((entry) => entry.type === "reflect-reactor");
+      objective.reactors = [
+        { id: "qa-reactor", x: 1_200, y: 530, w: 74, h: 60, requiredCharge: 6 },
+        { id: "qa-spare-reactor", x: 1_700, y: 530, w: 74, h: 60, requiredCharge: 6 },
+      ];
+    },
+  });
+  qa.startLevel(11);
+  assert.equal(qa.snapshot().heroModule, "echo");
+  qa.teleport(1_100, 536);
+
+  // The cannon's first shot spawns after its real half-second cooldown. The
+  // echo pulse then reflects that live hostile projectile toward the reactor.
+  qa.step(60);
+  qa.press("shoot");
+  qa.step(1);
+  qa.release("shoot");
+  assert.equal(qa.snapshot().moduleState.echoReflections, 1, "the pulse must reflect the cannon shot");
+  qa.step(30);
+
+  const snapshot = qa.snapshot();
+  const reactor = reactorSnapshot(snapshot).find((entry) => entry.id === "qa-reactor");
+  assert.equal(snapshot.moduleState.echoCharge, 3, "the reflected projectile itself must contribute exactly three charge");
+  assert.equal(reactor.charge, 4, "the reflected +3 and the ordinary fallback +1 should both reach the reactor");
+});

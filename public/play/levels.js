@@ -675,6 +675,8 @@
       name: "潮汐遗迹",
       nameEn: "TIDAL ARCHIVES",
       subtitle: "在涨落之间读懂石城",
+      tags: ["区域修复", "潮汐探索", "自由路线"],
+      thumbnail: "linear-gradient(145deg, #4AA8B5 0%, #2A777D 52%, #F0D9AE 100%)",
       briefing: {
         kicker: "STAGE 05 · TIDE",
         title: "潮汐遗迹",
@@ -713,13 +715,27 @@
       camera: { mode: "follow", deadZoneX: 0.36, lookAhead: 135 },
       spawn: { x: 88, y: 536, facing: 1 },
       goal: {
-        type: "rift-gate",
-        x: 4220,
+        type: "sanctuary",
+        x: 2030,
         y: 466,
-        w: 94,
+        w: 140,
         h: 154,
-        requires: "three-tide-runes"
+        requires: { type: "repair-zones", count: 2, submit: true, label: "潮汐修复点" }
       },
+      objectives: [
+        {
+          id: "tide-repair-route",
+          type: "repair-zones",
+          label: "潮汐锚点",
+          required: 2,
+          submitAtGoal: true,
+          zones: [
+            { id: "t-repair-west", x: 690, y: 500, w: 78, h: 120, label: "西侧星盘" },
+            { id: "t-repair-deep", x: 2790, y: 390, w: 86, h: 130, label: "深潮碑" },
+            { id: "t-repair-east", x: 3715, y: 440, w: 88, h: 180, label: "东侧潮门" }
+          ]
+        }
+      ],
       platforms: [
         platform("t-ground-01", 0, 620, 560, 100, { material: "ruin-stone" }),
         platform("t-step-01", 250, 500, 180, 24, { kind: "one-way", material: "salt-ledge" }),
@@ -774,14 +790,11 @@
       ],
       collectibles: [
         collectible("t-seed-01", "memory-seed", 330, 445),
-        collectible("t-rune-01", "tide-rune", 920, 365, { quest: true, order: 1 }),
         collectible("t-seed-02", "memory-seed", 1270, 410),
         collectible("t-heart-01", "heart", 1730, 445),
         collectible("t-seed-03", "memory-seed", 2190, 380),
-        collectible("t-rune-02", "tide-rune", 2910, 345, { quest: true, order: 2 }),
         collectible("t-seed-04", "memory-seed", 3270, 405),
         collectible("t-pearl", "air-pearl", 3590, 520, { duration: 12 }),
-        collectible("t-rune-03", "tide-rune", 3760, 425, { quest: true, order: 3 }),
         collectible("t-seed-05", "memory-seed", 4100, 445)
       ],
       checkpoints: [
@@ -790,6 +803,7 @@
       ],
       mechanics: {
         type: "tide",
+        sanctuary: { id: "t-central-sanctuary", x: 2030, y: 466, w: 140, h: 154 },
         water: {
           lowY: 675,
           highY: 445,
@@ -1577,13 +1591,15 @@
       kind: "stage",
       name: "极光冰晶花园",
       nameEn: "AURORA CRYSTAL GARDEN",
-      subtitle: "点亮热塔，让花园重新解冻",
+      subtitle: "为双炉供能，让花园重新解冻",
+      tags: ["脉冲解谜", "弹反供能", "多路线"],
+      thumbnail: "linear-gradient(145deg, #17304B 0%, #436A77 48%, #8FE7D2 100%)",
       briefing: {
         kicker: "STAGE 11 · AURORA",
         title: "极光冰晶花园",
-        subtitle: "点亮热塔，让花园重新解冻",
-        mechanic: "击亮热能灯塔后冰门只会融开数秒；沿暖流带和冰叶台冲到另一侧。",
-        hint: "热塔熄灭后可以再次充能，收集三枚暖光电池才能唤醒极光花冠。"
+        subtitle: "为双炉供能，让花园重新解冻",
+        mechanic: "为西、东两座极光反应炉各充满六格能量；普通脉冲也能慢慢供能。",
+        hint: "普通脉冲 +1，回声弹反 +3，沿途暖光电池会为最近的未满反应炉补充 +2。"
       },
       theme: {
         id: "aurora-crystal-garden",
@@ -1621,8 +1637,20 @@
         y: 445,
         w: 112,
         h: 175,
-        requires: { type: "collect", itemType: "storm-cell", count: 3, label: "暖光电池" }
+        requires: { type: "reflect-reactor", count: 2, label: "极光反应炉" }
       },
+      objectives: [
+        {
+          id: "aurora-reactor-route",
+          type: "reflect-reactor",
+          label: "极光反应炉",
+          required: 2,
+          reactors: [
+            { id: "ta-reactor-west", x: 1160, y: 410, w: 74, h: 60, requiredCharge: 6 },
+            { id: "ta-reactor-east", x: 3500, y: 330, w: 74, h: 60, requiredCharge: 6 }
+          ]
+        }
+      ],
       platforms: [
         platform("ta-ground-01", 0, 620, 750, 100, { material: "glacier-crystal" }),
         platform("ta-conveyor-01", 360, 505, 250, 28, { kind: "conveyor", material: "thermal-ribbon", conveyor: { speed: 105 } }),

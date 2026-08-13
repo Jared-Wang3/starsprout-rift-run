@@ -13,6 +13,32 @@
   const SAVE_KEY = "starsprout-save-v2";
   const TOUCH_MIN_HOLD_MS = 85;
   const api = window.StarSproutLevels;
+  const HERO_MODULES = Object.freeze({
+    none: {
+      id: "none",
+      name: "原生芽芯",
+      unlockBoss: 0,
+      description: "保持星芽原本的脉冲、冲刺与下砸能力。",
+    },
+    echo: {
+      id: "echo",
+      name: "回声芽芯",
+      unlockBoss: 4,
+      description: "发射脉冲时弹反近处敌弹；反射弹可快速为反应炉供能。",
+    },
+    wind: {
+      id: "wind",
+      name: "风行芽芯",
+      unlockBoss: 8,
+      description: "冲刺后保留一次折跃弹跳，空中也能接续跃升。",
+    },
+    root: {
+      id: "root",
+      name: "根守芽芯",
+      unlockBoss: 12,
+      description: "站在地面按下砸展开根盾，挡下一枚弹体并释放震波。",
+    },
+  });
 
   const DEFAULT_ART_ASSETS = {
     paper: { src: "./assets/art-v2/paper-texture.webp" },
@@ -114,7 +140,7 @@
     "world-core-seed": { label: "世界核心种", badge: "界", mode: "boss-core", description: "带走核心并完成观测站守门挑战" },
     "lumen-spore": { label: "雷光火种", badge: "雷", mode: "quest", description: "集齐三枚，解除铜钟塔出口封印" },
     "time-shard": { label: "时页碎片", badge: "页", mode: "quest", description: "集齐三枚，稳定梦境书库并开启出口" },
-    "storm-cell": { label: "暖光电池", badge: "暖", mode: "quest", description: "集齐三枚，为终点灯塔充满暖光" },
+    "storm-cell": { label: "暖光电池", badge: "暖", mode: "quest", description: "为最近一座未满的极光反应炉补充两格能量" },
     "rift-core-seed": { label: "裂界核心种", badge: "织", mode: "boss-core", description: "带走织界核心并完成最终挑战" },
   });
   const PROCEDURAL_COLLECTIBLE_TYPES = new Set([
@@ -335,6 +361,8 @@
       // v2 originally ended at stage 8 and therefore persisted unlocked=8 even
       // after victory. Preserve that progress while opening the first new act.
       if (completed.includes(8)) unlocked = Math.max(unlocked, nextCampaignLevelId(8) || unlocked);
+      const unlockedModules = unlockedModulesFor(completed);
+      const requestedModule = typeof parsed.heroModule === "string" ? parsed.heroModule : "none";
       return {
         unlocked,
         completed,
@@ -344,10 +372,32 @@
         collectedSeeds,
         deaths: Number(parsed.deaths) || 0,
         muted: Boolean(parsed.muted),
+        heroModule: unlockedModules.includes(requestedModule) ? requestedModule : "none",
       };
     } catch {
-      return { unlocked: FIRST_LEVEL_ID, completed: [], seeds: 0, collectedSeeds: [], deaths: 0, muted: false };
+      return { unlocked: FIRST_LEVEL_ID, completed: [], seeds: 0, collectedSeeds: [], deaths: 0, muted: false, heroModule: "none" };
     }
+  }
+
+  function unlockedModulesFor(completed = save?.completed || []) {
+    const cleared = new Set((completed || []).map(Number));
+    return Object.values(HERO_MODULES)
+      .filter((module) => module.unlockBoss === 0 || cleared.has(module.unlockBoss))
+      .map((module) => module.id);
+  }
+
+  function equipHeroModule(moduleId) {
+    const next = String(moduleId || "none");
+    const unlocked = unlockedModulesFor();
+    if (!HERO_MODULES[next] || !unlocked.includes(next)) {
+      toast("这枚芽芯仍沉睡在尚未修复的守门核心中", 1.5);
+      return false;
+    }
+    save.heroModule = next;
+    persist();
+    renderProfile();
+    renderLevelGrid();
+    return true;
   }
 
   function persist() {
@@ -415,6 +465,9 @@
       enemies: Array.isArray(raw.enemies) ? raw.enemies : [],
       collectibles: Array.isArray(raw.collectibles) ? raw.collectibles : [],
       checkpoints: Array.isArray(raw.checkpoints) ? raw.checkpoints : [],
+      objectives: Array.isArray(raw.objectives) ? deepClone(raw.objectives) : [],
+      tags: Array.isArray(raw.tags) ? raw.tags.slice(0, 4) : [],
+      thumbnail: raw.thumbnail || raw.theme?.thumbnail || null,
       mechanics,
       isBoss: Boolean(raw.isBoss || raw.kind === "boss" || raw.boss || BOSS_LEVEL_IDS.has(id)),
     };
@@ -600,6 +653,41 @@
       .map((device, index) => makeDevice(device, index, { prefix: "switch", w: 54, h: 54 }));
     const polarityConfig = devices.polarity && typeof devices.polarity === "object" ? devices.polarity : {};
     const initialPolarity = polarityValue(polarityConfig.initial) || "sun";
+    const objectives = level.objectives.map((objective, objectiveIndex) => {
+      const type = String(objective.type || "");
+      const zones = Array.isArray(objective.zones) ? objective.zones : [];
+      const reactors = Array.isArray(objective.reactors) ? objective.reactors : [];
+      return {
+        ...deepClone(objective),
+        id: objective.id || `objective-${objectiveIndex}`,
+        type,
+        required: Math.max(1, Number(objective.required || objective.count) || 1),
+        submitted: false,
+        completed: false,
+        zones: zones.map((zone, index) => ({
+          ...zone,
+          id: zone.id || `repair-${objectiveIndex}-${index}`,
+          x: Number(zone.x) || 0,
+          y: Number(zone.y) || 0,
+          w: Number(zone.w) || 80,
+          h: Number(zone.h) || 110,
+          repaired: false,
+          index,
+        })),
+        reactors: reactors.map((reactor, index) => ({
+          ...reactor,
+          id: reactor.id || `reactor-${objectiveIndex}-${index}`,
+          x: Number(reactor.x) || 0,
+          y: Number(reactor.y) || 0,
+          w: Number(reactor.w) || 72,
+          h: Number(reactor.h) || 64,
+          charge: 0,
+          requiredCharge: Math.max(1, Number(reactor.requiredCharge) || 6),
+          powered: false,
+          index,
+        })),
+      };
+    });
 
     const rt = {
       time: 0,
@@ -612,6 +700,7 @@
       projectiles: [],
       enemyShots: [],
       shockwaves: [],
+      rootWaves: [],
       devices,
       enabled: {},
       inventory: new Set(),
@@ -619,6 +708,8 @@
       charges: {},
       seedTotal: collectibles.filter((item) => item.type === "memory-seed" || item.type === "seed").length,
       goalToastCooldown: 0,
+      objectives,
+      moduleState: { echoPulse: 0, echoReflections: 0, echoCharge: 0, windLift: 0, rootShield: 0, rootShockwave: 0 },
       crystals: (devices.crystals || []).map((d, i) => ({ ...d, w: d.w || 44, h: d.h || 72, active: false, index: i })),
       switches,
       polaritySwitches,
@@ -703,6 +794,10 @@
       inWater: false,
       anim: 0,
       trailTimer: 0,
+      windDashJump: 0,
+      rootShield: 0,
+      rootShieldCharges: 0,
+      rootCooldown: 0,
     };
   }
 
@@ -711,6 +806,10 @@
       const visible = screen.id === id;
       screen.classList.toggle("is-visible", visible);
       screen.setAttribute("aria-hidden", visible ? "false" : "true");
+      if (visible) {
+        screen.scrollTop = 0;
+        screen.scrollLeft = 0;
+      }
     });
   }
 
@@ -719,6 +818,66 @@
     $("#hud").classList.toggle("is-visible", visible);
     $("#hud").setAttribute("aria-hidden", visible ? "false" : "true");
     $("#touch-controls").classList.toggle("is-visible", visible);
+  }
+
+  function setNodeText(selector, value) {
+    const node = $(selector);
+    if (node) node.textContent = String(value ?? "");
+  }
+
+  function ensureProfileUi() {
+    if (!document.getElementById || document.getElementById("profile-screen")) return;
+    const app = document.getElementById("app");
+    if (!app?.appendChild) return;
+    const screen = document.createElement("section");
+    screen.id = "profile-screen";
+    screen.className = "screen profile-screen";
+    screen.setAttribute("aria-label", "星芽档案");
+    screen.innerHTML = `<header class="section-heading"><div><span class="eyebrow">SPROUT PROFILE</span><h2>星芽档案</h2></div><button class="text-action" data-action="back">返回</button></header>
+      <div id="profile-progress"><strong id="profile-module-name"></strong><p id="profile-module-description"></p><p id="profile-module-status"></p><span id="profile-stage-progress"></span><i id="profile-stage-fill"></i><span id="profile-seed-count"></span><span id="profile-death-count"></span></div>
+      <div id="module-grid" class="module-grid">${["echo", "wind", "root"].map((id) => `<button data-module="${id}"><strong>${HERO_MODULES[id].name}</strong><small>${HERO_MODULES[id].description}</small></button>`).join("")}</div>`;
+    app.appendChild(screen);
+    const menu = document.querySelector(".menu-actions");
+    if (menu && !menu.querySelector?.('[data-action="profile"]')) {
+      const button = document.createElement("button");
+      button.dataset.action = "profile";
+      button.textContent = "星芽档案";
+      menu.appendChild(button);
+    }
+  }
+
+  function campaignProgressPercent() {
+    return Math.round(campaignCompletedCount(save.completed) / Math.max(1, CAMPAIGN_LEVELS.length) * 100);
+  }
+
+  function renderProfile() {
+    const equipped = HERO_MODULES[save.heroModule] || HERO_MODULES.none;
+    const unlocked = new Set(unlockedModulesFor());
+    const completedCount = campaignCompletedCount(save.completed);
+    setNodeText("#profile-module-name", equipped.name);
+    setNodeText("#profile-module-description", equipped.description);
+    setNodeText("#profile-module-status", save.heroModule === "none" ? "当前未装备额外芽芯" : `已装备 · ${equipped.name}`);
+    setNodeText("#profile-stage-progress", `${completedCount} / ${CAMPAIGN_LEVELS.length} 关`);
+    setNodeText("#profile-completed-count", completedCount);
+    setNodeText("#profile-seed-count", `${save.seeds} 枚记忆种子`);
+    setNodeText("#profile-death-count", `${save.deaths} 次重整`);
+    const fill = $("#profile-stage-fill");
+    if (fill) fill.style.transform = `scaleX(${campaignProgressPercent() / 100})`;
+    $$('[data-module]').forEach((button) => {
+      const id = String(button.dataset.module || "");
+      const heroModule = HERO_MODULES[id];
+      if (!heroModule) return;
+      const available = unlocked.has(id);
+      const active = save.heroModule === id;
+      button.disabled = !available;
+      button.classList.toggle("is-locked", !available);
+      button.classList.toggle("is-equipped", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.dataset.unlockBoss = String(heroModule.unlockBoss);
+      button.title = available ? heroModule.description : `完成第 ${heroModule.unlockBoss} 关 BOSS 后解锁`;
+      const status = button.querySelector?.("i");
+      if (status) status.textContent = active ? "已装备" : available ? "选择" : `BOSS ${pad(heroModule.unlockBoss)} 解锁`;
+    });
   }
 
   function openMenu() {
@@ -730,6 +889,13 @@
     setGameUi(false);
     showOnly("start-screen");
     $("#continue-label").textContent = save.unlocked > FIRST_LEVEL_ID ? `继续第 ${save.unlocked} 关` : "开始远征";
+    const expedition = CAMPAIGN_LEVELS.find((level) => Number(level.id) === Number(save.unlocked)) || CAMPAIGN_LEVELS[0];
+    setNodeText("#expedition-stage", `STAGE ${pad(expedition?.id || FIRST_LEVEL_ID)}`);
+    setNodeText("#expedition-name", expedition?.name || "等待新的裂界");
+    setNodeText("#expedition-progress", `${campaignCompletedCount(save.completed)} / ${CAMPAIGN_LEVELS.length} 已修复`);
+    const progressFill = $("#expedition-progress-fill");
+    if (progressFill) progressFill.style.transform = `scaleX(${campaignProgressPercent() / 100})`;
+    renderProfile();
   }
 
   function openLevels() {
@@ -743,6 +909,13 @@
     scene = "help";
     setGameUi(false);
     showOnly("help-screen");
+  }
+
+  function openProfile() {
+    scene = "profile";
+    setGameUi(false);
+    renderProfile();
+    showOnly("profile-screen");
   }
 
   function startLevel(id, skipBriefing = false) {
@@ -802,15 +975,42 @@
 
   function renderLevelGrid() {
     const levels = listLevels();
-    $("#level-grid").innerHTML = levels.map((entry) => {
+    const acts = new Map();
+    levels.forEach((entry) => {
       const level = normalizeLevel(deepClone(entry));
-      const unlocked = level.id <= save.unlocked;
-      const cleared = save.completed.includes(level.id);
-      return `<button class="level-card${level.isBoss ? " is-boss" : ""}" data-level="${level.id}" ${unlocked ? "" : "disabled"} style="--card-bg:${level.theme.mid};--card-accent:${level.theme.edge}">
-        <span class="card-number">${level.isBoss ? "BOSS" : "STAGE"} ${pad(level.id)} ${cleared ? "· 已修复" : unlocked ? "· 可进入" : "· 未解锁"}</span>
-        <strong>${level.name}</strong>
-        <small>${level.mechanic}</small>
-      </button>`;
+      const act = Math.max(1, Number(level.act) || Math.ceil(level.id / 4));
+      if (!acts.has(act)) acts.set(act, []);
+      acts.get(act).push(level);
+    });
+    $("#level-grid").innerHTML = [...acts.entries()].map(([act, actLevels]) => {
+      const clearedInAct = actLevels.filter((level) => save.completed.includes(level.id)).length;
+      const cards = actLevels.map((level) => {
+        const unlocked = level.id <= save.unlocked;
+        const cleared = save.completed.includes(level.id);
+        const tags = level.tags.length ? level.tags : level.isBoss ? ["守门挑战", "机关战"] : [level.mechanics?.type || "探索", "裂界修复"];
+        const progress = cleared ? 100 : 0;
+        const thumbnail = level.thumbnail || `linear-gradient(145deg, ${level.theme.skyTop}, ${level.theme.mid} 55%, ${level.theme.edge})`;
+        const atlasIndex = Math.max(0, Math.min(2, Math.floor((level.id - 1) / 4)));
+        const thumbnailArt = `url(${[
+          "./assets/art-v2/environments-a.webp",
+          "./assets/art-v2/environments-b.webp",
+          "./assets/art-v3/environments-c.webp",
+        ][atlasIndex]})`;
+        const frameIndex = (level.id - 1) % 4;
+        const thumbnailPosition = `${frameIndex % 2 * 100}% ${Math.floor(frameIndex / 2) * 100}%`;
+        return `<button class="level-card${level.isBoss ? " is-boss" : ""}${cleared ? " is-cleared" : ""}" data-level="${level.id}" data-act="${act}" data-progress="${progress}" data-tags="${tags.join(",")}" ${unlocked ? "" : "disabled"} style="--card-bg:${level.theme.mid};--card-accent:${level.theme.edge};--thumbnail:${thumbnail};--thumbnail-art:${thumbnailArt};--thumbnail-position:${thumbnailPosition};--level-thumbnail:${thumbnail}">
+          <span class="level-thumb" aria-hidden="true"></span>
+          <span class="level-card-copy"><span class="card-number">${level.isBoss ? "BOSS" : "STAGE"} ${pad(level.id)} ${cleared ? "· 已修复" : unlocked ? "· 可进入" : "· 未解锁"}</span><strong>${level.name}</strong><small>${level.mechanic}</small></span>
+          <span class="level-tags">${tags.map((tag) => `<span class="level-tag">${tag}</span>`).join("")}</span>
+          <span class="level-progress" style="--progress:${progress / 100}" aria-label="关卡进度 ${progress}%"><i></i></span>
+        </button>`;
+      }).join("");
+      const actCopy = {
+        1: ["风起之幕", "穿过荒野与洞窟，唤醒第一枚守门核心"],
+        2: ["潮火之幕", "在潮汐、云轨与熔炉之间改变行进方式"],
+        3: ["星织之幕", "驾驭菌伞、相位与极光，重连世界星线"],
+      }[act] || [`裂界之幕 ${act}`, "修复散落在航线上的生态裂界"];
+      return `<section class="route-act" data-act="${act}"><header class="route-act-head"><span>ACT ${pad(act)}</span><h3>${actCopy[0]}</h3><p>${clearedInAct} / ${actLevels.length} 已修复 · ${actCopy[1]}</p></header><div class="route-act-levels">${cards}</div></section>`;
     }).join("");
   }
 
@@ -858,6 +1058,13 @@
   function pickupStatusText() {
     if (!runtime || !currentLevel) return "";
     const parts = [];
+    const primaryObjective = runtime.objectives[0];
+    if (primaryObjective) {
+      const progress = objectiveProgress(primaryObjective);
+      const suffix = primaryObjective.type === "repair-zones" && progress.progress >= progress.required && !primaryObjective.submitted ? " · 回圣所提交" : "";
+      parts.push(`${primaryObjective.label || "裂界目标"} ${progress.progress}/${progress.required}${suffix}`);
+    }
+    parts.push(`芽芯 ${HERO_MODULES[save.heroModule]?.name || HERO_MODULES.none.name}`);
     if (runtime.seedTotal > 0) {
       const found = runtime.collectibles.filter((item) => (item.type === "memory-seed" || item.type === "seed") && item.collected).length;
       parts.push(`种子 ${found}/${runtime.seedTotal} · 总计 ${save.seeds}`);
@@ -1147,6 +1354,12 @@
       startLevel(Number(levelButton.dataset.level));
       return;
     }
+    const moduleButton = event.target.closest("[data-module]");
+    if (moduleButton) {
+      createAudio();
+      equipHeroModule(moduleButton.dataset.module);
+      return;
+    }
     const button = event.target.closest("[data-action]");
     if (!button) {
       if (scene === "briefing") beginBriefing();
@@ -1156,6 +1369,7 @@
     createAudio();
     if (action === "continue") startLevel(save.unlocked);
     if (action === "levels") openLevels();
+    if (action === "profile") openProfile();
     if (action === "help") openHelp();
     if (action === "back" || action === "home") openMenu();
     if (action === "resume") togglePause(true);
@@ -1234,6 +1448,10 @@
 
   function updateDevices(dt) {
     runtime.goalToastCooldown = Math.max(0, runtime.goalToastCooldown - dt);
+    runtime.moduleState.echoPulse = Math.max(0, runtime.moduleState.echoPulse - dt);
+    runtime.moduleState.windLift = Math.max(0, runtime.moduleState.windLift - dt);
+    runtime.moduleState.rootShield = Math.max(0, runtime.moduleState.rootShield - dt);
+    runtime.moduleState.rootShockwave = Math.max(0, runtime.moduleState.rootShockwave - dt);
     Object.keys(runtime.activeEffects).forEach((type) => {
       runtime.activeEffects[type] = Math.max(0, runtime.activeEffects[type] - dt);
       if (runtime.activeEffects[type] <= 0) delete runtime.activeEffects[type];
@@ -1270,6 +1488,15 @@
       runtime.polarity.grace = Math.max(0, runtime.polarity.grace - dt);
       if (runtime.polarity.grace <= 0) runtime.polarity.previous = null;
     }
+    runtime.objectives.forEach((objective) => {
+      if (objective.type === "repair-zones") {
+        const repaired = objective.zones.filter((zone) => zone.repaired).length;
+        objective.completed = repaired >= objective.required && (!objective.submitAtGoal || objective.submitted);
+      } else if (objective.type === "reflect-reactor") {
+        const powered = objective.reactors.filter((reactor) => reactor.powered).length;
+        objective.completed = powered >= objective.required;
+      }
+    });
     const water = runtime.devices.water;
     if (water) runtime.waterY = water.baseY + Math.sin(runtime.time * (water.speed || 0.7)) * (water.amplitude || 55);
     const lava = runtime.devices.lava;
@@ -1315,6 +1542,9 @@
     player.invulnerable = Math.max(0, player.invulnerable - dt);
     player.dashCooldown = Math.max(0, player.dashCooldown - dt * (effectActive("wind-feather") ? 3.5 : 1));
     player.shootCooldown = Math.max(0, player.shootCooldown - dt);
+    player.windDashJump = Math.max(0, player.windDashJump - dt);
+    player.rootShield = Math.max(0, player.rootShield - dt);
+    player.rootCooldown = Math.max(0, player.rootCooldown - dt);
     player.coyote = player.onGround ? 0.11 : Math.max(0, player.coyote - dt);
     if (input.pressed.has("jump")) player.jumpBuffer = 0.13;
     else player.jumpBuffer = Math.max(0, player.jumpBuffer - dt);
@@ -1329,6 +1559,7 @@
       player.vx = player.facing * 720;
       player.vy = 0;
       player.trailTimer = 0;
+      if (save.heroModule === "wind") player.windDashJump = 0.58;
       playTone("dash");
       burst(player.x + player.w / 2, player.y + player.h / 2, currentLevel.theme.paper, 8, 190);
     }
@@ -1336,6 +1567,8 @@
     if (input.pressed.has("shoot") && player.shootCooldown <= 0) {
       const resonanceBoost = effectActive("resonance-orb");
       const starCharged = Number(runtime.charges["star-charge"]) > 0;
+      if (save.heroModule === "echo") reflectEchoPulse();
+      repairNearbyObjectiveZone();
       if (starCharged) runtime.charges["star-charge"] -= 1;
       player.shootCooldown = resonanceBoost || starCharged ? 0.2 : 0.28;
       runtime.projectiles.push({
@@ -1351,6 +1584,30 @@
       });
       if (starCharged) toast(`星能脉冲已装填 · 剩余 ${runtime.charges["star-charge"]}`, 0.9);
       playTone("shoot");
+    }
+
+    if (save.heroModule === "wind" && input.pressed.has("jump") && player.windDashJump > 0) {
+      player.windDashJump = 0;
+      player.jumpBuffer = 0;
+      player.dashTime = 0;
+      player.vx = player.facing * Math.max(650, Math.abs(player.vx));
+      player.vy = -610;
+      player.onGround = false;
+      runtime.moduleState.windLift = 0.7;
+      playTone("jump");
+      toast("风行折跃 · 冲刺动量转化为跃升", 0.9);
+      burst(player.x + player.w / 2, player.y + player.h, currentLevel.theme.edge, 12, 230);
+    }
+
+    if (save.heroModule === "root" && player.onGround && input.pressed.has("down") && player.rootCooldown <= 0) {
+      player.rootShield = 0.82;
+      player.rootShieldCharges = 1;
+      player.rootCooldown = 4.8;
+      runtime.moduleState.rootShield = 0.82;
+      player.vx *= 0.25;
+      playTone("switch");
+      toast("根守屏障展开 · 可挡下一枚弹体", 1.05);
+      burst(player.x + player.w / 2, player.y + player.h, "#7fa96b", 10, 120);
     }
 
     if (!player.onGround && input.pressed.has("down")) {
@@ -1405,6 +1662,72 @@
     movePlayerX(dt);
     movePlayerY(dt);
     handlePlayerWorld();
+  }
+
+  function reflectEchoPulse() {
+    const centerX = player.x + player.w / 2;
+    const centerY = player.y + player.h / 2;
+    let reflected = 0;
+    runtime.moduleState.echoPulse = 0.28;
+    runtime.enemyShots.forEach((shot) => {
+      if (shot.life <= 0 || Math.hypot(shot.x - centerX, shot.y - centerY) > 190) return;
+      shot.life = 0;
+      runtime.projectiles.push({
+        x: shot.x,
+        y: shot.y,
+        w: Math.max(18, Number(shot.w) || 16),
+        h: Math.max(18, Number(shot.h) || 16),
+        vx: player.facing * 650,
+        vy: clamp(Number(shot.vy) * -0.25 || 0, -180, 180),
+        life: 1.8,
+        power: 1,
+        reflected: true,
+        enemyCollisionGrace: 0.08,
+      });
+      reflected += 1;
+      burst(shot.x, shot.y, currentLevel.theme.accent2, 7, 160);
+    });
+    if (reflected > 0) {
+      runtime.moduleState.echoReflections += reflected;
+      toast(`回声弹反 ×${reflected} · 反射弹获得供能增幅`, 0.95);
+      announce("回声芽芯完成弹反");
+    }
+  }
+
+  function repairNearbyObjectiveZone() {
+    const objective = objectiveByType("repair-zones");
+    if (!objective) return false;
+    const centerX = player.x + player.w / 2;
+    const centerY = player.y + player.h / 2;
+    const zone = objective.zones.find((entry) => !entry.repaired && Math.hypot(entry.x + entry.w / 2 - centerX, entry.y + entry.h / 2 - centerY) <= 145);
+    if (!zone) return false;
+    zone.repaired = true;
+    const progress = objectiveProgress(objective);
+    toast(`${zone.label || `修复点 ${zone.index + 1}`}已复苏 · ${progress.progress}/${progress.required}`, 1.35);
+    announce("潮汐锚点修复完成");
+    playTone("switch");
+    burst(zone.x + zone.w / 2, zone.y + zone.h / 2, currentLevel.theme.accent2, 18, 250);
+    return true;
+  }
+
+  function releaseRootShockwave(shot) {
+    const x = player.x + player.w / 2;
+    const y = player.y + player.h;
+    player.rootShield = 0;
+    player.rootShieldCharges = 0;
+    shot.life = 0;
+    runtime.rootWaves.push({ x, y, life: 0.42, maxLife: 0.42, radius: 18 });
+    runtime.moduleState.rootShield = 0;
+    runtime.moduleState.rootShockwave = 0.42;
+    runtime.enemies.forEach((enemy) => {
+      if (!enemy.alive || !isBossSpawnAvailable(enemy) || Math.hypot(enemy.x + enemy.w / 2 - x, enemy.y + enemy.h / 2 - y) > 180) return;
+      enemy.hp -= 1;
+      if (enemy.hp <= 0) enemy.alive = false;
+    });
+    shake = Math.max(shake, 7);
+    burst(x, y, "#8fb477", 18, 260);
+    playTone("switch");
+    toast("根盾格挡 · 根脉震波释放", 1.0);
   }
 
   function moveToward(value, target, amount) {
@@ -1517,7 +1840,17 @@
       toast(`潮汐符文 ${count} / 3 · 集齐后开启潮门`, 1.55);
     } else if (effect.mode === "quest") {
       runtime.inventory.add(item.type);
-      toast(`${effect.label}已取得 · ${effect.description}`, 1.7);
+      if (item.type === "storm-cell") {
+        const objective = objectiveByType("reflect-reactor");
+        const reactor = objective?.reactors
+          .filter((entry) => !entry.powered)
+          .sort((a, b) => Math.abs(a.x - item.x) - Math.abs(b.x - item.x))[0];
+        if (reactor) {
+          reactor.charge = Math.min(reactor.requiredCharge, reactor.charge + 2);
+          reactor.powered = reactor.charge >= reactor.requiredCharge;
+          toast(`暖光电池接入反应炉 · ${reactor.charge}/${reactor.requiredCharge}`, 1.55);
+        } else toast(`${effect.label}已取得 · 所有反应炉已经饱和`, 1.45);
+      } else toast(`${effect.label}已取得 · ${effect.description}`, 1.7);
     } else if (effect.mode === "coolant") {
       const coolant = runtime.coolants.find((entry) => entry.id === item.mechanismId || entry.id === item.id);
       if (coolant) {
@@ -1554,8 +1887,11 @@
     });
     runtime.enemyShots.forEach((shot) => {
       if (shot.life > 0 && overlap(body, shot)) {
-        shot.life = 0;
-        hurtPlayer(shot.x);
+        if (save.heroModule === "root" && player.rootShield > 0 && player.rootShieldCharges > 0) releaseRootShockwave(shot);
+        else {
+          shot.life = 0;
+          hurtPlayer(shot.x);
+        }
       }
     });
     runtime.shockwaves.forEach((wave) => {
@@ -1598,6 +1934,14 @@
     if (runtime.devices.autoScroll && player.x + player.w < autoCameraX + 14) respawnPlayer();
 
     if (!currentLevel.isBoss && overlap(body, currentLevel.goal)) {
+      const requirement = currentLevel.goal?.requires;
+      if (requirement?.type === "repair-zones") {
+        const objective = objectiveByType("repair-zones");
+        if (objective && objective.zones.filter((zone) => zone.repaired).length >= objective.required) {
+          objective.submitted = true;
+          objective.completed = true;
+        }
+      }
       if (goalRequirementMet()) completeLevel();
       else if (runtime.goalToastCooldown <= 0) {
         runtime.goalToastCooldown = 1.6;
@@ -1614,6 +1958,8 @@
         const progress = collectRequirementProgress(requirement);
         return progress.count >= progress.required;
       }
+      if (requirement.type === "repair-zones") return Boolean(objectiveByType("repair-zones")?.completed);
+      if (requirement.type === "reflect-reactor") return Boolean(objectiveByType("reflect-reactor")?.completed);
       return false;
     }
     if (requirement === "crystal-crown") return runtime.inventory.has("crystal-crown");
@@ -1631,12 +1977,39 @@
     return { itemType, required, count };
   }
 
+  function objectiveByType(type) {
+    return runtime?.objectives?.find((objective) => objective.type === type) || null;
+  }
+
+  function objectiveProgress(objective) {
+    if (!objective) return { required: 0, progress: 0 };
+    if (objective.type === "repair-zones") {
+      return { required: objective.required, progress: objective.zones.filter((zone) => zone.repaired).length };
+    }
+    if (objective.type === "reflect-reactor") {
+      return { required: objective.required, progress: objective.reactors.filter((reactor) => reactor.powered).length };
+    }
+    return { required: objective.required, progress: objective.completed ? objective.required : 0 };
+  }
+
   function goalRequirementHint() {
     const requirement = currentLevel.goal?.requires;
     if (requirement && typeof requirement === "object") {
       if (requirement.type === "collect") {
         const progress = collectRequirementProgress(requirement);
         return `${requirement.label || COLLECTIBLE_EFFECTS[progress.itemType]?.label || "任务物"}尚未集齐 · ${progress.count}/${progress.required}`;
+      }
+      if (requirement.type === "repair-zones") {
+        const objective = objectiveByType("repair-zones");
+        const progress = objectiveProgress(objective);
+        return progress.progress >= progress.required
+          ? "修复已达标 · 返回中央圣所提交"
+          : `${requirement.label || "修复点"} ${progress.progress}/${progress.required} · 击打锚点完成修复`;
+      }
+      if (requirement.type === "reflect-reactor") {
+        const objective = objectiveByType("reflect-reactor");
+        const progress = objectiveProgress(objective);
+        return `${requirement.label || "反应炉"} ${progress.progress}/${progress.required} · 普通脉冲可慢充，回声弹反充能更快`;
       }
       return "未知的出口条件 · 航线保持封闭";
     }
@@ -1789,11 +2162,13 @@
     const projectiles = runtime.projectiles;
     projectiles.forEach((projectile) => {
       projectile.life -= dt;
+      projectile.enemyCollisionGrace = Math.max(0, Number(projectile.enemyCollisionGrace) - dt || 0);
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
       let consumed = false;
 
       for (const enemy of runtime.enemies) {
+        if (projectile.enemyCollisionGrace > 0) continue;
         if (!enemy.alive || !isBossSpawnAvailable(enemy) || !overlap(projectile, enemy)) continue;
         enemy.hp -= Number(projectile.power) || 1;
         consumed = true;
@@ -1824,6 +2199,35 @@
           toast(`传动齿轮 ${device.index + 1} 已咬合`, 1.35);
           playTone("switch");
           burst(device.x + device.w / 2, device.y + device.h / 2, currentLevel.theme.edge, 16, 240);
+        }
+      });
+
+      runtime.objectives.forEach((objective) => {
+        if (objective.type === "repair-zones") {
+          objective.zones.forEach((zone) => {
+            if (zone.repaired || !overlap(projectile, zone)) return;
+            zone.repaired = true;
+            consumed = true;
+            const progress = objectiveProgress(objective);
+            toast(`${zone.label || `修复点 ${zone.index + 1}`}已复苏 · ${progress.progress}/${progress.required}`, 1.35);
+            announce("潮汐锚点修复完成");
+            playTone("switch");
+            burst(zone.x + zone.w / 2, zone.y + zone.h / 2, currentLevel.theme.accent2, 18, 250);
+          });
+        }
+        if (objective.type === "reflect-reactor") {
+          objective.reactors.forEach((reactor) => {
+            if (!overlap(projectile, reactor)) return;
+            const amount = projectile.reflected ? 3 : 1;
+            const before = reactor.charge;
+            reactor.charge = Math.min(reactor.requiredCharge, reactor.charge + amount);
+            reactor.powered = reactor.charge >= reactor.requiredCharge;
+            consumed = true;
+            if (projectile.reflected) runtime.moduleState.echoCharge += reactor.charge - before;
+            toast(`${reactor.powered ? "反应炉已点亮" : "反应炉供能"} · ${reactor.charge}/${reactor.requiredCharge}${projectile.reflected ? " · 弹反增幅" : ""}`, 1.1);
+            playTone("switch");
+            burst(reactor.x + reactor.w / 2, reactor.y + reactor.h / 2, projectile.reflected ? currentLevel.theme.edge : currentLevel.theme.accent2, 12, 190);
+          });
         }
       });
 
@@ -1889,6 +2293,11 @@
       wave.x += wave.vx * hostileDt;
     });
     runtime.shockwaves = runtime.shockwaves.filter((wave) => wave.life > 0);
+    runtime.rootWaves.forEach((wave) => {
+      wave.life -= dt;
+      wave.radius += 420 * dt;
+    });
+    runtime.rootWaves = runtime.rootWaves.filter((wave) => wave.life > 0);
   }
 
   function updateBoss(dt) {
@@ -2207,7 +2616,19 @@
     drawPaperCloud(menuX(1080) + Math.sin(menuTime * 0.18) * 36, 280, 0.85, theme.paper, 0.42);
     ctx.fillStyle = theme.ground;
     paperPolygon([[menuX(520), 610], [menuX(630), 542], [menuX(775), 570], [menuX(930), 512], [menuX(1090), 545], [VIEW_W, 474], [VIEW_W, 720], [menuX(500), 720]], theme.ground, theme.ink, 5);
-    drawHero(menuX(1000), 468 + Math.sin(menuTime * 2.2) * 5, 1.8, 1, 0, theme, menuTime);
+    const moduleColor = { none: "#f4edda", echo: "#71d9dc", wind: "#f6b84b", root: "#87ad70" }[save.heroModule] || "#f4edda";
+    const heroX = menuX(945);
+    const heroY = 488 + Math.sin(menuTime * 2.2) * 5;
+    ctx.save();
+    ctx.strokeStyle = moduleColor;
+    ctx.globalAlpha = 0.26;
+    ctx.lineWidth = 18;
+    ctx.beginPath(); ctx.ellipse(heroX, heroY - 70, 78, 95, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(heroX, heroY - 70, 67 + Math.sin(menuTime * 2) * 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    drawHero(heroX, heroY, 2.35, 1, 0, theme, menuTime);
     for (let i = 0; i < 12; i += 1) {
       const x = menuX(600) + mod(i * menuX(117) + menuTime * (18 + i), menuX(760));
       const y = 340 + Math.sin(i * 2.2 + menuTime) * 70;
@@ -2255,11 +2676,30 @@
     runtime.enemies.forEach((enemy) => { if (enemy.alive && isBossSpawnAvailable(enemy) && inCamera(enemy.x, enemy.w)) drawEnemy(enemy, theme); });
     runtime.enemyShots.forEach((shot) => { if (inCamera(shot.x, shot.w, 80)) drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, shot.w * 0.7, theme.accent, theme.ink); });
     runtime.shockwaves.forEach((wave) => { if (inCamera(wave.x, wave.w, 80)) drawShockwave(wave, theme); });
+    runtime.rootWaves.forEach((wave) => {
+      if (!inCamera(wave.x - wave.radius, wave.radius * 2, 80)) return;
+      ctx.save();
+      ctx.strokeStyle = "#8fb477";
+      ctx.globalAlpha = clamp(wave.life / wave.maxLife, 0, 1);
+      ctx.lineWidth = 9;
+      ctx.beginPath(); ctx.ellipse(wave.x, wave.y, wave.radius, wave.radius * 0.25, 0, Math.PI, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    });
     runtime.projectiles.forEach((shot) => {
       if (inCamera(shot.x, shot.w, 80)) drawOrb(shot.x + shot.w / 2, shot.y + shot.h / 2, Math.max(11, shot.w * 0.48), shot.starCharged ? theme.accent : theme.edge, theme.paper);
     });
     if (runtime.boss && runtime.boss.hp > 0) drawBoss(runtime.boss, theme);
-    if (player) drawHero(player.x + player.w / 2, player.y + player.h, 1, player.facing, player.vx, theme, player.anim, player);
+    if (player) {
+      if (player.rootShield > 0) {
+        ctx.save(); ctx.strokeStyle = "#8fb477"; ctx.globalAlpha = 0.5 + Math.sin(runtime.time * 12) * 0.15; ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.ellipse(player.x + player.w / 2, player.y + player.h / 2, 38, 46, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      } else if (runtime.moduleState.echoPulse > 0) {
+        ctx.save(); ctx.strokeStyle = theme.accent2; ctx.globalAlpha = runtime.moduleState.echoPulse / 0.28; ctx.lineWidth = 6;
+        const radius = 40 + (1 - runtime.moduleState.echoPulse / 0.28) * 150;
+        ctx.beginPath(); ctx.arc(player.x + player.w / 2, player.y + player.h / 2, radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      }
+      drawHero(player.x + player.w / 2, player.y + player.h, 1, player.facing, player.vx, theme, player.anim, player);
+    }
     runtime.particles.forEach((particle) => { if (inCamera(particle.x, particle.size * 2, 80)) drawParticle(particle); });
     renderWaterAndLava(theme);
     ctx.restore();
@@ -3029,6 +3469,35 @@
   }
 
   function renderDevices(theme) {
+    runtime.objectives.forEach((objective) => {
+      if (objective.type === "repair-zones") objective.zones.forEach((zone) => {
+        if (!inCamera(zone.x, zone.w)) return;
+        ctx.save();
+        ctx.translate(zone.x + zone.w / 2, zone.y + zone.h / 2);
+        ctx.fillStyle = zone.repaired ? theme.accent2 : theme.ink;
+        ctx.strokeStyle = zone.repaired ? theme.paper : theme.accent2;
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.globalAlpha = zone.repaired ? 0.8 : 0.42;
+        ctx.beginPath(); ctx.arc(0, 0, 42 + Math.sin(runtime.time * 3 + zone.index) * 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = zone.repaired ? theme.ink : theme.paper;
+        ctx.globalAlpha = 1;
+        ctx.font = '900 18px "Microsoft YaHei", sans-serif'; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(zone.repaired ? "✓" : "修", 0, 1);
+        ctx.restore();
+      });
+      if (objective.type === "reflect-reactor") objective.reactors.forEach((reactor) => {
+        if (!inCamera(reactor.x, reactor.w)) return;
+        const ratio = clamp(reactor.charge / reactor.requiredCharge, 0, 1);
+        ctx.save(); ctx.translate(reactor.x + reactor.w / 2, reactor.y + reactor.h / 2);
+        ctx.fillStyle = theme.ink; ctx.fillRect(-reactor.w / 2, -reactor.h / 2, reactor.w, reactor.h);
+        ctx.fillStyle = reactor.powered ? theme.edge : theme.far; ctx.fillRect(-reactor.w / 2 + 7, -reactor.h / 2 + 7, (reactor.w - 14) * ratio, reactor.h - 14);
+        ctx.strokeStyle = reactor.powered ? theme.paper : theme.accent2; ctx.lineWidth = 4; ctx.strokeRect(-reactor.w / 2, -reactor.h / 2, reactor.w, reactor.h);
+        ctx.fillStyle = theme.paper; ctx.font = '900 13px "Microsoft YaHei", sans-serif'; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(reactor.powered ? "满" : `${reactor.charge}/${reactor.requiredCharge}`, 0, 0);
+        ctx.restore();
+      });
+    });
     runtime.crystals.forEach((crystal) => { if (inCamera(crystal.x, crystal.w)) drawCrystal(crystal.x + crystal.w / 2, crystal.y + crystal.h, crystal.active ? theme.edge : theme.far, crystal.active); });
     runtime.switches.forEach((device) => {
       if (!inCamera(device.x, device.w)) return;
@@ -3375,6 +3844,8 @@
     if (!inCamera(goal.x, goal.w, 100)) return;
     ctx.save();
     ctx.translate(goal.x + goal.w / 2, goal.y + goal.h / 2);
+    const repairObjective = objectiveByType("repair-zones");
+    const repairProgress = objectiveProgress(repairObjective);
     ctx.rotate(Math.sin(runtime.time * 0.7) * 0.035);
     ctx.fillStyle = theme.ink;
     ctx.beginPath();
@@ -3384,6 +3855,12 @@
     ctx.beginPath();
     ctx.roundRect(-goal.w / 2 + 4, -goal.h / 2 + 8, goal.w - 8, goal.h - 12, 9);
     ctx.fill();
+    if (repairObjective) {
+      ctx.fillStyle = repairProgress.progress >= repairProgress.required ? theme.accent2 : theme.far;
+      ctx.globalAlpha = 0.34;
+      ctx.beginPath(); ctx.arc(0, 4, Math.max(goal.w, goal.h) * 0.5 + Math.sin(runtime.time * 2) * 8, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     const portal = ctx.createRadialGradient(0, 4, 4, 0, 4, goal.w * 0.42);
     portal.addColorStop(0, theme.paper);
     portal.addColorStop(0.34, theme.accent2);
@@ -4067,6 +4544,7 @@
 
   function init() {
     syncCanvasViewport();
+    ensureProfileUi();
     $("#mute-icon").textContent = muted ? "静音" : "声音";
     renderLevelGrid();
     openMenu();
@@ -4102,7 +4580,21 @@
       unlocked: save.unlocked,
       completed: [...save.completed],
       seeds: save.seeds,
+      heroModule: save.heroModule,
+      unlockedModules: unlockedModulesFor(),
+      moduleState: runtime ? { ...runtime.moduleState } : null,
       goalReady: Boolean(runtime && currentLevel && goalRequirementMet()),
+      objectives: runtime ? runtime.objectives.map((objective) => {
+        const progress = objectiveProgress(objective);
+        return { id: objective.id, type: objective.type, required: progress.required, progress: progress.progress, completed: Boolean(objective.completed), submitted: Boolean(objective.submitted) };
+      }) : [],
+      objective: runtime?.objectives?.[0] ? (() => {
+        const objective = runtime.objectives[0];
+        const progress = objectiveProgress(objective);
+        return { id: objective.id, type: objective.type, required: progress.required, progress: progress.progress, completed: Boolean(objective.completed) };
+      })() : null,
+      repairZones: runtime ? runtime.objectives.flatMap((objective) => objective.zones || []).map((zone) => ({ id: zone.id, x: zone.x, y: zone.y, w: zone.w, h: zone.h, repaired: Boolean(zone.repaired) })) : [],
+      reactors: runtime ? runtime.objectives.flatMap((objective) => objective.reactors || []).map((reactor) => ({ id: reactor.id, x: reactor.x, y: reactor.y, w: reactor.w, h: reactor.h, charge: reactor.charge, required: reactor.requiredCharge, requiredCharge: reactor.requiredCharge, charged: Boolean(reactor.powered), powered: Boolean(reactor.powered) })) : [],
       polarity: runtime?.polarity?.current || null,
       platforms: runtime ? runtime.platforms.map((platform) => ({
         id: platform.id,
@@ -4133,6 +4625,13 @@
     release: (action, source = "qa") => releaseAction(action, source),
     captureReady: () => captureReady || scene === "menu",
     unlockAll: () => { save.unlocked = MAX_LEVEL_ID; persist(); renderLevelGrid(); },
+    equipModule: (moduleId) => equipHeroModule(moduleId),
+    completeForQa: (id) => {
+      const levelId = Number(id);
+      if (!CAMPAIGN_LEVEL_IDS.has(levelId)) return false;
+      save.completed = [...new Set([...save.completed, levelId])].sort((a, b) => a - b);
+      persist(); renderProfile(); renderLevelGrid(); return true;
+    },
     teleport: (x, y = 420) => {
       if (!player || !currentLevel) return false;
       player.x = clamp(Number(x) || 0, 0, currentLevel.worldWidth - player.w);

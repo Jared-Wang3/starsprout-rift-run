@@ -76,6 +76,48 @@ test("game shell exposes every required screen and HUD surface", async () => {
   );
 });
 
+test("expedition shell exposes the hero profile and three unlockable sprout modules", async () => {
+  const html = await readProjectFile("public/play/index.html");
+
+  assert.match(html, /\bid=["']profile-screen["']/i, "missing the hero profile screen");
+  assert.match(html, /\bdata-action=["']profile["']/i, "the expedition shell needs a profile entrance");
+
+  for (const moduleId of ["echo", "wind", "root"]) {
+    assert.match(
+      html,
+      new RegExp(`\\bdata-module=["']${moduleId}["']`, "i"),
+      `missing the ${moduleId} sprout module button`,
+    );
+  }
+
+  assert.match(
+    html,
+    /\bdata-module=["'](?:none|echo|wind|root)["'][^>]*\baria-pressed=|\baria-pressed=[^>]*\bdata-module=/i,
+    "module buttons must expose their equipped state with aria-pressed",
+  );
+});
+
+test("route renderer groups the campaign into three acts with mode tags and thumbnails", async () => {
+  const source = await readProjectFile("public/play/game.js");
+
+  assert.match(source, /function\s+renderLevelGrid\s*\(/, "missing renderLevelGrid()");
+  assert.match(
+    source,
+    /data-act=["']?\$\{|data-act=["'][^"']*\$\{/,
+    "renderLevelGrid() must emit a semantic data-act marker for each act group",
+  );
+  assert.match(
+    source,
+    /(?:level|route|mode)[-_]tag|class=["'][^"']*tag/i,
+    "route cards must render their gameplay mode tags",
+  );
+  assert.match(
+    source,
+    /(?:level|route|card)[-_](?:thumb|thumbnail)|thumbnail/i,
+    "route cards must render a visual thumbnail surface",
+  );
+});
+
 test("touch UI supports portrait play without a blocking rotate notice", async () => {
   const html = await readProjectFile("public/play/index.html");
   const css = await readProjectFile("public/play/game.css");

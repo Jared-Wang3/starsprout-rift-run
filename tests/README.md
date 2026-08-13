@@ -13,7 +13,8 @@ the spring, polarity, timed-relay, and rift-weaver data contracts.
 JavaScript syntax. `game-art.test.mjs` checks the sprite and background
 manifests. `gameplay-feedback.test.mjs` drives the deterministic
 `window.__STARSPROUT_TEST__` hook to cover save migration, goal gating, live
-mechanics, Boss dispatch, and touch-input behavior.
+mechanics, Boss dispatch, touch-input behavior, hero modules, repair-zone
+objectives, and multi-route reactor charging.
 
 The legacy starter-template fixture in `rendered-html.test.mjs` is intentionally
 excluded from the game test script.
