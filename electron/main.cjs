@@ -37,7 +37,7 @@ function createWindow() {
       allowRunningInsecureContent: false,
       spellcheck: false,
       devTools: !app.isPackaged,
-      backgroundThrottling: false,
+      backgroundThrottling: true,
     },
   });
 

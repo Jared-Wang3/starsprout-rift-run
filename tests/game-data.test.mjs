@@ -50,17 +50,17 @@ function isBoss(level) {
   return Boolean(level.boss) || level.type === "boss" || level.kind === "boss";
 }
 
-test("level bundle defines a stable twelve-stage campaign schema", async () => {
+test("level bundle defines a stable sixteen-stage campaign schema", async () => {
   const bundle = await loadLevelBundle();
   const levels = extractLevels(bundle);
 
   assert.equal(typeof bundle.get, "function", "bundle must expose get(id)");
   assert.equal(typeof bundle.clone, "function", "bundle must expose clone(id)");
   assert.ok(Array.isArray(bundle.list), "bundle must expose a list array");
-  assert.equal(levels.length, 12, "campaign must contain exactly twelve stages");
+  assert.equal(levels.length, 16, "campaign must contain exactly sixteen stages");
   assert.deepEqual(
     Array.from(levels, (level) => level.id),
-    Array.from({ length: 12 }, (_, index) => index + 1),
+    Array.from({ length: 16 }, (_, index) => index + 1),
     "stage ids must be sequential and one-based",
   );
 
@@ -95,14 +95,14 @@ test("each act contains three stages and a fourth-stage boss", async () => {
   const levels = extractLevels(bundle);
   const bossIds = Array.from(levels).filter(isBoss).map((level) => level.id);
 
-  assert.deepEqual(bossIds, [4, 8, 12]);
+  assert.deepEqual(bossIds, [4, 8, 12, 16]);
   assert.deepEqual(
     Array.from(bundle.schema?.bossLevels ?? []),
     bossIds,
     "schema.bossLevels must match the actual boss stages",
   );
 
-  for (let act = 1; act <= 3; act += 1) {
+  for (let act = 1; act <= 4; act += 1) {
     const actLevels = levels.filter((level) => level.act === act);
     assert.deepEqual(
       Array.from(actLevels, (level) => level.id),
@@ -130,16 +130,17 @@ test("each act contains three stages and a fourth-stage boss", async () => {
   }
 });
 
-test("only stage 12 is the campaign finale", async () => {
+test("only stage 16 is the campaign finale", async () => {
   const levels = extractLevels(await loadLevelBundle());
   const finaleIds = Array.from(
     levels.filter((level) => level.finale === true),
     (level) => level.id,
   );
 
-  assert.deepEqual(finaleIds, [12]);
-  assert.equal(levels[7].id, 8);
-  assert.notEqual(levels[7].finale, true, "stage 8 is an act boss, not the campaign finale");
+  assert.deepEqual(finaleIds, [16]);
+  for (const id of [4, 8, 12]) {
+    assert.notEqual(levels[id - 1].finale, true, `stage ${id} is an act boss, not the campaign finale`);
+  }
 });
 
 test("act 3 quest pickups remain explicit while stage 11 uses reactor completion", async () => {
@@ -222,6 +223,33 @@ test("act 3 mechanic data is complete enough for runtime behavior", async () => 
     level12.collectibles.some((item) => item.type === "rift-core-seed" && item.spawnOnBossDefeat === true),
     "stage 12 must spawn rift-core-seed only after the boss is defeated",
   );
+});
+
+test("act 4 uses four distinct traversal and puzzle loops", async () => {
+  const levels = extractLevels(await loadLevelBundle());
+  const level13 = levels.find((level) => level.id === 13);
+  const level14 = levels.find((level) => level.id === 14);
+  const level15 = levels.find((level) => level.id === 15);
+  const level16 = levels.find((level) => level.id === 16);
+
+  assert.equal(level13.mechanics.type, "gravity-wells");
+  assert.ok(level13.mechanics.gravityZones.length >= 3, "stage 13 needs multiple low-gravity route zones");
+  assert.ok(level13.platforms.filter((platform) => platform.motion?.type === "orbit").length >= 4,
+    "stage 13 needs orbiting platforms rather than a normal run-right route");
+
+  assert.equal(level14.mechanics.type, "local-time-freeze");
+  assert.ok(level14.mechanics.timeAnchors.length >= 4, "stage 14 needs several local time anchors");
+  assert.ok(level14.mechanics.timeAnchors.every((anchor) => anchor.radius > 0 && anchor.duration > 0));
+
+  assert.equal(level15.mechanics.type, "delayed-echo");
+  assert.ok(level15.mechanics.echoDelay >= 1, "stage 15 needs an observable delayed clone");
+  assert.deepEqual([...new Set(level15.mechanics.echoPads.map((pad) => pad.group))].sort(), ["a", "b"]);
+  assert.equal(level15.goal.requires.type, "echo-pairs");
+
+  assert.equal(level16.boss.archetype, "star-whale");
+  assert.deepEqual(Array.from(level16.boss.phases, (phase) => phase.requiredAnchors), [1, 2, 3]);
+  assert.equal(level16.mechanics.gravityAnchors.length, 3);
+  assert.ok(level16.collectibles.some((item) => item.type === "starwhale-core" && item.spawnOnBossDefeat));
 });
 
 test("all stages have distinct worlds instead of palette-swapped repetition", async () => {

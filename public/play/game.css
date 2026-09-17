@@ -89,8 +89,7 @@ button:active {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.22;
-  mix-blend-mode: soft-light;
+  opacity: 0.08;
   background-image:
     repeating-linear-gradient(8deg, transparent 0 3px, rgba(255, 255, 255, 0.025) 3px 4px),
     repeating-linear-gradient(97deg, rgba(0, 0, 0, 0.03) 0 1px, transparent 1px 5px);
@@ -1671,6 +1670,23 @@ kbd {
   pointer-events: auto;
 }
 
+.touch-move {
+  gap: 0;
+  padding: 0.38rem;
+  border: 2px solid rgba(244, 237, 218, 0.34);
+  border-radius: 1.45rem;
+  background: rgba(3, 16, 23, 0.78);
+  box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(244, 237, 218, 0.08);
+  touch-action: none;
+}
+
+.touch-actions {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: max(0.72rem, var(--touch-gap));
+  align-items: center;
+}
+
 .touch-controls button {
   width: var(--touch-action-size);
   height: var(--touch-action-size);
@@ -1690,8 +1706,18 @@ kbd {
 }
 
 .touch-move button {
-  width: var(--touch-move-size);
+  width: calc(var(--touch-move-size) * 1.22);
   height: var(--touch-move-size);
+  border-width: 0;
+  border-radius: 1.05rem 0 0 1.05rem;
+  box-shadow: none;
+  background: rgba(244, 237, 218, 0.09);
+  font-size: 1.8rem;
+}
+
+.touch-move button + button {
+  border-left: 1px solid rgba(244, 237, 218, 0.22);
+  border-radius: 0 1.05rem 1.05rem 0;
 }
 
 .touch-controls button.is-pressed {
@@ -1755,6 +1781,14 @@ kbd {
 }
 
 @media (any-pointer: coarse), (pointer: coarse), (max-width: 900px) {
+  .field-dock > button,
+  .panel-screen,
+  .briefing-screen,
+  .center-screen,
+  .touch-controls button {
+    backdrop-filter: none;
+  }
+
   .touch-controls.is-visible {
     display: flex;
   }
@@ -1894,7 +1928,7 @@ kbd {
     --touch-action-size: clamp(3rem, 15vh, 3.8rem);
     --touch-jump-size: clamp(3.9rem, 21vh, 5rem);
     --touch-dash-size: clamp(3rem, 15vh, 3.7rem);
-    --touch-gap: clamp(0.3rem, 1.4vw, 0.6rem);
+    --touch-gap: clamp(0.55rem, 2.2vw, 0.85rem);
     right: max(0.75rem, var(--safe-right));
     bottom: max(0.65rem, calc(0.25rem + var(--safe-bottom)));
     left: max(0.75rem, var(--safe-left));
@@ -1928,7 +1962,7 @@ kbd {
   }
 
   .route-intro::after {
-    content: "横向滑动查看三幕  →";
+    content: "横向滑动查看四幕  →";
     flex: 0 0 auto;
     margin-left: auto;
     color: var(--amber);

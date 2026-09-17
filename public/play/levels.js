@@ -1746,7 +1746,6 @@
       key: "riftweave-sanctum",
       act: 3,
       kind: "boss",
-      finale: true,
       name: "裂界织殿",
       nameEn: "RIFTWEAVE SANCTUM",
       subtitle: "让断裂的星线重新相连",
@@ -1890,6 +1889,420 @@
           defeatEffect: "rewoven-rift"
         }
       }
+    },
+
+    {
+      id: 13,
+      key: "weightless-star-ring",
+      act: 4,
+      kind: "stage",
+      name: "失重星环",
+      nameEn: "WEIGHTLESS STAR RING",
+      subtitle: "把坠落变成一条新的航线",
+      briefing: {
+        kicker: "STAGE 13 · GRAVITY",
+        title: "失重星环",
+        subtitle: "把坠落变成一条新的航线",
+        mechanic: "进入蓝色引力泡后跳跃会持续升空，下砸则能立刻锚定；环轨平台会围绕星井转动。",
+        hint: "不要只向右跑：先借低重力升到外环，再用下砸切回下层收集三枚星轨钥。"
+      },
+      theme: {
+        id: "weightless-star-ring",
+        palette: {
+          skyTop: "#07182D",
+          skyBottom: "#214E68",
+          ink: "#050B19",
+          paper: "#F2E9D5",
+          ground: "#273E55",
+          groundDark: "#111D2C",
+          platform: "#506E78",
+          accent: "#F7C85C",
+          accent2: "#58D5D0",
+          danger: "#F06463",
+          fog: "#36596D"
+        },
+        material: "orbital-paper-brass",
+        ambient: { type: "gravity-dust", count: 42, speed: 0.38 },
+        landmark: { type: "orbital-garden", x: 2920, y: 72, scale: 1.65, accent: "#58D5D0" }
+      },
+      worldWidth: 4800,
+      worldHeight: WORLD_HEIGHT,
+      killY: 830,
+      camera: { mode: "follow", deadZoneX: 0.35, lookAhead: 145 },
+      spawn: { x: 90, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4610,
+        y: 470,
+        w: 94,
+        h: 150,
+        requires: { type: "collect", itemType: "orbit-key", count: 3, label: "星轨钥" }
+      },
+      platforms: [
+        platform("sg-ground-01", 0, 620, 520, 100, { material: "star-stone" }),
+        platform("sg-orbit-01", 620, 500, 170, 24, { kind: "moving", material: "orbit-brass", motion: { type: "orbit", centerX: 780, centerY: 430, radiusX: 170, radiusY: 105, speed: 0.72, phase: 0 } }),
+        platform("sg-orbit-02", 940, 360, 150, 24, { kind: "moving", material: "orbit-brass", motion: { type: "orbit", centerX: 1010, centerY: 380, radiusX: 125, radiusY: 145, speed: -0.88, phase: 1.4 } }),
+        platform("sg-ground-02", 1240, 620, 480, 100, { material: "star-stone" }),
+        platform("sg-high-01", 1330, 355, 190, 24, { kind: "one-way", material: "crystal-orbit" }),
+        platform("sg-orbit-03", 1800, 430, 170, 24, { kind: "moving", material: "orbit-brass", motion: { type: "orbit", centerX: 1940, centerY: 405, radiusX: 190, radiusY: 150, speed: 0.64, phase: 2.2 } }),
+        platform("sg-ground-03", 2140, 620, 460, 100, { material: "star-stone" }),
+        platform("sg-high-02", 2220, 330, 180, 24, { kind: "one-way", material: "crystal-orbit" }),
+        platform("sg-orbit-04", 2670, 420, 165, 24, { kind: "moving", material: "orbit-brass", motion: { type: "orbit", centerX: 2830, centerY: 390, radiusX: 205, radiusY: 170, speed: -0.74, phase: 0.8 } }),
+        platform("sg-ground-04", 3050, 620, 510, 100, { material: "star-stone" }),
+        platform("sg-high-03", 3140, 305, 200, 24, { kind: "one-way", material: "crystal-orbit" }),
+        platform("sg-orbit-05", 3650, 455, 175, 24, { kind: "moving", material: "orbit-brass", motion: { type: "orbit", centerX: 3780, centerY: 395, radiusX: 170, radiusY: 150, speed: 0.92, phase: 2.8 } }),
+        platform("sg-ground-05", 4010, 620, 790, 100, { material: "star-stone" }),
+        platform("sg-finish-step", 4380, 480, 185, 24, { kind: "one-way", material: "crystal-orbit" })
+      ],
+      hazards: [
+        hazard("sg-void-01", "star-void", 520, 660, 720, 60, { damage: 99 }),
+        hazard("sg-void-02", "star-void", 1720, 660, 420, 60, { damage: 99 }),
+        hazard("sg-void-03", "star-void", 2600, 660, 450, 60, { damage: 99 }),
+        hazard("sg-void-04", "star-void", 3560, 660, 450, 60, { damage: 99 }),
+        hazard("sg-rift-01", "void-rift", 1490, 575, 110, 45),
+        hazard("sg-rift-02", "void-rift", 3290, 575, 120, 45)
+      ],
+      enemies: [
+        enemy("sg-eye-01", "orbit-eye", 1370, 285, 1250, 1580, { hp: 2, yBob: 45, speed: 76 }),
+        enemy("sg-eye-02", "orbit-eye", 2240, 260, 2140, 2480, { hp: 2, yBob: 48, speed: 84 }),
+        enemy("sg-shadow-01", "shadow-sprout", 3160, 566, 3090, 3440, { hp: 2, speed: 72 }),
+        enemy("sg-eye-03", "orbit-eye", 4180, 300, 4050, 4450, { hp: 3, yBob: 56, speed: 96 })
+      ],
+      collectibles: [
+        collectible("sg-seed-01", "memory-seed", 320, 470),
+        collectible("sg-key-01", "orbit-key", 1470, 295, { quest: true }),
+        collectible("sg-seed-02", "memory-seed", 1940, 220),
+        collectible("sg-key-02", "orbit-key", 2300, 270, { quest: true }),
+        collectible("sg-heart", "heart", 3220, 245),
+        collectible("sg-key-03", "orbit-key", 3790, 245, { quest: true }),
+        collectible("sg-seed-03", "memory-seed", 4370, 425)
+      ],
+      checkpoints: [
+        checkpoint("sg-check-01", 1280, 528, 1300, 536),
+        checkpoint("sg-check-02", 3090, 528, 3110, 536)
+      ],
+      mechanics: {
+        type: "gravity-wells",
+        gravityZones: [
+          { id: "sg-gravity-a", x: 500, y: 130, w: 740, h: 520, gravityScale: 0.22, liftOnHold: 390 },
+          { id: "sg-gravity-b", x: 1700, y: 100, w: 900, h: 550, gravityScale: 0.28, liftOnHold: 350 },
+          { id: "sg-gravity-c", x: 2590, y: 80, w: 970, h: 570, gravityScale: 0.2, liftOnHold: 410 },
+          { id: "sg-gravity-d", x: 3540, y: 110, w: 470, h: 540, gravityScale: 0.25, liftOnHold: 370 }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 14,
+      key: "timesand-cloister",
+      act: 4,
+      kind: "stage",
+      name: "时砂回廊",
+      nameEn: "TIMESAND CLOISTER",
+      subtitle: "让危险停在发生之前",
+      briefing: {
+        kicker: "STAGE 14 · TIME",
+        title: "时砂回廊",
+        subtitle: "让危险停在发生之前",
+        mechanic: "脉冲击中时花会冻结附近的平台、敌人与机关四秒；冻结不是开门，而是亲手制造通行窗口。",
+        hint: "先观察机关的运动轨迹，再决定何时冻结。三枚时砂花瓣分布在不同高度。"
+      },
+      theme: {
+        id: "timesand-cloister",
+        palette: {
+          skyTop: "#102232",
+          skyBottom: "#76513E",
+          ink: "#08121B",
+          paper: "#F2E4CC",
+          ground: "#493B38",
+          groundDark: "#211E22",
+          platform: "#8A6950",
+          accent: "#F1A94E",
+          accent2: "#67D6D1",
+          danger: "#E85E55",
+          fog: "#6D5A4D"
+        },
+        material: "timesand-paper",
+        ambient: { type: "suspended-sand", count: 40, speed: 0.22 },
+        landmark: { type: "hourglass-cloister", x: 3020, y: 64, scale: 1.55, accent: "#F1A94E" }
+      },
+      worldWidth: 4700,
+      worldHeight: WORLD_HEIGHT,
+      killY: 800,
+      camera: { mode: "follow", deadZoneX: 0.36, lookAhead: 140 },
+      spawn: { x: 88, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4515,
+        y: 470,
+        w: 94,
+        h: 150,
+        requires: { type: "collect", itemType: "chrono-petal", count: 3, label: "时砂花瓣" }
+      },
+      platforms: [
+        platform("tc-ground-01", 0, 620, 560, 100, { material: "clock-stone" }),
+        platform("tc-pendulum-01", 600, 470, 170, 24, { kind: "moving", material: "hourglass-brass", motion: { axis: "y", distance: 170, speed: 1.45, phase: 0.3 } }),
+        platform("tc-pendulum-02", 850, 350, 170, 24, { kind: "moving", material: "hourglass-brass", motion: { axis: "y", distance: 185, speed: 1.7, phase: 2.1 } }),
+        platform("tc-ground-02", 1110, 620, 510, 100, { material: "clock-stone" }),
+        platform("tc-gear-01", 1240, 455, 180, 24, { kind: "moving", material: "hourglass-brass", motion: { axis: "x", distance: 175, speed: 1.8, phase: 0.7 } }),
+        platform("tc-ground-03", 1840, 620, 500, 100, { material: "clock-stone" }),
+        platform("tc-pendulum-03", 1900, 365, 170, 24, { kind: "moving", material: "hourglass-brass", motion: { axis: "y", distance: 185, speed: 1.9, phase: 1.4 } }),
+        platform("tc-pendulum-04", 2200, 430, 165, 24, { kind: "moving", material: "hourglass-brass", motion: { axis: "x", distance: 190, speed: 2.1, phase: 2.7 } }),
+        platform("tc-ground-04", 2600, 620, 520, 100, { material: "clock-stone" }),
+        platform("tc-high-01", 2690, 370, 190, 24, { kind: "one-way", material: "frozen-glass" }),
+        platform("tc-pendulum-05", 3190, 420, 175, 24, { kind: "moving", material: "hourglass-brass", motion: { axis: "y", distance: 200, speed: 2.25, phase: 0.9 } }),
+        platform("tc-ground-05", 3580, 620, 470, 100, { material: "clock-stone" }),
+        platform("tc-pendulum-06", 3650, 355, 175, 24, { kind: "moving", material: "hourglass-brass", motion: { axis: "x", distance: 210, speed: 2.4, phase: 1.8 } }),
+        platform("tc-ground-06", 4270, 620, 430, 100, { material: "clock-stone" }),
+        platform("tc-finish-step", 4380, 480, 180, 24, { kind: "one-way", material: "frozen-glass" })
+      ],
+      hazards: [
+        hazard("tc-pit-01", "fall", 560, 660, 550, 60, { damage: 99 }),
+        hazard("tc-pit-02", "fall", 1620, 660, 220, 60, { damage: 99 }),
+        hazard("tc-saw-01", "saw-gear", 1460, 546, 74, 74, { radius: 35, angularSpeed: 3.4 }),
+        hazard("tc-pit-03", "fall", 2340, 660, 260, 60, { damage: 99 }),
+        hazard("tc-saw-02", "saw-gear", 2930, 544, 76, 76, { radius: 36, angularSpeed: -3.8 }),
+        hazard("tc-pit-04", "fall", 3120, 660, 460, 60, { damage: 99 }),
+        hazard("tc-saw-03", "saw-gear", 3900, 542, 78, 78, { radius: 37, angularSpeed: 4.1 }),
+        hazard("tc-pit-05", "fall", 4050, 660, 220, 60, { damage: 99 })
+      ],
+      enemies: [
+        enemy("tc-eye-01", "orbit-eye", 1180, 350, 1120, 1510, { hp: 2, yBob: 42, speed: 86 }),
+        enemy("tc-shadow-01", "shadow-sprout", 1900, 566, 1870, 2260, { hp: 2, speed: 80 }),
+        enemy("tc-cannon-01", "storm-cannon", 2790, 552, 2790, 2790, { hp: 3, speed: 0 }),
+        enemy("tc-eye-02", "orbit-eye", 3650, 280, 3540, 3950, { hp: 3, yBob: 52, speed: 104 })
+      ],
+      collectibles: [
+        collectible("tc-seed-01", "memory-seed", 330, 470),
+        collectible("tc-petal-01", "chrono-petal", 925, 270, { quest: true }),
+        collectible("tc-heart", "heart", 1970, 315),
+        collectible("tc-petal-02", "chrono-petal", 2765, 315, { quest: true }),
+        collectible("tc-seed-02", "memory-seed", 3310, 250),
+        collectible("tc-petal-03", "chrono-petal", 3740, 295, { quest: true }),
+        collectible("tc-seed-03", "memory-seed", 4420, 425)
+      ],
+      checkpoints: [
+        checkpoint("tc-check-01", 1150, 528, 1170, 536),
+        checkpoint("tc-check-02", 2630, 528, 2650, 536),
+        checkpoint("tc-check-03", 3610, 528, 3630, 536)
+      ],
+      mechanics: {
+        type: "local-time-freeze",
+        timeAnchors: [
+          { id: "tc-anchor-a", x: 505, y: 430, w: 54, h: 72, radius: 650, duration: 4.2 },
+          { id: "tc-anchor-b", x: 1645, y: 390, w: 54, h: 72, radius: 720, duration: 4.0 },
+          { id: "tc-anchor-c", x: 3060, y: 390, w: 54, h: 72, radius: 720, duration: 3.8 },
+          { id: "tc-anchor-d", x: 4160, y: 430, w: 54, h: 72, radius: 620, duration: 3.6 }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 15,
+      key: "echo-twin-city",
+      act: 4,
+      kind: "stage",
+      name: "双影镜城",
+      nameEn: "ECHO TWIN CITY",
+      subtitle: "和一秒前的自己并肩前进",
+      briefing: {
+        kicker: "STAGE 15 · ECHO",
+        title: "双影镜城",
+        subtitle: "和一秒前的自己并肩前进",
+        mechanic: "青色纸影会持续重演约 1.8 秒前的移动；让本体与纸影分别站上同组双生台，才能封合镜门。",
+        hint: "先踩过第一座台，再保持节奏抵达第二座；停顿和折返都会改变纸影的路线。"
+      },
+      theme: {
+        id: "echo-twin-city",
+        palette: {
+          skyTop: "#171637",
+          skyBottom: "#526390",
+          ink: "#09091A",
+          paper: "#F1E7D8",
+          ground: "#343553",
+          groundDark: "#17182B",
+          platform: "#696780",
+          accent: "#D989D8",
+          accent2: "#62DDD3",
+          danger: "#ED6373",
+          fog: "#54536F"
+        },
+        material: "mirror-paper",
+        ambient: { type: "echo-ribbons", count: 38, speed: 0.5 },
+        landmark: { type: "twin-mirror-city", x: 2860, y: 72, scale: 1.62, accent: "#62DDD3" }
+      },
+      worldWidth: 4700,
+      worldHeight: WORLD_HEIGHT,
+      killY: 800,
+      camera: { mode: "follow", deadZoneX: 0.34, lookAhead: 150 },
+      spawn: { x: 88, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4510,
+        y: 470,
+        w: 94,
+        h: 150,
+        requires: { type: "echo-pairs", count: 2, label: "双生镜印" }
+      },
+      platforms: [
+        platform("ec-ground-01", 0, 620, 1500, 100, { material: "mirror-stone" }),
+        platform("ec-step-01", 470, 485, 170, 24, { kind: "one-way", material: "echo-glass" }),
+        platform("ec-step-02", 1080, 420, 170, 24, { kind: "one-way", material: "echo-glass" }),
+        platform("ec-ground-02", 1600, 620, 500, 100, { material: "mirror-stone" }),
+        platform("ec-bridge-01", 2100, 485, 260, 24, { kind: "moving", material: "echo-glass", motion: { axis: "y", distance: 115, speed: 0.82, phase: 0.4 } }),
+        platform("ec-ground-03", 2440, 620, 1260, 100, { material: "mirror-stone" }),
+        platform("ec-step-03", 2600, 455, 170, 24, { kind: "one-way", material: "echo-glass" }),
+        platform("ec-step-04", 3240, 380, 170, 24, { kind: "one-way", material: "echo-glass" }),
+        platform("ec-ground-04", 3800, 620, 900, 100, { material: "mirror-stone" }),
+        platform("ec-finish-step", 4330, 480, 185, 24, { kind: "one-way", material: "echo-glass" })
+      ],
+      hazards: [
+        hazard("ec-mirror-spike-01", "crystal-spike", 700, 588, 90, 32),
+        hazard("ec-mirror-spike-02", "crystal-spike", 1320, 588, 90, 32),
+        hazard("ec-void-01", "star-void", 1500, 660, 100, 60, { damage: 99 }),
+        hazard("ec-void-02", "star-void", 2100, 660, 340, 60, { damage: 99 }),
+        hazard("ec-mirror-spike-03", "crystal-spike", 2860, 588, 90, 32),
+        hazard("ec-mirror-spike-04", "crystal-spike", 3500, 588, 90, 32),
+        hazard("ec-void-03", "star-void", 3700, 660, 100, 60, { damage: 99 })
+      ],
+      enemies: [
+        enemy("ec-shadow-01", "shadow-sprout", 860, 566, 820, 1120, { hp: 2, speed: 72 }),
+        enemy("ec-eye-01", "orbit-eye", 1880, 320, 1720, 2030, { hp: 2, yBob: 44, speed: 82 }),
+        enemy("ec-shadow-02", "shadow-sprout", 2700, 566, 2520, 3050, { hp: 2, speed: 84 }),
+        enemy("ec-eye-02", "orbit-eye", 4040, 300, 3870, 4290, { hp: 3, yBob: 54, speed: 96 })
+      ],
+      collectibles: [
+        collectible("ec-seed-01", "memory-seed", 390, 430),
+        collectible("ec-heart", "heart", 1860, 520),
+        collectible("ec-seed-02", "memory-seed", 2220, 425),
+        collectible("ec-seed-03", "memory-seed", 3310, 325),
+        collectible("ec-star", "star-charge", 4050, 480, { charges: 2 })
+      ],
+      checkpoints: [
+        checkpoint("ec-check-01", 1635, 528, 1655, 536),
+        checkpoint("ec-check-02", 3835, 528, 3855, 536)
+      ],
+      mechanics: {
+        type: "delayed-echo",
+        echoDelay: 1.8,
+        echoPads: [
+          { id: "ec-pad-a1", group: "a", x: 540, y: 594, w: 120, h: 26 },
+          { id: "ec-pad-a2", group: "a", x: 1170, y: 594, w: 120, h: 26 },
+          { id: "ec-pad-b1", group: "b", x: 2560, y: 594, w: 120, h: 26 },
+          { id: "ec-pad-b2", group: "b", x: 3190, y: 594, w: 120, h: 26 }
+        ],
+        gates: [
+          { id: "ec-gate-a", x: 1430, y: 350, w: 50, h: 270, openByEcho: "a" },
+          { id: "ec-gate-b", x: 3610, y: 350, w: 50, h: 270, openByEcho: "b" }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 16,
+      key: "starwhale-court",
+      act: 4,
+      kind: "boss",
+      finale: true,
+      name: "星噬鲸庭",
+      nameEn: "STAR-EATER COURT",
+      subtitle: "在引力潮中拉回最后一颗星",
+      briefing: {
+        kicker: "BOSS 04 · ORBIT",
+        title: "星噬鲸",
+        subtitle: "在引力潮中拉回最后一颗星",
+        mechanic: "三枚星锚会环绕鲸身高速移动；用脉冲依次点亮足够数量的星锚，把巨鲸拉落后攻击胸口星核。",
+        hint: "引力潮会持续推拉星芽。顺着潮向移动比逆向硬冲更安全，后两个阶段需要同时维持更多星锚。"
+      },
+      theme: {
+        id: "starwhale-court",
+        palette: {
+          skyTop: "#070D22",
+          skyBottom: "#31325F",
+          ink: "#030714",
+          paper: "#F4EBD8",
+          ground: "#252C4A",
+          groundDark: "#101428",
+          platform: "#555C78",
+          accent: "#F5C653",
+          accent2: "#55D8D3",
+          danger: "#F05D69",
+          fog: "#42466A"
+        },
+        material: "constellation-brass",
+        ambient: { type: "gravity-tide", count: 48, speed: 0.64 },
+        landmark: { type: "star-whale-court", x: 2250, y: 58, scale: 1.76, accent: "#F5C653" }
+      },
+      worldWidth: 3600,
+      worldHeight: WORLD_HEIGHT,
+      killY: 800,
+      camera: { mode: "boss-lock", deadZoneX: 0.42, lookAhead: 80 },
+      spawn: { x: 88, y: 536, facing: 1 },
+      goal: { type: "world-core", x: 3370, y: 435, w: 120, h: 185, requires: "boss-defeated" },
+      platforms: [
+        platform("sw-ground-entry", 0, 620, 760, 100, { material: "constellation-stone" }),
+        platform("sw-entry-step", 300, 500, 185, 24, { kind: "one-way", material: "orbit-brass" }),
+        platform("sw-entry-bridge", 760, 555, 330, 65, { material: "constellation-brass" }),
+        platform("sw-arena-floor", 1090, 620, 2100, 100, { material: "constellation-stone" }),
+        platform("sw-orbit-left", 1250, 410, 180, 24, { kind: "moving", material: "orbit-brass", motion: { type: "orbit", centerX: 1450, centerY: 390, radiusX: 180, radiusY: 100, speed: 0.72, phase: 0.2 } }),
+        platform("sw-high-left", 1580, 330, 170, 24, { kind: "one-way", material: "crystal-orbit" }),
+        platform("sw-core-dais", 2030, 505, 320, 28, { kind: "one-way", material: "constellation-brass" }),
+        platform("sw-high-right", 2500, 345, 170, 24, { kind: "one-way", material: "crystal-orbit" }),
+        platform("sw-orbit-right", 2780, 430, 180, 24, { kind: "moving", material: "orbit-brass", motion: { type: "orbit", centerX: 2790, centerY: 405, radiusX: 175, radiusY: 110, speed: -0.8, phase: 1.5 } }),
+        platform("sw-ground-exit", 3190, 620, 410, 100, { material: "constellation-stone" }),
+        platform("sw-core-step", 3310, 500, 190, 24, { kind: "one-way", material: "orbit-brass" })
+      ],
+      hazards: [
+        hazard("sw-void-entry", "star-void", 760, 660, 330, 60, { damage: 99 }),
+        hazard("sw-rift-left", "void-rift", 1510, 586, 120, 34),
+        hazard("sw-rift-mid", "void-rift", 2110, 586, 120, 34),
+        hazard("sw-rift-right", "void-rift", 2680, 586, 120, 34),
+        hazard("sw-star-01", "falling-star", 1420, 155, 46, 46, { phase: 0.4 }),
+        hazard("sw-star-02", "falling-star", 2780, 145, 46, 46, { phase: 1.4 })
+      ],
+      enemies: [
+        enemy("sw-minion-01", "orbit-eye", 1450, 285, 1260, 1740, { hp: 2, yBob: 48, speed: 92, spawnOnBossPhase: 2 }),
+        enemy("sw-minion-02", "shadow-sprout", 1730, 566, 1600, 1980, { hp: 2, speed: 78, spawnOnBossPhase: 2 }),
+        enemy("sw-minion-03", "storm-cannon", 2910, 552, 2910, 2910, { hp: 3, speed: 0, spawnOnBossPhase: 3 })
+      ],
+      collectibles: [
+        collectible("sw-seed-01", "memory-seed", 360, 445),
+        collectible("sw-heart-entry", "heart", 950, 505),
+        collectible("sw-star-charge", "star-charge", 1630, 275, { charges: 2 }),
+        collectible("sw-heart-phase-03", "heart", 2580, 295, { spawnOnBossPhase: 3 }),
+        collectible("sw-core", "starwhale-core", 2200, 455, { quest: true, spawnOnBossDefeat: true })
+      ],
+      checkpoints: [checkpoint("sw-check-01", 1010, 478, 1030, 536)],
+      mechanics: {
+        type: "star-whale",
+        arenaTrigger: { x: 1090, lockLeft: 1090, lockRight: 3190 },
+        gravityTide: { horizontalForce: 520, verticalForce: 170, period: 4.8 },
+        gravityAnchors: [
+          { id: "sw-anchor-a", angle: 0, radiusX: 210, radiusY: 125, speed: 0.7, duration: 9 },
+          { id: "sw-anchor-b", angle: 2.094, radiusX: 250, radiusY: 150, speed: -0.82, duration: 9 },
+          { id: "sw-anchor-c", angle: 4.188, radiusX: 290, radiusY: 105, speed: 0.96, duration: 9 }
+        ]
+      },
+      boss: {
+        id: "star-whale",
+        archetype: "star-whale",
+        name: "星噬鲸 · 引力守门者",
+        hp: 6,
+        maxHealth: 6,
+        arena: { x: 1090, y: 150, w: 2100, h: 470 },
+        spawn: { x: 2110, y: 245 },
+        body: { w: 230, h: 140 },
+        weakPoint: { type: "stellar-heart", vulnerableState: "anchor-fall", damagePerHit: 1, hitsPerExposure: 2, exposedTime: 3.8 },
+        phases: [
+          { atHealth: 6, name: "初潮", requiredAnchors: 1, attackCooldown: 2.25, orbitScale: 0.8 },
+          { atHealth: 4, name: "回潮", requiredAnchors: 2, attackCooldown: 1.8, orbitScale: 1.05 },
+          { atHealth: 2, name: "坍潮", requiredAnchors: 3, attackCooldown: 1.35, orbitScale: 1.3 }
+        ],
+        mechanism: { shielded: true, exposeBy: "moving-gravity-anchors", resetAnchorsOnExposure: true }
+      }
     }
   ];
 
@@ -1916,7 +2329,7 @@
   }
 
   window.StarSproutLevels = {
-    version: 3,
+    version: 4,
     schema: {
       coordinateSystem: "1280x720 logical canvas; x grows right, y grows down",
       level: [
@@ -1946,6 +2359,7 @@
       entityRect: "x, y, w, h use world pixels; platform y is its top edge",
       goalRequirement: "requires may be a legacy string or { type: 'collect', itemType, count, label }",
       act3Mechanics: ["spring/bounceY", "polarity/sun-moon", "timed relay", "rift-weaver"],
+      act4Mechanics: ["gravity zones/orbit", "local time freeze", "delayed echo pairing", "moving gravity anchors"],
       bossLevels: levels.filter(function (level) { return level.kind === "boss" || level.boss; }).map(function (level) { return level.id; })
     },
     levels: levels,

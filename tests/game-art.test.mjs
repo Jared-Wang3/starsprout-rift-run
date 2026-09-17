@@ -115,7 +115,9 @@ test("art manifest is offline-only and every declared raster asset is packaged",
     "environmentsA",
     "environmentsB",
     "environmentsC",
+    "environmentsD",
     "bossWeaver",
+    "bossStarWhale",
     "act3Collectibles",
   ];
   const declaredUrls = new Set();
@@ -124,15 +126,15 @@ test("art manifest is offline-only and every declared raster asset is packaged",
     assert.ok(config, `manifest.assets is missing ${sheetName}`);
     assert.match(
       String(config.src ?? ""),
-      /^\.\/assets\/art-v[23]\/[a-z0-9][a-z0-9._-]*$/i,
-      `${sheetName} must use a packaged ./assets/art-v2 or ./assets/art-v3 path`,
+      /^\.\/assets\/art-v[235]\/[a-z0-9][a-z0-9._-]*$/i,
+      `${sheetName} must use a packaged versioned art path`,
     );
   }
 
   for (const [sheetName, value] of Object.entries(manifest.assets)) {
     const config = assetConfig(value);
-    assert.match(String(config?.src ?? ""), /^\.\/assets\/art-v[23]\/[a-z0-9][a-z0-9._-]*$/i,
-      `${sheetName} must use a packaged ./assets/art-v2 or ./assets/art-v3 path`);
+    assert.match(String(config?.src ?? ""), /^\.\/assets\/art-v[235]\/[a-z0-9][a-z0-9._-]*$/i,
+      `${sheetName} must use a packaged versioned art path`);
     declaredUrls.add(config.src);
   }
 
@@ -159,7 +161,7 @@ test("art manifest is offline-only and every declared raster asset is packaged",
   assert.deepEqual(chromaFiles, [], "runtime assets must not include chroma-key intermediates");
 });
 
-test("sprite and background maps cover the complete twelve-stage campaign", async () => {
+test("sprite and background maps cover the complete sixteen-stage campaign", async () => {
   const manifest = await loadBrowserBundle("public/play/art-assets.js", "StarSproutArt");
   const levels = extractLevels(await loadBrowserBundle("public/play/levels.js", "StarSproutLevels"));
 
@@ -204,6 +206,10 @@ test("sprite and background maps cover the complete twelve-stage campaign", asyn
     return `${frame.sheet}:${frame.col}:${frame.row}`;
   }));
   assert.equal(weaverCells.size, 8, "bossWeaver animation states must use eight distinct cells");
+  const whaleFrames = Object.entries(manifest.bossFrames)
+    .filter(([, value]) => frameConfig(value)?.sheet === "bossStarWhale");
+  assert.equal(whaleFrames.length, 8, "bossStarWhale needs a complete 4x2 animation set");
+  assertFrameCoverage(manifest, "bossFrames", whaleFrames.map(([name]) => name));
 
   const collectibleTypes = new Set([
     "heart",
@@ -218,21 +224,24 @@ test("sprite and background maps cover the complete twelve-stage campaign", asyn
   );
 
   const stageIds = Array.from(levels, (level) => String(level.id));
-  assert.deepEqual(stageIds, Array.from({ length: 12 }, (_, index) => String(index + 1)));
+  assert.deepEqual(stageIds, Array.from({ length: 16 }, (_, index) => String(index + 1)));
   assertFrameCoverage(manifest, "levelBackgroundFrames", stageIds);
   const backgroundCells = new Set(stageIds.map((id) => {
     const frame = frameConfig(manifest.levelBackgroundFrames[id]);
     return `${frame.sheet}:${frame.col}:${frame.row}`;
   }));
-  assert.equal(backgroundCells.size, 12, "all twelve stages need distinct background cells");
+  assert.equal(backgroundCells.size, 16, "all sixteen stages need distinct background cells");
   for (const id of stageIds.slice(0, 4)) {
     assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsA");
   }
   for (const id of stageIds.slice(4)) {
     if (Number(id) <= 8) assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsB");
   }
-  for (const id of stageIds.slice(8)) {
+  for (const id of stageIds.slice(8, 12)) {
     assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsC");
+  }
+  for (const id of stageIds.slice(12)) {
+    assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsD");
   }
 });
 
@@ -271,4 +280,22 @@ test("renderer falls back to procedural art and never fetches runtime images", a
   assert.match(source, /function\s+drawCollectible\b[\s\S]*?drawAtlasFrame\([\s\S]*?drawSeed\(/);
   assert.match(source, /function\s+renderBackground\b[\s\S]*?drawEnvironmentBackdrop\([\s\S]*?if\s*\(!illustrated\)/);
   assert.match(source, /function\s+drawEnvironmentBackdrop\b[\s\S]*?if\s*\(!record\)\s*return false/);
+});
+
+test("startup keeps art loading scoped to the selected stage", async () => {
+  const source = await readProjectFile("public/play/game.js");
+
+  assert.doesNotMatch(
+    source,
+    /Object\.keys\(DEFAULT_ART_ASSETS\)[\s\S]{0,160}?artImage\s*\(/,
+    "startup must not eagerly load every campaign art sheet",
+  );
+  assert.match(source, /function\s+levelArtAssetNames\s*\(level\)/,
+    "the renderer needs an explicit current-level asset selector");
+  assert.match(source, /function\s+preloadLevelArt\s*\(level\)/,
+    "the renderer needs a stage-scoped preload entry point");
+  assert.match(source, /preloadLevelArt\s*\(currentLevel\)/,
+    "startLevel() must begin the selected stage preload during its briefing");
+  assert.match(source, /\b(?:promise|loadPromise)\b[\s\S]{0,220}?artImageCache|artImageCache[\s\S]{0,220}?\b(?:promise|loadPromise)\b/i,
+    "art cache entries must share one in-flight Promise per image");
 });

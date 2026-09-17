@@ -50,7 +50,9 @@
     environmentsA: { src: "./assets/art-v2/environments-a.webp", cols: 2, rows: 2, gutter: 0 },
     environmentsB: { src: "./assets/art-v2/environments-b.webp", cols: 2, rows: 2, gutter: 0 },
     environmentsC: { src: "./assets/art-v3/environments-c.webp", cols: 2, rows: 2, gutter: 0 },
+    environmentsD: { src: "./assets/art-v5/environments-d.webp", cols: 2, rows: 2, gutter: 0 },
     bossWeaver: { src: "./assets/art-v3/boss-weaver.png", cols: 4, rows: 2 },
+    bossStarWhale: { src: "./assets/art-v5/boss-star-whale.png", cols: 4, rows: 2 },
     act3Collectibles: { src: "./assets/art-v3/act3-collectibles.png", cols: 2, rows: 2 },
   };
   const DEFAULT_HERO_FRAMES = {
@@ -98,6 +100,14 @@
     weaverStunned: { sheet: "bossWeaver", col: 1, row: 1 },
     weaverCoreOpen: { sheet: "bossWeaver", col: 2, row: 1 },
     weaverDefeated: { sheet: "bossWeaver", col: 3, row: 1 },
+    whaleIdle: { sheet: "bossStarWhale", col: 0, row: 0 },
+    whaleCharge: { sheet: "bossStarWhale", col: 1, row: 0 },
+    whaleDive: { sheet: "bossStarWhale", col: 2, row: 0 },
+    whaleShield: { sheet: "bossStarWhale", col: 3, row: 0 },
+    whaleBeam: { sheet: "bossStarWhale", col: 0, row: 1 },
+    whaleStunned: { sheet: "bossStarWhale", col: 1, row: 1 },
+    whaleCoreOpen: { sheet: "bossStarWhale", col: 2, row: 1 },
+    whaleDefeated: { sheet: "bossStarWhale", col: 3, row: 1 },
   };
   const DEFAULT_COLLECTIBLE_FRAMES = {
     "memory-seed": { sheet: "collectibles", col: 0, row: 0 },
@@ -142,9 +152,13 @@
     "time-shard": { label: "时页碎片", badge: "页", mode: "quest", description: "集齐三枚，稳定梦境书库并开启出口" },
     "storm-cell": { label: "暖光电池", badge: "暖", mode: "quest", description: "为最近一座未满的极光反应炉补充两格能量" },
     "rift-core-seed": { label: "裂界核心种", badge: "织", mode: "boss-core", description: "带走织界核心并完成最终挑战" },
+    "orbit-key": { label: "星轨钥", badge: "轨", mode: "quest", description: "集齐三枚，校准失重星环的出口" },
+    "chrono-petal": { label: "时砂花瓣", badge: "砂", mode: "quest", description: "集齐三枚，稳定时砂回廊" },
+    "starwhale-core": { label: "星鲸核心种", badge: "鲸", mode: "boss-core", description: "带回最后一颗被吞噬的星" },
   });
   const PROCEDURAL_COLLECTIBLE_TYPES = new Set([
     "memory-seed", "clock-spring", "tide-rune", "parcel-wings", "quench-bell", "forge-seal",
+    "orbit-key", "chrono-petal", "starwhale-core",
   ]);
   const ART_ALIASES = {
     paper: ["paper", "paperTexture", "paper-texture"],
@@ -156,10 +170,13 @@
     environmentsA: ["environmentsA", "environmentAtlasA", "environment-atlas-a"],
     environmentsB: ["environmentsB", "environmentAtlasB", "environment-atlas-b"],
     environmentsC: ["environmentsC", "environmentAtlasC", "environment-atlas-c"],
+    environmentsD: ["environmentsD", "environmentAtlasD", "environment-atlas-d"],
     bossWeaver: ["bossWeaver", "riftWeaverBoss", "boss-weaver", "boss-weaver-sprites"],
+    bossStarWhale: ["bossStarWhale", "starWhaleBoss", "boss-star-whale", "boss-star-whale-sprites"],
     act3Collectibles: ["act3Collectibles", "act3-collectibles", "act-three-collectibles"],
   };
   const artImageCache = new Map();
+  const artImageLoadPromises = new Map();
   let paperPattern = null;
   let paperPatternSource = null;
   let environmentBackdropCache = null;
@@ -238,11 +255,77 @@
     return cached.ready && !cached.failed ? cached : null;
   }
 
+  function preloadArtAsset(name) {
+    const config = artAssetConfig(name);
+    if (!config.src) return Promise.resolve(false);
+    const key = `${name}:${config.src}`;
+    const ready = artImage(name);
+    if (ready) return Promise.resolve(true);
+    const cached = artImageCache.get(key);
+    if (!cached || cached.failed) return Promise.resolve(false);
+
+    let loadPromise = artImageLoadPromises.get(key);
+    if (!loadPromise) {
+      loadPromise = new Promise((resolve) => {
+        let settled = false;
+        const finish = (loaded) => {
+          if (settled) return;
+          settled = true;
+          resolve(loaded);
+        };
+        cached.image.addEventListener("load", () => finish(true), { once: true });
+        cached.image.addEventListener("error", () => finish(false), { once: true });
+        if (cached.image.complete) finish(cached.image.naturalWidth > 0);
+      });
+      artImageLoadPromises.set(key, loadPromise);
+    }
+    return loadPromise;
+  }
+
   function frameSpec(group, name, fallback) {
     const configured = artManifest()[group]?.[name];
     const source = configured || fallback;
     if (Array.isArray(source)) return { sheet: source[0], col: Number(source[1]) || 0, row: Number(source[2]) || 0 };
     return source ? { ...source } : null;
+  }
+
+  function addFrameSheet(names, group, name, fallback) {
+    const frame = frameSpec(group, name, fallback);
+    if (frame?.sheet) names.add(frame.sheet);
+  }
+
+  function levelArtAssetNames(level) {
+    const names = new Set(["hero", "paper"]);
+    addFrameSheet(names, "levelBackgroundFrames", String(level.id), null);
+    level.enemies.forEach((enemy) => {
+      const type = String(enemy.type || "");
+      addFrameSheet(names, "enemyFrames", type, DEFAULT_ENEMY_FRAMES[type]);
+    });
+    level.collectibles.forEach((item) => {
+      const type = String(item.type || "memory-seed");
+      if (!PROCEDURAL_COLLECTIBLE_TYPES.has(type)) {
+        addFrameSheet(names, "collectibleFrames", type, DEFAULT_COLLECTIBLE_FRAMES[type]);
+      }
+    });
+
+    if (level.isBoss) {
+      const boss = level.boss || {};
+      const archetype = boss.archetype
+        || (boss.id === "boiler-beetle" || level.mechanics?.type === "coolant-trap" ? "boiler-beetle" : "eclipse-observer");
+      const frameNames = archetype === "boiler-beetle"
+        ? ["boilerNormal", "boilerCharge", "boilerCoreOpen", "boilerFrozenHit"]
+        : archetype === "rift-weaver"
+          ? ["weaverIdle", "weaverThreadCharge", "weaverThreadDash", "weaverCocoon", "weaverBeam", "weaverStunned", "weaverCoreOpen", "weaverDefeated"]
+          : archetype === "star-whale"
+            ? ["whaleIdle", "whaleCharge", "whaleDive", "whaleShield", "whaleBeam", "whaleStunned", "whaleCoreOpen", "whaleDefeated"]
+          : ["eclipseNormal", "eclipseBeamCharge", "eclipseShieldBreak", "eclipseCoreExposed"];
+      frameNames.forEach((name) => addFrameSheet(names, "bossFrames", name, DEFAULT_BOSS_FRAMES[name]));
+    }
+    return [...names];
+  }
+
+  function preloadLevelArt(level) {
+    return Promise.all(levelArtAssetNames(level).map(preloadArtAsset));
   }
 
   function drawAtlasFrame(frame, x, y, width, height, options = {}) {
@@ -321,6 +404,8 @@
   let muted = save.muted || false;
   let audioContext = null;
   let captureReady = false;
+  let animationFrameId = null;
+  const hudRenderCache = Object.create(null);
 
   function usesPortraitViewport() {
     return window.matchMedia("(orientation: portrait) and (max-width: 760px)").matches;
@@ -718,6 +803,13 @@
       valves: (devices.valves || []).map((d, i) => ({ ...d, w: d.w || 54, h: d.h || 76, active: false, timer: 0, index: i })),
       mirrors: (devices.mirrors || []).map((d, i) => ({ ...d, w: d.w || 66, h: d.h || 96, active: false, timer: 0, index: i })),
       coolants: (devices.coolants || []).map((d, i) => ({ ...d, w: d.w || 40, h: d.h || 40, active: true, respawn: 0, index: i })),
+      timeAnchors: (devices.timeAnchors || []).map((d, i) => ({ ...d, w: d.w || 54, h: d.h || 72, active: false, timer: 0, index: i })),
+      echoPads: (devices.echoPads || []).map((d, i) => ({ ...d, w: d.w || 120, h: d.h || 26, active: false, index: i })),
+      echoPairs: {},
+      echoDelay: Math.max(0.4, Number(devices.echoDelay) || 1.8),
+      echoHistory: [],
+      echoClone: null,
+      gravityAnchors: (devices.gravityAnchors || []).map((d, i) => ({ ...d, x: 0, y: 0, w: d.w || 52, h: d.h || 52, active: false, timer: 0, index: i })),
       waterY: devices.water?.baseY || 900,
       lavaY: devices.lava?.startY || 900,
       hiddenRevealed: false,
@@ -881,6 +973,7 @@
   }
 
   function openMenu() {
+    stopAnimationLoop();
     scene = "menu";
     currentLevel = null;
     runtime = null;
@@ -902,6 +995,7 @@
   }
 
   function openLevels() {
+    stopAnimationLoop();
     scene = "levels";
     setGameUi(false);
     renderLevelGrid();
@@ -909,12 +1003,14 @@
   }
 
   function openHelp() {
+    stopAnimationLoop();
     scene = "help";
     setGameUi(false);
     showOnly("help-screen");
   }
 
   function openProfile() {
+    stopAnimationLoop();
     scene = "profile";
     setGameUi(false);
     renderProfile();
@@ -922,8 +1018,10 @@
   }
 
   function startLevel(id, skipBriefing = false) {
+    stopAnimationLoop();
     resetInput();
     currentLevel = normalizeLevel(rawLevel(id));
+    preloadLevelArt(currentLevel);
     runtime = makeRuntime(currentLevel);
     player = makePlayer(currentLevel);
     cameraX = clamp(currentLevel.spawn.x - 180, 0, Math.max(0, currentLevel.worldWidth - VIEW_W));
@@ -938,6 +1036,7 @@
       showOnly(null);
       setGameUi(true);
       setTimeout(() => { captureReady = true; }, 180);
+      resumeAnimationLoop();
     } else {
       scene = "briefing";
       setGameUi(false);
@@ -956,6 +1055,7 @@
     setGameUi(true);
     playTone("start");
     toast(currentLevel.mechanic, 2.6);
+    resumeAnimationLoop();
   }
 
   function togglePause(forceResume = false) {
@@ -963,16 +1063,19 @@
       scene = "playing";
       showOnly(null);
       setGameUi(true);
+      resumeAnimationLoop();
       return;
     }
     if (scene === "playing") {
       scene = "paused";
       setGameUi(false);
       showOnly("pause-screen");
+      stopAnimationLoop();
     } else if (scene === "paused") {
       scene = "playing";
       showOnly(null);
       setGameUi(true);
+      resumeAnimationLoop();
     }
   }
 
@@ -993,11 +1096,12 @@
         const tags = level.tags.length ? level.tags : level.isBoss ? ["守门挑战", "机关战"] : [level.mechanics?.type || "探索", "裂界修复"];
         const progress = cleared ? 100 : 0;
         const thumbnail = level.thumbnail || `linear-gradient(145deg, ${level.theme.skyTop}, ${level.theme.mid} 55%, ${level.theme.edge})`;
-        const atlasIndex = Math.max(0, Math.min(2, Math.floor((level.id - 1) / 4)));
+        const atlasIndex = Math.max(0, Math.min(3, Math.floor((level.id - 1) / 4)));
         const thumbnailArt = `url(${[
           "./assets/art-v2/environments-a.webp",
           "./assets/art-v2/environments-b.webp",
           "./assets/art-v3/environments-c.webp",
+          "./assets/art-v5/environments-d.webp",
         ][atlasIndex]})`;
         const frameIndex = (level.id - 1) % 4;
         const thumbnailPosition = `${frameIndex % 2 * 100}% ${Math.floor(frameIndex / 2) * 100}%`;
@@ -1012,6 +1116,7 @@
         1: ["风起之幕", "穿过荒野与洞窟，唤醒第一枚守门核心"],
         2: ["潮火之幕", "在潮汐、云轨与熔炉之间改变行进方式"],
         3: ["星织之幕", "驾驭菌伞、相位与极光，重连世界星线"],
+        4: ["逆潮之幕", "重写重力、时间与自己的影子，夺回最后一颗星"],
       }[act] || [`裂界之幕 ${act}`, "修复散落在航线上的生态裂界"];
       return `<section class="route-act" data-act="${act}"><header class="route-act-head"><span>ACT ${pad(act)}</span><h3>${actCopy[0]}</h3><p>${clearedInAct} / ${actLevels.length} 已修复 · ${actCopy[1]}</p></header><div class="route-act-levels">${cards}</div></section>`;
     }).join("");
@@ -1108,25 +1213,38 @@
     $("#announcer").textContent = message;
   }
 
+  function updateHudProperty(cacheKey, node, property, value) {
+    const nextValue = String(value);
+    if (hudRenderCache[cacheKey] === nextValue) return;
+    hudRenderCache[cacheKey] = nextValue;
+    node[property] = nextValue;
+  }
+
   function updateHud() {
     if (!player || !currentLevel) return;
-    $("#health").innerHTML = Array.from({ length: player.maxHealth }, (_, i) => `<i class="${i < player.health ? "is-full" : ""}"></i>`).join("");
-    $("#hud-stage").textContent = `STAGE ${pad(currentLevel.id)}`;
-    $("#hud-name").textContent = currentLevel.name;
-    $("#dash-fill").style.transform = `scaleX(${clamp(1 - player.dashCooldown / 0.8, 0, 1)})`;
+    const healthMarkup = Array.from({ length: player.maxHealth }, (_, i) => `<i class="${i < player.health ? "is-full" : ""}"></i>`).join("");
+    updateHudProperty("health", $("#health"), "innerHTML", healthMarkup);
+    updateHudProperty("stage", $("#hud-stage"), "textContent", `STAGE ${pad(currentLevel.id)}`);
+    updateHudProperty("name", $("#hud-name"), "textContent", currentLevel.name);
+    updateHudProperty("dash", $("#dash-fill").style, "transform", `scaleX(${clamp(1 - player.dashCooldown / 0.8, 0, 1)})`);
     const pickupNode = $("#pickup-status");
-    if (pickupNode) {
-      pickupNode.textContent = pickupStatusText();
-      pickupNode.title = pickupNode.textContent;
+    const pickupText = pickupStatusText();
+    if (pickupNode && hudRenderCache.pickup !== pickupText) {
+      hudRenderCache.pickup = pickupText;
+      pickupNode.textContent = pickupText;
+      pickupNode.title = pickupText;
     }
     const bossHud = $("#boss-hud");
-    if (runtime?.boss?.active) {
-      bossHud.hidden = false;
-      $("#boss-name").textContent = runtime.boss.name;
-      $("#boss-health").innerHTML = Array.from({ length: runtime.boss.maxHp }, (_, i) => `<i class="${i < runtime.boss.hp ? "is-full" : ""}"></i>`).join("");
-      $("#boss-status").textContent = bossStatus();
-    } else {
-      bossHud.hidden = true;
+    const bossVisible = Boolean(runtime?.boss?.active);
+    if (hudRenderCache.bossVisible !== bossVisible) {
+      hudRenderCache.bossVisible = bossVisible;
+      bossHud.hidden = !bossVisible;
+    }
+    if (bossVisible) {
+      updateHudProperty("bossName", $("#boss-name"), "textContent", runtime.boss.name);
+      const bossHealthMarkup = Array.from({ length: runtime.boss.maxHp }, (_, i) => `<i class="${i < runtime.boss.hp ? "is-full" : ""}"></i>`).join("");
+      updateHudProperty("bossHealth", $("#boss-health"), "innerHTML", bossHealthMarkup);
+      updateHudProperty("bossStatus", $("#boss-status"), "textContent", bossStatus());
     }
   }
 
@@ -1157,6 +1275,14 @@
     return { ids, relays, active, countdown, ready: relays.length === ids.length && ids.length > 0 && active.length === ids.length };
   }
 
+  function starWhaleAnchorProgress(boss = runtime?.boss) {
+    const phaseData = boss?.phases?.[Math.max(0, Number(boss?.phase) - 1)] || {};
+    const required = Math.max(1, Number(phaseData.requiredAnchors) || Number(boss?.phase) || 1);
+    const active = runtime?.gravityAnchors?.filter((anchor) => anchor.active && anchor.timer > 0) || [];
+    const countdown = active.length ? Math.min(...active.map((anchor) => anchor.timer)) : 0;
+    return { required, active, countdown, ready: active.length >= required };
+  }
+
   function bossStatus() {
     if (!runtime?.boss) return "";
     const boss = runtime.boss;
@@ -1166,6 +1292,13 @@
       const relay = weaverRelayProgress(boss);
       const countdown = relay.countdown > 0 ? ` · ${Math.ceil(relay.countdown)}秒` : "";
       return `第 ${boss.phase} 相 · 继电器 ${relay.active.length}/${relay.ids.length}${countdown}`;
+    }
+    if (boss.archetype === "star-whale") {
+      const hitsPerExposure = Math.max(1, Number(boss.weakPoint.hitsPerExposure) || 2);
+      if (boss.vulnerable > 0) return `星核暴露 · 本轮可命中 ${Math.max(0, hitsPerExposure - boss.exposureHits)} 次`;
+      const anchors = starWhaleAnchorProgress(boss);
+      const countdown = anchors.countdown > 0 ? ` · ${Math.ceil(anchors.countdown)}秒` : "";
+      return `第 ${boss.phase} 潮 · 星锚 ${anchors.active.length}/${anchors.required}${countdown}`;
     }
     if (boss.vulnerable > 0) return "核心暴露 · 现在攻击！";
     if (boss.archetype === "boiler-beetle") {
@@ -1309,9 +1442,13 @@
   });
 
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) return;
-    resetInput();
-    if (scene === "playing") togglePause();
+    if (document.hidden) {
+      stopAnimationLoop();
+      resetInput();
+      if (scene === "playing") togglePause();
+      return;
+    }
+    if (scene === "playing") resumeAnimationLoop();
   });
   window.addEventListener("pagehide", resetInput);
 
@@ -1342,8 +1479,29 @@
     }
   }
 
+  function handleTouchPointerMove(event) {
+    const active = input.pointers.get(event.pointerId);
+    if (!active || (active.action !== "left" && active.action !== "right")) return;
+    event.preventDefault();
+    const movePad = active.button.closest?.(".touch-move");
+    const rect = movePad?.getBoundingClientRect?.();
+    if (!rect || rect.width <= 0) return;
+    const action = event.clientX < rect.left + rect.width / 2 ? "left" : "right";
+    if (action === active.action) return;
+    const nextButton = movePad.querySelector?.(`[data-touch="${action}"]`);
+    if (!nextButton) return;
+    releaseAction(active.action, active.source);
+    const oldButton = active.button;
+    active.action = action;
+    active.button = nextButton;
+    pressAction(action, active.source);
+    oldButton.classList.toggle("is-pressed", [...input.pointers.values()].some((entry) => entry !== active && entry.button === oldButton));
+    nextButton.classList.add("is-pressed");
+  }
+
   $$('[data-touch]').forEach((button) => {
     button.addEventListener("pointerdown", handleTouchPointerDown);
+    button.addEventListener("pointermove", handleTouchPointerMove);
     button.addEventListener("pointerup", (event) => releaseTouchPointer(event.pointerId, event));
     button.addEventListener("pointercancel", (event) => releaseTouchPointer(event.pointerId, event));
     button.addEventListener("lostpointercapture", (event) => releaseTouchPointer(event.pointerId, event));
@@ -1412,6 +1570,7 @@
     updatePlatforms(dt);
     updateDevices(dt);
     updatePlayer(dt);
+    updateEchoClone(dt);
     updateEnemies(dt);
     updateProjectiles(dt);
     updateBoss(dt);
@@ -1421,18 +1580,32 @@
     input.pressed.clear();
   }
 
+  function isTimeFrozenAt(x, y) {
+    return runtime.timeAnchors.some((anchor) => anchor.active && anchor.timer > 0
+      && Math.hypot(x - (anchor.x + anchor.w / 2), y - (anchor.y + anchor.h / 2)) <= (Number(anchor.radius) || 650));
+  }
+
   function updatePlatforms(dt) {
     runtime.platforms.forEach((platform) => {
       const oldX = platform.x;
       const oldY = platform.y;
       const motion = platform.motion;
-      if (motion) {
+      if (motion && !isTimeFrozenAt(platform.x + platform.w / 2, platform.y + platform.h / 2)) {
+        if (motion.type === "orbit") {
+          const centerX = Number(motion.centerX) || platform.originX;
+          const centerY = Number(motion.centerY) || platform.originY;
+          const speed = Number(motion.speed) || 0.8;
+          const angle = runtime.time * speed + (Number(motion.phase) || platform.phase);
+          platform.x = centerX + Math.cos(angle) * (Number(motion.radiusX) || 150) - platform.w / 2;
+          platform.y = centerY + Math.sin(angle) * (Number(motion.radiusY) || 110) - platform.h / 2;
+        } else {
         const axis = motion.axis || (motion.y ? "y" : "x");
         const distance = Number(motion.distance || motion.range || (axis === "x" ? motion.x : motion.y)) || 120;
         const speed = Number(motion.speed) || 1.2;
         const value = Math.sin(runtime.time * speed + platform.phase) * distance;
         if (axis === "x") platform.x = platform.originX + value;
         else platform.y = platform.originY + value;
+        }
       }
       platform.dx = platform.x - oldX;
       platform.dy = platform.y - oldY;
@@ -1487,6 +1660,16 @@
       relay.timer = Math.max(0, relay.timer - dt);
       if (relay.timer <= 0) relay.active = false;
     });
+    runtime.timeAnchors.forEach((anchor) => {
+      if (!anchor.active) return;
+      anchor.timer = Math.max(0, anchor.timer - dt);
+      if (anchor.timer <= 0) anchor.active = false;
+    });
+    runtime.gravityAnchors.forEach((anchor) => {
+      if (!anchor.active) return;
+      anchor.timer = Math.max(0, anchor.timer - dt);
+      if (anchor.timer <= 0) anchor.active = false;
+    });
     if (runtime.polarity.grace > 0) {
       runtime.polarity.grace = Math.max(0, runtime.polarity.grace - dt);
       if (runtime.polarity.grace <= 0) runtime.polarity.previous = null;
@@ -1524,6 +1707,7 @@
   }
 
   function isGateActive(gate) {
+    if (gate.openByEcho) return !runtime.echoPairs[gate.openByEcho];
     if (gate.openBy) {
       const relay = runtime.relays.find((device) => device.id === gate.openBy);
       if (relay) return !relay.active;
@@ -1538,6 +1722,15 @@
       ...activePlatforms(),
       ...runtime.gates.filter(isGateActive).map((gate) => ({ ...gate, type: "gate" })),
     ];
+  }
+
+  function playerGravityZone() {
+    return (runtime.devices.gravityZones || []).find((zone) => overlap(player, {
+      x: Number(zone.x) || 0,
+      y: Number(zone.y) || 0,
+      w: Number(zone.w) || 0,
+      h: Number(zone.h) || 0,
+    })) || null;
   }
 
   function updatePlayer(dt) {
@@ -1639,10 +1832,12 @@
       player.vx = move
         ? moveToward(player.vx, target, (reversing ? turnAcceleration : acceleration) * dt)
         : moveToward(player.vx, 0, braking * dt);
-      let gravity = player.inWater ? (pearlBoost ? 300 : 420) : 1880;
+      const gravityZone = playerGravityZone();
+      let gravity = player.inWater ? (pearlBoost ? 300 : 420) : 1880 * (gravityZone ? clamp(Number(gravityZone.gravityScale) || 0.25, 0.08, 1) : 1);
       if (input.held.jump && player.vy < 0) gravity *= 0.58;
       if (!player.inWater && effectActive("parcel-wings") && input.held.jump && player.vy > 0) gravity *= 0.28;
-      const maxFall = player.inWater ? (pearlBoost ? 250 : 330) : effectActive("parcel-wings") && input.held.jump ? 360 : 980;
+      if (gravityZone && input.held.jump && !player.downstrike) player.vy -= (Number(gravityZone.liftOnHold) || 360) * dt;
+      const maxFall = player.inWater ? (pearlBoost ? 250 : 330) : gravityZone ? 430 : effectActive("parcel-wings") && input.held.jump ? 360 : 980;
       player.vy = Math.min(maxFall, player.vy + gravity * dt);
       if (player.inWater && input.pressed.has("jump")) {
         player.vy = pearlBoost ? -430 : -340;
@@ -1662,9 +1857,48 @@
     }
 
     applyWind(dt);
+    applyGravityTide(dt);
     movePlayerX(dt);
     movePlayerY(dt);
     handlePlayerWorld();
+  }
+
+  function applyGravityTide(dt) {
+    const tide = runtime.devices.gravityTide;
+    const boss = runtime.boss;
+    if (!tide || boss?.archetype !== "star-whale" || !boss.active || boss.hp <= 0 || boss.vulnerable > 0) return;
+    const period = Math.max(1.5, Number(tide.period) || 4.8);
+    const wave = Math.sin(runtime.time * Math.PI * 2 / period);
+    player.vx += wave * (Number(tide.horizontalForce) || 520) * dt;
+    player.vy += Math.cos(runtime.time * Math.PI * 2 / period) * (Number(tide.verticalForce) || 170) * dt;
+  }
+
+  function updateEchoClone() {
+    if (!runtime.echoPads.length) return;
+    runtime.echoHistory.push({ time: runtime.time, x: player.x, y: player.y, w: player.w, h: player.h, facing: player.facing });
+    const targetTime = runtime.time - runtime.echoDelay;
+    while (runtime.echoHistory.length > 2 && runtime.echoHistory[1].time <= targetTime) runtime.echoHistory.shift();
+    if (runtime.echoHistory[0]?.time <= targetTime) runtime.echoClone = { ...runtime.echoHistory[0] };
+    const echo = runtime.echoClone;
+    runtime.echoPads.forEach((pad) => {
+      pad.playerOn = overlap(player, pad);
+      pad.echoOn = Boolean(echo && overlap(echo, pad));
+      pad.active = pad.playerOn || pad.echoOn;
+    });
+    const groups = [...new Set(runtime.echoPads.map((pad) => pad.group).filter(Boolean))];
+    groups.forEach((group) => {
+      if (runtime.echoPairs[group]) return;
+      const pads = runtime.echoPads.filter((pad) => pad.group === group);
+      const paired = pads.some((pad) => pad.playerOn) && pads.some((pad) => pad.echoOn)
+        && pads.some((pad) => pad.playerOn && !pad.echoOn)
+        && pads.some((pad) => pad.echoOn && !pad.playerOn);
+      if (!paired) return;
+      runtime.echoPairs[group] = true;
+      toast(`双生镜印 ${String(group).toUpperCase()} 已封合 · 镜门开启`, 1.5);
+      announce("本体与延迟纸影完成双生压板");
+      playTone("switch");
+      burst(pads[0].x + pads[0].w / 2, pads[0].y, currentLevel.theme.accent2, 18, 210);
+    });
   }
 
   function reflectEchoPulse() {
@@ -1886,6 +2120,7 @@
   function handlePlayerWorld() {
     const body = player;
     runtime.hazards.forEach((hazard) => {
+      if (isTimeFrozenAt(hazard.x + hazard.w / 2, hazard.y + hazard.h / 2)) return;
       if (overlap(body, hazard)) hurtPlayer(hazard.x + hazard.w / 2);
     });
     runtime.enemyShots.forEach((shot) => {
@@ -1963,6 +2198,7 @@
       }
       if (requirement.type === "repair-zones") return Boolean(objectiveByType("repair-zones")?.completed);
       if (requirement.type === "reflect-reactor") return Boolean(objectiveByType("reflect-reactor")?.completed);
+      if (requirement.type === "echo-pairs") return Object.keys(runtime.echoPairs).filter((group) => runtime.echoPairs[group]).length >= Math.max(1, Number(requirement.count) || 1);
       return false;
     }
     if (requirement === "crystal-crown") return runtime.inventory.has("crystal-crown");
@@ -2013,6 +2249,11 @@
         const objective = objectiveByType("reflect-reactor");
         const progress = objectiveProgress(objective);
         return `${requirement.label || "反应炉"} ${progress.progress}/${progress.required} · 普通脉冲可慢充，回声弹反充能更快`;
+      }
+      if (requirement.type === "echo-pairs") {
+        const required = Math.max(1, Number(requirement.count) || 1);
+        const complete = Object.keys(runtime.echoPairs).filter((group) => runtime.echoPairs[group]).length;
+        return `${requirement.label || "双生镜印"} ${complete}/${required} · 让本体与延迟纸影分别站上同组压板`;
       }
       return "未知的出口条件 · 航线保持封闭";
     }
@@ -2066,6 +2307,7 @@
     const enemyDt = dt * (effectActive("clock-spring") ? 0.55 : 1);
     runtime.enemies.forEach((enemy) => {
       if (!enemy.alive || !isBossSpawnAvailable(enemy)) return;
+      if (isTimeFrozenAt(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2)) return;
       enemy.t += enemyDt;
       enemy.cooldown -= enemyDt;
       if (isFlyingEnemy(enemy.type)) {
@@ -2158,6 +2400,10 @@
       const relay = weaverRelayProgress(runtime.boss);
       return `织网偏转了脉冲——同时点亮本相的 ${relay.ids.length} 个继电器`;
     }
+    if (runtime?.boss?.archetype === "star-whale") {
+      const anchors = starWhaleAnchorProgress(runtime.boss);
+      return `引力壳偏转了脉冲——追上并点亮 ${anchors.required} 枚移动星锚`;
+    }
     return "暗核吞掉了脉冲——让两面日光镜同时共鸣";
   }
 
@@ -2191,6 +2437,29 @@
           toast("回声晶体亮起：隐匿的纸桥显形了", 1.65);
           playTone("switch");
           burst(crystal.x + crystal.w / 2, crystal.y + crystal.h / 2, currentLevel.theme.edge, 18, 270);
+        }
+      });
+
+      runtime.timeAnchors.forEach((anchor) => {
+        if (overlap(projectile, anchor)) {
+          anchor.active = true;
+          anchor.timer = Math.max(anchor.timer, Number(anchor.duration) || 4);
+          consumed = true;
+          toast(`时花绽放 · 周围机关冻结 ${anchor.timer.toFixed(1)} 秒`, 1.25);
+          playTone("switch");
+          burst(anchor.x + anchor.w / 2, anchor.y + anchor.h / 2, currentLevel.theme.accent2, 18, 220);
+        }
+      });
+
+      runtime.gravityAnchors.forEach((anchor) => {
+        if (overlap(projectile, anchor)) {
+          anchor.active = true;
+          anchor.timer = Math.max(anchor.timer, Number(anchor.duration) || 9);
+          consumed = true;
+          const progress = starWhaleAnchorProgress(runtime.boss);
+          toast(`移动星锚 ${anchor.index + 1} 已锁定 · ${progress.active.length}/${progress.required}`, 1.15);
+          playTone("switch");
+          burst(anchor.x + anchor.w / 2, anchor.y + anchor.h / 2, currentLevel.theme.edge, 16, 240);
         }
       });
 
@@ -2326,6 +2595,7 @@
 
     if (boss.archetype === "boiler-beetle") updateBeetleBoss(boss, arena, dt);
     else if (boss.archetype === "rift-weaver") updateRiftWeaverBoss(boss, arena, dt);
+    else if (boss.archetype === "star-whale") updateStarWhaleBoss(boss, arena, dt);
     else updateEclipseBoss(boss, arena, dt);
 
     if (overlap(player, boss) && boss.vulnerable <= 0) hurtPlayer(boss.x + boss.w / 2);
@@ -2497,6 +2767,80 @@
     playTone("boss");
   }
 
+  function updateStarWhaleBoss(boss, arena, dt) {
+    boss.phase = bossPhaseForHealth(boss);
+    const phaseData = boss.phases[Math.max(0, boss.phase - 1)] || {};
+    const orbitScale = Number(phaseData.orbitScale) || 1;
+    const centerX = boss.x + boss.w / 2;
+    const centerY = boss.y + boss.h / 2;
+    runtime.gravityAnchors.forEach((anchor) => {
+      const angle = Number(anchor.angle) + runtime.time * Number(anchor.speed || 0.8) * orbitScale;
+      anchor.x = centerX + Math.cos(angle) * Number(anchor.radiusX || 230) * orbitScale - anchor.w / 2;
+      anchor.y = centerY + Math.sin(angle) * Number(anchor.radiusY || 130) * orbitScale - anchor.h / 2;
+    });
+
+    const anchorProgress = starWhaleAnchorProgress(boss);
+    if (anchorProgress.ready && boss.vulnerable <= 0 && boss.state !== "anchor-stunned") {
+      boss.vulnerable = Math.max(1, Number(boss.weakPoint.exposedTime) || 3.8);
+      boss.exposureHits = 0;
+      boss.state = "anchor-stunned";
+      boss.vx = 0;
+      if (boss.mechanism.resetAnchorsOnExposure !== false) {
+        runtime.gravityAnchors.forEach((anchor) => { anchor.active = false; anchor.timer = 0; });
+      }
+      shake = 16;
+      burst(centerX, centerY, currentLevel.theme.edge, 40, 430);
+      toast(`第 ${boss.phase} 潮被星锚拉断 · 胸口星核暴露！`, 1.8);
+      announce("星噬鲸被星锚拉落，核心暴露");
+    }
+
+    if (boss.vulnerable > 0) {
+      boss.state = "anchor-stunned";
+      boss.y = 365 + Math.sin(runtime.time * 5.4) * 8;
+      return;
+    }
+    if (boss.state === "anchor-stunned") {
+      boss.state = "tide";
+      boss.timer = 0.8;
+      boss.exposureHits = 0;
+    }
+
+    const left = arena.x + 420;
+    const right = arena.x + arena.w - boss.w - 260;
+    boss.x = clamp(boss.x + Math.sin(runtime.time * 0.72 + boss.phase) * (38 + boss.phase * 8) * dt, left, right);
+    boss.y = 225 + Math.sin(runtime.time * (1.2 + boss.phase * 0.12)) * (54 + boss.phase * 10);
+    if (boss.timer > 0) return;
+
+    const attack = Math.floor(runtime.time * 0.7 + boss.phase) % 3;
+    if (attack === 0) {
+      boss.state = "beam";
+      const originX = boss.x + boss.w / 2;
+      const originY = boss.y + boss.h / 2;
+      for (let i = -2 - boss.phase; i <= 2 + boss.phase; i += 1) {
+        const angle = Math.atan2(player.y + player.h / 2 - originY, player.x + player.w / 2 - originX) + i * 0.15;
+        const speed = 260 + boss.phase * 34;
+        runtime.enemyShots.push({ x: originX, y: originY, w: 18, h: 18, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 4.2 });
+      }
+      toast("星鲸吐息 · 贴近轨道缝隙", 0.95);
+    } else if (attack === 1) {
+      boss.state = "dive";
+      runtime.shockwaves.push(
+        { x: boss.x, y: 578, w: 72, h: 24, vx: -360 - boss.phase * 35, life: 2.8 },
+        { x: boss.x + boss.w, y: 578, w: 72, h: 24, vx: 360 + boss.phase * 35, life: 2.8 },
+      );
+      shake = 10;
+      toast("引力拍岸 · 跳过双向潮波", 0.95);
+    } else {
+      boss.state = "charge";
+      for (let i = 0; i < 3 + boss.phase; i += 1) {
+        runtime.enemyShots.push({ x: arena.x + 210 + i * (arena.w - 420) / (2 + boss.phase), y: 110, w: 22, h: 22, vx: 0, vy: 350 + i * 16, life: 2.3 });
+      }
+      toast("坠星潮 · 跟随引力方向换位", 0.95);
+    }
+    boss.timer = Math.max(0.75, Number(phaseData.attackCooldown) || 2.1);
+    playTone("boss");
+  }
+
   function damageBoss(amount = 1) {
     const boss = runtime.boss;
     if (!boss || boss.hitFlash > 0 || boss.vulnerable <= 0) return;
@@ -2506,7 +2850,7 @@
     const damage = configuredDamage > 0 ? configuredDamage : Math.max(1, Number(amount) || 1);
     boss.hp = Math.max(0, boss.hp - damage);
     boss.hitFlash = 0.35;
-    if (boss.archetype === "rift-weaver") boss.exposureHits += 1;
+    if (boss.archetype === "rift-weaver" || boss.archetype === "star-whale") boss.exposureHits += 1;
     else boss.vulnerable = 0;
     boss.phase = bossPhaseForHealth(boss);
     shake = 18;
@@ -2522,15 +2866,15 @@
       if (hasCoreReward) toast("守门核心已经显现 · 拾取它完成挑战", 2.2);
       else setTimeout(() => completeLevel(), 650);
     } else {
-      if (boss.archetype === "rift-weaver") {
+      if (boss.archetype === "rift-weaver" || boss.archetype === "star-whale") {
         const hitsPerExposure = Math.max(1, Number(runtime.bossRelay.hitsPerExposure || boss.weakPoint.hitsPerExposure) || 2);
         if (boss.exposureHits >= hitsPerExposure) {
           boss.vulnerable = 0;
-          boss.state = "weaving";
+          boss.state = boss.archetype === "star-whale" ? "tide" : "weaving";
           boss.timer = 1;
-          toast(`织界核心闭合 · 还剩 ${boss.hp} 层`, 1.6);
+          toast(`${boss.archetype === "star-whale" ? "星核沉回引力壳" : "织界核心闭合"} · 还剩 ${boss.hp} 层`, 1.6);
         } else {
-          boss.state = "relay-stunned";
+          boss.state = boss.archetype === "star-whale" ? "anchor-stunned" : "relay-stunned";
           toast(`核心受损 · 本轮还能命中 ${hitsPerExposure - boss.exposureHits} 次`, 1.35);
         }
       } else {
@@ -2674,6 +3018,7 @@
     ctx.save();
     ctx.translate(-cameraX, 0);
     renderWindZones(theme);
+    renderActFourFields(theme);
     renderGoal(theme);
     renderPlatforms(theme);
     renderHazards(theme);
@@ -2697,6 +3042,13 @@
     });
     if (runtime.boss && runtime.boss.hp > 0) drawBoss(runtime.boss, theme);
     if (player) {
+      if (runtime.echoClone && inCamera(runtime.echoClone.x, runtime.echoClone.w, 80)) {
+        ctx.save();
+        ctx.globalAlpha = 0.42;
+        ctx.filter = "hue-rotate(115deg) saturate(1.4)";
+        drawHero(runtime.echoClone.x + runtime.echoClone.w / 2, runtime.echoClone.y + runtime.echoClone.h, 1, runtime.echoClone.facing, player.vx, theme, runtime.time - runtime.echoDelay, { ...runtime.echoClone, onGround: false, vy: 0 });
+        ctx.restore();
+      }
       if (player.rootShield > 0) {
         ctx.save(); ctx.strokeStyle = "#8fb477"; ctx.globalAlpha = 0.5 + Math.sin(runtime.time * 12) * 0.15; ctx.lineWidth = 7;
         ctx.beginPath(); ctx.ellipse(player.x + player.w / 2, player.y + player.h / 2, 38, 46, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
@@ -2711,6 +3063,24 @@
     renderWaterAndLava(theme);
     ctx.restore();
     renderForeground(theme);
+  }
+
+  function renderActFourFields(theme) {
+    (runtime.devices.gravityZones || []).forEach((zone) => {
+      if (!inCamera(Number(zone.x) || 0, Number(zone.w) || 0)) return;
+      ctx.save();
+      ctx.fillStyle = theme.accent2;
+      ctx.globalAlpha = 0.07 + Math.sin(runtime.time * 2.2 + Number(zone.x) * 0.01) * 0.025;
+      ctx.beginPath();
+      ctx.roundRect(zone.x, zone.y, zone.w, zone.h, Math.min(80, zone.w * 0.12));
+      ctx.fill();
+      ctx.strokeStyle = theme.accent2;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 4;
+      ctx.setLineDash([16, 18]);
+      ctx.stroke();
+      ctx.restore();
+    });
   }
 
   function renderBackground(theme) {
@@ -3577,6 +3947,46 @@
     runtime.mirrors.forEach((mirror) => { if (inCamera(mirror.x, mirror.w)) drawMirror(mirror, theme); });
     runtime.coolants.forEach((coolant) => { if (coolant.active && inCamera(coolant.x, coolant.w)) drawCoolantDevice(coolant, theme); });
     (runtime.devices.fans || []).forEach((fan, index) => { if (inCamera(Number(fan.x) || 0, Number(fan.w) || 90)) drawFanDevice(fan, theme, index); });
+    runtime.timeAnchors.forEach((anchor) => {
+      if (!inCamera(anchor.x, anchor.w)) return;
+      ctx.save(); ctx.translate(anchor.x + anchor.w / 2, anchor.y + anchor.h / 2);
+      ctx.fillStyle = anchor.active ? theme.accent2 : theme.ink;
+      ctx.strokeStyle = anchor.active ? theme.paper : theme.accent2;
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(0, 0, 23, 31, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.rotate(runtime.time * (anchor.active ? 0.15 : 1.2));
+      ctx.beginPath(); ctx.moveTo(0, -23); ctx.lineTo(0, 23); ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.stroke();
+      if (anchor.active) {
+        ctx.globalAlpha = 0.18; ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.arc(0, 0, Number(anchor.radius) || 650, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    });
+    runtime.echoPads.forEach((pad) => {
+      if (!inCamera(pad.x, pad.w)) return;
+      const complete = Boolean(runtime.echoPairs[pad.group]);
+      ctx.save();
+      ctx.fillStyle = complete ? theme.accent2 : pad.active ? theme.edge : theme.ink;
+      ctx.beginPath(); ctx.roundRect(pad.x, pad.y, pad.w, pad.h, 10); ctx.fill();
+      ctx.strokeStyle = theme.paper; ctx.globalAlpha = complete ? 0.9 : 0.55; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = complete ? theme.ink : theme.paper; ctx.globalAlpha = 1;
+      ctx.font = '900 13px "Microsoft YaHei", sans-serif'; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(complete ? "已封合" : `镜印 ${String(pad.group).toUpperCase()}`, pad.x + pad.w / 2, pad.y + pad.h / 2);
+      ctx.restore();
+    });
+    runtime.gravityAnchors.forEach((anchor) => {
+      if (!runtime.boss?.active || !inCamera(anchor.x, anchor.w, 100)) return;
+      ctx.save(); ctx.translate(anchor.x + anchor.w / 2, anchor.y + anchor.h / 2);
+      ctx.rotate(runtime.time * (anchor.index % 2 ? -1.8 : 1.8));
+      drawStarShape(0, 0, 25, anchor.active ? theme.edge : theme.ink, anchor.active ? theme.paper : theme.accent2);
+      ctx.strokeStyle = anchor.active ? theme.edge : theme.accent2; ctx.globalAlpha = 0.45; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, 34 + Math.sin(runtime.time * 4 + anchor.index) * 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      if (anchor.active && runtime.boss) {
+        ctx.save(); ctx.strokeStyle = theme.edge; ctx.globalAlpha = 0.32; ctx.lineWidth = 4; ctx.setLineDash([10, 12]);
+        ctx.beginPath(); ctx.moveTo(anchor.x + anchor.w / 2, anchor.y + anchor.h / 2); ctx.lineTo(runtime.boss.x + runtime.boss.w / 2, runtime.boss.y + runtime.boss.h / 2); ctx.stroke(); ctx.restore();
+      }
+    });
 
     if (runtime.devices.vent) {
       const vent = runtime.devices.vent;
@@ -4147,6 +4557,15 @@
       else if (boss.state === "thread-charge" && boss.phase >= 3) frameName = "weaverBeam";
       else if (boss.state === "thread-charge") frameName = "weaverThreadCharge";
       else frameName = "weaverIdle";
+    } else if (archetype === "star-whale") {
+      if (boss.hp <= 0 || boss.state === "defeated") frameName = "whaleDefeated";
+      else if (boss.hitFlash > 0) frameName = "whaleStunned";
+      else if (boss.vulnerable > 0) frameName = "whaleCoreOpen";
+      else if (boss.state === "beam") frameName = "whaleBeam";
+      else if (boss.state === "dive") frameName = "whaleDive";
+      else if (boss.state === "charge") frameName = "whaleCharge";
+      else if (boss.state === "shield") frameName = "whaleShield";
+      else frameName = "whaleIdle";
     } else {
       if (boss.vulnerable > 0) frameName = "eclipseCoreExposed";
       else if (boss.hitFlash > 0) frameName = "eclipseShieldBreak";
@@ -4157,8 +4576,8 @@
     if (frame) {
       const centerX = boss.x + boss.w / 2;
       const feetY = boss.y + boss.h;
-      const width = Number(frame.drawW) || (archetype === "boiler-beetle" ? 250 : archetype === "rift-weaver" ? 330 : 260);
-      const height = Number(frame.drawH) || (archetype === "boiler-beetle" ? 315 : archetype === "rift-weaver" ? 350 : 340);
+      const width = Number(frame.drawW) || (archetype === "boiler-beetle" ? 250 : archetype === "rift-weaver" ? 330 : archetype === "star-whale" ? 330 : 260);
+      const height = Number(frame.drawH) || (archetype === "boiler-beetle" ? 315 : archetype === "rift-weaver" ? 350 : archetype === "star-whale" ? 440 : 340);
       ctx.save();
       ctx.fillStyle = theme.ink;
       ctx.globalAlpha = 0.25;
@@ -4176,10 +4595,23 @@
       drawBoilerBossFallback(boss, theme);
     } else if (archetype === "rift-weaver") {
       drawWeaverBossFallback(boss, theme);
+    } else if (archetype === "star-whale") {
+      drawStarWhaleBossFallback(boss, theme);
     } else {
       drawEclipseBossFallback(boss, theme);
     }
     ctx.restore();
+  }
+
+  function drawStarWhaleBossFallback(boss, theme) {
+    const open = boss.vulnerable > 0;
+    ctx.fillStyle = open ? theme.edge : theme.ink;
+    ctx.beginPath(); ctx.ellipse(0, 0, boss.w * 0.62, boss.h * 0.46, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = theme.accent2;
+    ctx.beginPath(); ctx.moveTo(-boss.w * 0.45, -8); ctx.quadraticCurveTo(-boss.w * 0.82, -boss.h * 0.62, -boss.w * 0.7, 10); ctx.quadraticCurveTo(-boss.w * 0.78, boss.h * 0.62, -boss.w * 0.38, 22); ctx.fill();
+    ctx.fillStyle = theme.paper;
+    ctx.beginPath(); ctx.ellipse(boss.w * 0.24, -boss.h * 0.1, 9, 7, 0, 0, Math.PI * 2); ctx.fill();
+    drawStarShape(0, 8, open ? 31 : 20, open ? theme.paper : theme.accent, theme.ink);
   }
 
   function drawWeaverBossFallback(boss, theme) {
@@ -4533,7 +4965,31 @@
     ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
   }
 
+  function animationLoopSuspended() {
+    return document.hidden || scene !== "playing";
+  }
+
+  function scheduleAnimationLoop() {
+    if (animationFrameId !== null || animationLoopSuspended()) return;
+    animationFrameId = requestAnimationFrame(loop);
+  }
+
+  function stopAnimationLoop() {
+    if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+
+  function resumeAnimationLoop() {
+    if (animationLoopSuspended()) return;
+    previousTime = performance.now();
+    accumulator = 0;
+    render();
+    scheduleAnimationLoop();
+  }
+
   function loop(now) {
+    animationFrameId = null;
+    if (animationLoopSuspended()) return;
     const frame = Math.min(0.1, (now - previousTime) / 1000);
     previousTime = now;
     accumulator += frame;
@@ -4542,11 +4998,7 @@
       accumulator -= STEP;
     }
     render();
-    requestAnimationFrame(loop);
-  }
-
-  function preloadArtAssets() {
-    Object.keys(DEFAULT_ART_ASSETS).forEach((name) => artImage(name));
+    scheduleAnimationLoop();
   }
 
   function init() {
@@ -4558,11 +5010,9 @@
     const params = new URLSearchParams(location.search);
     const requested = Number(params.get("level"));
     if (CAMPAIGN_LEVEL_IDS.has(requested)) startLevel(requested, params.get("autostart") === "1" || params.get("capture") === "1");
-    artImage("hero");
-    artImage("paper");
-    if ("requestIdleCallback" in window) window.requestIdleCallback(preloadArtAssets, { timeout: 1200 });
-    else setTimeout(preloadArtAssets, 180);
-    requestAnimationFrame(loop);
+    preloadArtAsset("hero");
+    preloadArtAsset("paper");
+    scheduleAnimationLoop();
   }
 
   window.addEventListener("resize", syncCanvasViewport, { passive: true });
@@ -4603,8 +5053,14 @@
       repairZones: runtime ? runtime.objectives.flatMap((objective) => objective.zones || []).map((zone) => ({ id: zone.id, x: zone.x, y: zone.y, w: zone.w, h: zone.h, repaired: Boolean(zone.repaired) })) : [],
       reactors: runtime ? runtime.objectives.flatMap((objective) => objective.reactors || []).map((reactor) => ({ id: reactor.id, x: reactor.x, y: reactor.y, w: reactor.w, h: reactor.h, charge: reactor.charge, required: reactor.requiredCharge, requiredCharge: reactor.requiredCharge, charged: Boolean(reactor.powered), powered: Boolean(reactor.powered) })) : [],
       polarity: runtime?.polarity?.current || null,
+      timeAnchors: runtime ? runtime.timeAnchors.map((anchor) => ({ id: anchor.id, active: anchor.active, timer: anchor.timer })) : [],
+      echoPairs: runtime ? { ...runtime.echoPairs } : {},
+      echoClone: runtime?.echoClone ? { x: runtime.echoClone.x, y: runtime.echoClone.y } : null,
+      gravityAnchors: runtime ? runtime.gravityAnchors.map((anchor) => ({ id: anchor.id, x: anchor.x, y: anchor.y, active: anchor.active, timer: anchor.timer })) : [],
       platforms: runtime ? runtime.platforms.map((platform) => ({
         id: platform.id,
+        x: platform.x,
+        y: platform.y,
         bounceY: Number(platform.bounceY) || 0,
         polarity: platform.polarity || null,
         // QA reports the selected phase; collision still honors the brief

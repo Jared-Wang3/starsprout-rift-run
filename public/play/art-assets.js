@@ -9,7 +9,9 @@
     environmentsA: { src: "./assets/art-v2/environments-a.webp", cols: 2, rows: 2 },
     environmentsB: { src: "./assets/art-v2/environments-b.webp", cols: 2, rows: 2 },
     environmentsC: { src: "./assets/art-v3/environments-c.webp", cols: 2, rows: 2 },
+    environmentsD: { src: "./assets/art-v5/environments-d.webp", cols: 2, rows: 2 },
     bossWeaver: { src: "./assets/art-v3/boss-weaver.png", cols: 4, rows: 2 },
+    bossStarWhale: { src: "./assets/art-v5/boss-star-whale.png", cols: 4, rows: 2 },
     act3Collectibles: { src: "./assets/art-v3/act3-collectibles.png", cols: 2, rows: 2 },
   };
 
@@ -71,6 +73,14 @@
     weaverStunned: { sheet: "bossWeaver", col: 1, row: 1 },
     weaverCoreOpen: { sheet: "bossWeaver", col: 2, row: 1 },
     weaverDefeated: { sheet: "bossWeaver", col: 3, row: 1 },
+    whaleIdle: { sheet: "bossStarWhale", col: 0, row: 0 },
+    whaleCharge: { sheet: "bossStarWhale", col: 1, row: 0 },
+    whaleDive: { sheet: "bossStarWhale", col: 2, row: 0 },
+    whaleShield: { sheet: "bossStarWhale", col: 3, row: 0 },
+    whaleBeam: { sheet: "bossStarWhale", col: 0, row: 1 },
+    whaleStunned: { sheet: "bossStarWhale", col: 1, row: 1 },
+    whaleCoreOpen: { sheet: "bossStarWhale", col: 2, row: 1 },
+    whaleDefeated: { sheet: "bossStarWhale", col: 3, row: 1 },
   };
 
   const collectibleFrames = {
@@ -95,12 +105,16 @@
     "time-shard": { sheet: "act3Collectibles", col: 1, row: 0 },
     "storm-cell": { sheet: "act3Collectibles", col: 0, row: 1 },
     "rift-core-seed": { sheet: "act3Collectibles", col: 1, row: 1 },
+    "orbit-key": { sheet: "act3Collectibles", col: 1, row: 0 },
+    "chrono-petal": { sheet: "act3Collectibles", col: 0, row: 1 },
+    "starwhale-core": { sheet: "act3Collectibles", col: 1, row: 1 },
   };
 
   const environmentAtlases = {
     environmentsA: { asset: "environmentsA", cols: 2, rows: 2, levels: [1, 2, 3, 4] },
     environmentsB: { asset: "environmentsB", cols: 2, rows: 2, levels: [5, 6, 7, 8] },
     environmentsC: { asset: "environmentsC", cols: 2, rows: 2, levels: [9, 10, 11, 12] },
+    environmentsD: { asset: "environmentsD", cols: 2, rows: 2, levels: [13, 14, 15, 16] },
   };
 
   const levelBackgroundFrames = {
@@ -116,10 +130,14 @@
     10: { sheet: "environmentsC", col: 1, row: 0 },
     11: { sheet: "environmentsC", col: 0, row: 1 },
     12: { sheet: "environmentsC", col: 1, row: 1 },
+    13: { sheet: "environmentsD", col: 0, row: 0 },
+    14: { sheet: "environmentsD", col: 1, row: 0 },
+    15: { sheet: "environmentsD", col: 0, row: 1 },
+    16: { sheet: "environmentsD", col: 1, row: 1 },
   };
 
   window.StarSproutArt = Object.freeze({
-    version: "3.0.0",
+    version: "4.0.0",
     assets,
     heroFrames,
     enemyFrames,

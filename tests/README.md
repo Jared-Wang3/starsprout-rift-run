@@ -7,8 +7,9 @@ extra package:
 node --test tests/game-data.test.mjs tests/game-ui.test.mjs tests/game-art.test.mjs tests/gameplay-feedback.test.mjs
 ```
 
-`game-data.test.mjs` validates the 12-level campaign, its three Boss stages, and
-the spring, polarity, timed-relay, and rift-weaver data contracts.
+`game-data.test.mjs` validates the 16-level campaign, its four Boss stages, and
+the spring, polarity, timed-relay, rift-weaver, gravity, time-freeze, delayed-echo,
+and star-whale data contracts.
 `game-ui.test.mjs` checks the offline HTML shell, responsive touch CSS, and
 JavaScript syntax. `game-art.test.mjs` checks the sprite and background
 manifests. `gameplay-feedback.test.mjs` drives the deterministic

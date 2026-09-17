@@ -130,7 +130,7 @@ test("main menu is a responsive rift-cover composition instead of a stacked card
   }
 });
 
-test("route renderer groups the campaign into three acts with mode tags and thumbnails", async () => {
+test("route renderer groups the campaign into four acts with mode tags and thumbnails", async () => {
   const source = await readProjectFile("public/play/game.js");
 
   assert.match(source, /function\s+renderLevelGrid\s*\(/, "missing renderLevelGrid()");
@@ -167,31 +167,41 @@ test("touch UI supports portrait play without a blocking rotate notice", async (
   assert.match(css, /\.touch-actions\s+\.touch-down\s*\{/i);
   assert.doesNotMatch(css, /\.portrait-notice\s*\{/i);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
+  assert.doesNotMatch(
+    css,
+    /\.paper-grain\s*\{[^}]*mix-blend-mode:\s*soft-light/s,
+    "the DOM grain layer must not duplicate the Canvas soft-light texture pass",
+  );
+  assert.match(
+    css,
+    /@media\s*\([^)]*(?:any-pointer|pointer):\s*coarse[^)]*\)[\s\S]*?backdrop-filter:\s*none/i,
+    "coarse-pointer devices must disable expensive backdrop filters",
+  );
 });
 
-test("campaign copy and level selection scale to twelve stages", async () => {
+test("campaign copy and level selection scale to sixteen stages", async () => {
   const [html, css, source] = await Promise.all([
     readProjectFile("public/play/index.html"),
     readProjectFile("public/play/game.css"),
     readProjectFile("public/play/game.js"),
   ]);
 
-  assert.match(html, />\s*12\s*(?:个关卡|片裂界)\s*</);
-  assert.match(html, />\s*3\s*(?:场\s*BOSS|位守门者)\s*</i);
-  assert.match(html, /12\s*\/\s*12\s*关/);
+  assert.match(html, />\s*16\s*(?:个关卡|片裂界)\s*</);
+  assert.match(html, />\s*4\s*(?:场\s*BOSS|位守门者)\s*</i);
+  assert.match(html, /16\s*\/\s*16\s*关/);
   assert.doesNotMatch(html, />\s*8\s*个关卡\s*</);
   assert.doesNotMatch(html, />\s*2\s*场\s*BOSS\s*</i);
   assert.doesNotMatch(html, /8\s*\/\s*8\s*关/);
 
   assert.match(css, /\.panel-screen\s*\{[^}]*\boverflow-y:\s*auto\s*;/s,
-    "the twelve-card route screen must remain vertically scrollable");
+    "the sixteen-card route screen must remain vertically scrollable");
   assert.match(css, /\.level-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s,
-    "desktop route selection should fit twelve cards in three rows");
+    "desktop route selection should fit sixteen cards in four rows");
   assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*?\.level-grid\s*\{[^}]*repeat\(2,/i,
     "mobile route selection should use two columns and scroll");
   assert.match(source, /level-card[^`\n]*\$\{[^}]*\.isBoss[^}]*is-boss/,
     "boss card styling must be driven by level semantics");
-  assert.doesNotMatch(css, /\.level-card\[data-level=["'](?:4|8|12)["']\]/,
+  assert.doesNotMatch(css, /\.level-card\[data-level=["'](?:4|8|12|16)["']\]/,
     "boss card styling must not be tied to fixed stage ids");
 });
 
@@ -242,4 +252,7 @@ test("Electron keeps the same offline play tree inside ASAR", async () => {
   assert.match(mainSource, /sandbox:\s*true/);
   assert.match(mainSource, /setWindowOpenHandler\(\(\)\s*=>\s*\(\{\s*action:\s*["']deny["']/);
   assert.match(mainSource, /will-navigate[\s\S]*?preventDefault\(\)/);
+  assert.match(mainSource, /backgroundThrottling:\s*true/,
+    "hidden or minimized desktop windows must use Chromium background throttling");
+  assert.doesNotMatch(mainSource, /backgroundThrottling:\s*false/);
 });

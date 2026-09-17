@@ -51,7 +51,9 @@ function createNoopCanvasContext() {
 
 function createFakeElement(id = "", context = createNoopCanvasContext()) {
   const classes = new Set();
-  return {
+  const writes = { innerHTML: 0 };
+  let innerHTML = "";
+  const fake = {
     id,
     width: id === "game" ? 1280 : 0,
     height: id === "game" ? 720 : 0,
@@ -80,20 +82,36 @@ function createFakeElement(id = "", context = createNoopCanvasContext()) {
     requestFullscreen() {},
     closest: () => null,
   };
+  Object.defineProperties(fake, {
+    innerHTML: {
+      get: () => innerHTML,
+      set(value) {
+        innerHTML = String(value);
+        writes.innerHTML += 1;
+      },
+    },
+    __writes: { value: writes },
+  });
+  return fake;
 }
 
 async function loadGameQaHook(options = {}) {
-  const [levelsSource, gameSource] = await Promise.all([
+  const [levelsSource, artSource, gameSource] = await Promise.all([
     readProjectFile("public/play/levels.js"),
+    readProjectFile("public/play/art-assets.js"),
     readProjectFile("public/play/game.js"),
   ]);
   const canvasContext = createNoopCanvasContext();
   const elements = new Map();
+  const documentListeners = new Map();
+  const animationFrames = new Map();
+  let nextAnimationFrameId = 1;
   const element = (id) => {
     if (!elements.has(id)) elements.set(id, createFakeElement(id, canvasContext));
     return elements.get(id);
   };
   const storage = new Map();
+  const imageSources = [];
   if (options.save !== undefined) {
     storage.set("starsprout-save-v2", JSON.stringify(options.save));
   }
@@ -106,7 +124,10 @@ async function loadGameQaHook(options = {}) {
     },
     querySelectorAll: () => [],
     createElement: (tagName) => createFakeElement(tagName === "canvas" ? "canvas" : tagName, canvasContext),
-    addEventListener() {},
+    addEventListener(type, listener) {
+      if (!documentListeners.has(type)) documentListeners.set(type, []);
+      documentListeners.get(type).push(listener);
+    },
     exitFullscreen() {},
   };
   class FakeImage {
@@ -114,7 +135,10 @@ async function loadGameQaHook(options = {}) {
     naturalWidth = 0;
     naturalHeight = 0;
     addEventListener() {}
-    set src(value) { this.currentSrc = value; }
+    set src(value) {
+      this.currentSrc = value;
+      imageSources.push(value);
+    }
   }
   const browserGlobal = {
     console,
@@ -131,8 +155,13 @@ async function loadGameQaHook(options = {}) {
     matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
     addEventListener() {},
     removeEventListener() {},
-    requestAnimationFrame: () => 0,
-    cancelAnimationFrame() {},
+    requestAnimationFrame(callback) {
+      const id = nextAnimationFrameId;
+      nextAnimationFrameId += 1;
+      animationFrames.set(id, callback);
+      return id;
+    },
+    cancelAnimationFrame: (id) => animationFrames.delete(id),
     requestIdleCallback: () => 0,
     cancelIdleCallback() {},
     setTimeout: () => 0,
@@ -146,6 +175,10 @@ async function loadGameQaHook(options = {}) {
     timeout: 1_000,
   });
   options.mutateLevels?.(browserGlobal.StarSproutLevels);
+  vm.runInContext(artSource, context, {
+    filename: "public/play/art-assets.js",
+    timeout: 1_000,
+  });
   vm.runInContext(gameSource, context, {
     filename: "public/play/game.js",
     timeout: 3_000,
@@ -154,9 +187,140 @@ async function loadGameQaHook(options = {}) {
   Object.defineProperties(browserGlobal.__STARSPROUT_TEST__, {
     __elements: { value: elements },
     __storage: { value: storage },
+    __imageSources: { value: imageSources },
+    __animationFrames: { value: animationFrames },
+    __clickAction: {
+      value(action) {
+        const target = {
+          dataset: { action },
+          closest: (selector) => selector === "[data-action]" ? target : null,
+        };
+        documentListeners.get("click")?.forEach((listener) => listener({ target }));
+      },
+    },
+    __clickLevel: {
+      value(id) {
+        const target = {
+          disabled: false,
+          dataset: { level: String(id) },
+          closest: (selector) => selector === "[data-level]" ? target : null,
+        };
+        documentListeners.get("click")?.forEach((listener) => listener({ target }));
+      },
+    },
+    __beginBriefing: {
+      value() {
+        const target = { closest: () => null };
+        documentListeners.get("click")?.forEach((listener) => listener({ target }));
+      },
+    },
   });
   return browserGlobal.__STARSPROUT_TEST__;
 }
+
+test("startup and stage entry only request core plus current-level art", async () => {
+  const qa = await loadGameQaHook();
+
+  assert.deepEqual(
+    Array.from(new Set(qa.__imageSources)).sort(),
+    ["./assets/art-v2/hero-sprites.png", "./assets/art-v2/paper-texture.webp"],
+    "the menu should only warm the core hero and paper assets",
+  );
+
+  qa.startLevel(1);
+  const stageOneSources = new Set(qa.__imageSources);
+  assert.equal(stageOneSources.has("./assets/art-v2/environments-a.webp"), true,
+    "stage 1 should warm its own environment atlas");
+  assert.equal(stageOneSources.has("./assets/art-v2/environments-b.webp"), false,
+    "stage 1 must not warm a later act environment atlas");
+  assert.equal(stageOneSources.has("./assets/art-v3/environments-c.webp"), false,
+    "stage 1 must not warm the final act environment atlas");
+  assert.equal(stageOneSources.has("./assets/art-v3/boss-weaver.png"), false,
+    "stage 1 must not warm the final boss atlas");
+});
+
+test("unchanged HUD state does not rewrite health or boss markup every frame", async () => {
+  const qa = await loadGameQaHook();
+  qa.startLevel(1);
+
+  const health = qa.__elements.get("health");
+  const healthWrites = health.__writes.innerHTML;
+  qa.step(8);
+  assert.equal(
+    health.__writes.innerHTML,
+    healthWrites,
+    "stable health must not rebuild its DOM during each simulation frame",
+  );
+
+  qa.startLevel(12);
+  qa.enterBossArena();
+  const bossHealth = qa.__elements.get("boss-health");
+  const bossWrites = bossHealth.__writes.innerHTML;
+  qa.step(3);
+  assert.equal(
+    bossHealth.__writes.innerHTML,
+    bossWrites,
+    "stable boss health must not rebuild its DOM during each simulation frame",
+  );
+});
+
+test("animation loop suspends while paused or hidden and resumes through one scheduler", async () => {
+  const source = await readProjectFile("public/play/game.js");
+  const loop = namedFunction(source, "loop");
+  const togglePause = namedFunction(source, "togglePause");
+
+  assert.match(source, /function\s+(?:animationLoopSuspended|shouldSuspendAnimation)\s*\([^)]*\)[\s\S]{0,220}?document\.hidden[\s\S]{0,120}?scene\s*!==\s*["']playing["']/,
+    "one suspension predicate must reserve rAF ownership for visible gameplay");
+  assert.match(loop, /(?:animationLoopSuspended|shouldSuspendAnimation)\s*\(/,
+    "the rAF callback must stop before updating or rendering a suspended game");
+  assert.match(source, /function\s+scheduleAnimationLoop\s*\(/,
+    "rAF ownership must be centralized so resume cannot create duplicate loops");
+  assert.match(togglePause, /resumeAnimationLoop\s*\(/,
+    "resuming play must reset the frame clock and restart the single scheduler");
+  assert.doesNotMatch(loop, /requestAnimationFrame\s*\(\s*loop\s*\)/,
+    "loop() must not recursively bypass the single-loop scheduler");
+});
+
+test("restart, level-map, and home routes restore exactly one gameplay loop", async () => {
+  const restart = await loadGameQaHook();
+  assert.equal(restart.__animationFrames.size, 0, "the menu must not own a background rAF");
+  restart.startLevel(1);
+  assert.equal(restart.__animationFrames.size, 1, "autostart gameplay must own one rAF");
+  restart.__clickAction("pause");
+  assert.equal(restart.__animationFrames.size, 0, "pause must cancel the gameplay rAF");
+  restart.__clickAction("restart");
+  assert.equal(restart.snapshot().scene, "briefing");
+  assert.equal(restart.__animationFrames.size, 0, "the restart briefing must stay still");
+  restart.__beginBriefing();
+  assert.equal(restart.snapshot().scene, "playing");
+  assert.equal(restart.__animationFrames.size, 1, "leaving the restart briefing must restore one rAF");
+
+  const levels = await loadGameQaHook();
+  levels.startLevel(1);
+  levels.__clickAction("pause");
+  levels.__clickAction("levels");
+  assert.equal(levels.snapshot().scene, "levels");
+  assert.equal(levels.__animationFrames.size, 0, "the level map must not own a background rAF");
+  levels.__clickLevel(2);
+  assert.equal(levels.snapshot().scene, "briefing");
+  assert.equal(levels.__animationFrames.size, 0);
+  levels.__beginBriefing();
+  assert.equal(levels.snapshot().scene, "playing");
+  assert.equal(levels.__animationFrames.size, 1, "selecting a new level must restore one rAF");
+
+  const home = await loadGameQaHook();
+  home.startLevel(1);
+  home.__clickAction("pause");
+  home.__clickAction("home");
+  assert.equal(home.snapshot().scene, "menu");
+  assert.equal(home.__animationFrames.size, 0, "returning home must not restart the rAF");
+  home.__clickAction("continue");
+  assert.equal(home.snapshot().scene, "briefing");
+  assert.equal(home.__animationFrames.size, 0);
+  home.__beginBriefing();
+  assert.equal(home.snapshot().scene, "playing");
+  assert.equal(home.__animationFrames.size, 1, "continuing from home must restore one rAF");
+});
 
 // Returns a balanced JS object/function/array block while ignoring braces in
 // strings and comments. This keeps the assertions local to an implementation
@@ -260,17 +424,17 @@ test("level normalization preserves goal type and requirement metadata", async (
   }
 });
 
-test("campaign limits drive unlock-all and direct stage 12 URLs", async () => {
+test("campaign limits drive unlock-all and direct stage 16 URLs", async () => {
   const qa = await loadGameQaHook();
   qa.unlockAll();
 
-  assert.equal(qa.snapshot().unlocked, 12, "unlockAll() must use the campaign maximum, not a literal 8");
+  assert.equal(qa.snapshot().unlocked, 16, "unlockAll() must use the campaign maximum, not a literal 12");
   const grid = qa.__elements.get("level-grid").innerHTML;
   const cardIds = Array.from(grid.matchAll(/\bdata-level=["'](\d+)["']/g), (match) => Number(match[1]));
-  assert.deepEqual(cardIds, Array.from({ length: 12 }, (_, index) => index + 1));
+  assert.deepEqual(cardIds, Array.from({ length: 16 }, (_, index) => index + 1));
 
-  const direct = await loadGameQaHook({ locationSearch: "?level=12&autostart=1" });
-  assert.equal(direct.snapshot().level, 12, "?level=12 must open the new final stage");
+  const direct = await loadGameQaHook({ locationSearch: "?level=16&autostart=1" });
+  assert.equal(direct.snapshot().level, 16, "?level=16 must open the final stage");
   assert.equal(direct.snapshot().scene, "playing");
 });
 
@@ -294,7 +458,7 @@ test("an old completed-eight save migrates forward without losing progress", asy
   assert.equal(qa.__elements.get("continue-label").textContent, "继续第 9 关");
 });
 
-test("stage 8 completes its act while only stage 12 completes the campaign", async () => {
+test("act bosses complete normally while only stage 16 completes the campaign", async () => {
   const makeReachable = (id, finale) => (bundle) => {
     const level = bundle.get(id);
     level.kind = "stage";
@@ -316,15 +480,15 @@ test("stage 8 completes its act while only stage 12 completes the campaign", asy
   assert.equal(qa8.snapshot().scene, "complete", "stage 8 must use the ordinary act-complete screen");
   assert.equal(qa8.snapshot().unlocked, 9, "clearing stage 8 must unlock stage 9");
 
-  const qa12 = await loadGameQaHook({
-    save: { unlocked: 12, completed: Array.from({ length: 11 }, (_, index) => index + 1) },
-    mutateLevels: makeReachable(12, true),
+  const qa16 = await loadGameQaHook({
+    save: { unlocked: 16, completed: Array.from({ length: 15 }, (_, index) => index + 1) },
+    mutateLevels: makeReachable(16, true),
   });
-  qa12.startLevel(12);
-  qa12.teleport(230, 500);
-  qa12.step(1);
-  assert.equal(qa12.snapshot().scene, "victory", "only the campaign's final stage should open the victory screen");
-  assert.match(qa12.__elements.get("victory-stats").textContent, /^12\s*\/\s*12\s*关/);
+  qa16.startLevel(16);
+  qa16.teleport(230, 500);
+  qa16.step(1);
+  assert.equal(qa16.snapshot().scene, "victory", "only the campaign's final stage should open the victory screen");
+  assert.match(qa16.__elements.get("victory-stats").textContent, /^16\s*\/\s*16\s*关/);
 });
 
 test("unknown goal requirements fail closed instead of silently opening the exit", async () => {
@@ -499,6 +663,46 @@ test("stage 12 preserves max health and dispatches an explicit third boss archet
     "updateBoss() must dispatch by archetype instead of treating every non-stage-4 boss as eclipse");
 });
 
+test("act 4 mechanics execute as gravity, time, echo, and anchor systems", async () => {
+  const levels = await loadLevels();
+
+  const gravity = await loadGameQaHook({ save: { unlocked: 16, completed: [] } });
+  gravity.startLevel(13);
+  const orbitId = levels.find((level) => level.id === 13).platforms.find((platform) => platform.motion?.type === "orbit").id;
+  const beforeOrbit = gravity.snapshot().platforms.find((platform) => platform.id === orbitId);
+  gravity.step(30);
+  const afterOrbit = gravity.snapshot().platforms.find((platform) => platform.id === orbitId);
+  assert.notDeepEqual([afterOrbit.x, afterOrbit.y], [beforeOrbit.x, beforeOrbit.y], "stage 13 orbit platforms must move on both axes");
+
+  const timeLevel = levels.find((level) => level.id === 14);
+  const timeAnchor = timeLevel.mechanics.timeAnchors[0];
+  const time = await loadGameQaHook({ save: { unlocked: 16, completed: [] } });
+  time.startLevel(14);
+  time.teleport(timeAnchor.x - 90, timeAnchor.y + 8);
+  time.press("shoot");
+  time.step(12);
+  time.release("shoot");
+  const frozen = time.snapshot().timeAnchors.find((anchor) => anchor.id === timeAnchor.id);
+  assert.equal(frozen.active, true, "shooting a time flower must open a local freeze window");
+  assert.ok(frozen.timer > 0 && frozen.timer <= timeAnchor.duration);
+
+  const echo = await loadGameQaHook({ save: { unlocked: 16, completed: [] } });
+  echo.startLevel(15);
+  echo.press("right");
+  echo.step(125);
+  echo.release("right");
+  assert.ok(echo.snapshot().echoClone, "stage 15 must materialize the player's delayed paper echo");
+
+  const whale = await loadGameQaHook({ save: { unlocked: 16, completed: [] } });
+  whale.startLevel(16);
+  whale.enterBossArena();
+  whale.step(2);
+  const whaleState = whale.snapshot();
+  assert.equal(whaleState.boss.archetype, "star-whale");
+  assert.equal(whaleState.gravityAnchors.length, 3);
+  assert.ok(whaleState.gravityAnchors.every((anchor) => anchor.x > 0 && anchor.y > 0), "star-whale anchors must orbit in world space");
+});
+
 test("rift-weaver relays cannot be preloaded for a future phase or during core exposure", async () => {
   const levels = await loadLevels();
   const level12 = levels.find((entry) => entry.id === 12);
@@ -554,6 +758,13 @@ test("touch direction taps are buffered and pointer-capture failures cannot swal
     /addEventListener\(["']pointerleave["']\s*,/,
     "pointerleave must not release a captured direction press before pointerup/pointercancel",
   );
+  assert.match(touchBindings, /addEventListener\(["']pointermove["']\s*,\s*handleTouchPointerMove\)/,
+    "the movement pad must support sliding from left to right without lifting the thumb");
+  const moveHandler = namedFunction(source, "handleTouchPointerMove");
+  assert.match(moveHandler, /rect\.left\s*\+\s*rect\.width\s*\/\s*2/,
+    "slide steering must use the movement pad midpoint rather than tiny button hit targets");
+  assert.match(moveHandler, /releaseAction[\s\S]*pressAction/,
+    "crossing the movement pad must atomically release the old direction and press the new one");
 
   const holdConstant = Array.from(
     source.matchAll(/\b(?:const|let)\s+([A-Z][A-Z0-9_]*)\s*=\s*(\d+(?:\.\d+)?)\b/g),
@@ -772,7 +983,7 @@ test("mobile HUD keeps a persistent pickup status after the toast disappears", a
   assert.match(css, /(?:#pickup-status|\.pickup-status)\s*\{/i, "pickup status needs a visible HUD style");
   assert.match(
     source,
-    /(?:\$\(["']#pickup-status["']\)|getElementById\(["']pickup-status["']\))[\s\S]{0,160}?\.textContent\s*=/,
+    /(?:\$\(["']#pickup-status["']\)|getElementById\(["']pickup-status["']\))[\s\S]{0,320}?\.textContent\s*=/,
     "updateHud() must keep #pickup-status synchronized with the lasting pickup effect",
   );
 });

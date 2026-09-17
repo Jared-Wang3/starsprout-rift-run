@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#071c27" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <title>星芽跃界 · Starsprout Rift Run</title>
-    <meta name="description" content="原创纸雕风横版动作闯关游戏：12 个特色关卡、3 场机关 Boss 战，支持键盘与手机触控。" />
+    <meta name="description" content="原创纸雕风横版动作闯关游戏：16 个特色关卡、4 场机关 Boss 战，支持键盘与手机触控。" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./game.css" />
   </head>
@@ -40,7 +40,7 @@
         <div class="expedition-trail" aria-label="当前远征进度">
           <div class="trail-heading">
             <span>当前远征</span>
-            <strong id="expedition-progress">0 / 12 已修复</strong>
+            <strong id="expedition-progress">0 / 16 已修复</strong>
           </div>
           <div class="trail-track" aria-hidden="true">
             <i id="expedition-progress-fill"></i>
@@ -48,26 +48,26 @@
         </div>
 
         <nav class="menu-actions field-dock" aria-label="游戏菜单">
-          <button data-action="levels"><small>ROUTE / 12</small><strong>跃界航线</strong></button>
+          <button data-action="levels"><small>ROUTE / 16</small><strong>跃界航线</strong></button>
           <button data-action="profile"><small>SPROUT / 04</small><strong>星芽档案</strong></button>
           <button class="menu-help" data-action="help" aria-label="操作提示"><b aria-hidden="true">?</b><small>操作</small></button>
         </nav>
         <div class="start-meta">
-          <span>12 片裂界</span><span>3 位守门者</span><span>4 种芽芯</span>
+          <span>16 片裂界</span><span>4 位守门者</span><span>4 种芽芯</span>
         </div>
       </section>
 
       <section id="level-screen" class="screen panel-screen" aria-label="关卡选择" aria-hidden="true">
         <header class="panel-heading">
           <p class="eyebrow">THREE-ACT EXPEDITION</p>
-          <h2>三幕跃界航线</h2>
+          <h2>四幕跃界航线</h2>
           <button class="text-action" data-action="back">返回</button>
         </header>
         <div class="route-intro">
           <p>每一幕都以三场生态试炼通向一位守门者。已修复区域仍可返回收集记忆种子。</p>
           <div class="route-legend" aria-label="航线图例"><span>生态试炼</span><span class="is-boss">守门者</span><span class="is-cleared">已修复</span></div>
         </div>
-        <div id="level-grid" class="level-grid route-map" aria-label="三幕关卡航线" aria-live="polite"></div>
+        <div id="level-grid" class="level-grid route-map" aria-label="四幕关卡航线" aria-live="polite"></div>
       </section>
 
       <section id="profile-screen" class="screen panel-screen profile-screen" aria-label="星芽档案" aria-hidden="true">
@@ -96,12 +96,12 @@
                   <p class="eyebrow">FIELD RECORD</p>
                   <h3 id="profile-progress-title">远征记录</h3>
                 </div>
-                <strong id="profile-stage-progress">0 / 12</strong>
+                <strong id="profile-stage-progress">0 / 16</strong>
               </div>
               <div class="profile-progress-track" aria-hidden="true"><i id="profile-stage-fill"></i></div>
               <dl class="profile-collection">
-                <div><dt>记忆种子</dt><dd id="profile-seed-count">0 / 12</dd></div>
-                <div><dt>远征规模</dt><dd id="profile-total-count">12 关</dd></div>
+                <div><dt>记忆种子</dt><dd id="profile-seed-count">0 枚</dd></div>
+                <div><dt>远征规模</dt><dd id="profile-total-count">16 关</dd></div>
                 <div><dt>重整次数</dt><dd id="profile-death-count">0</dd></div>
               </dl>
             </section>
@@ -157,12 +157,13 @@
             <div><kbd>S</kbd><span>空中下砸</span></div>
           </div>
           <div class="guide-notes">
-            <p><strong>触屏：</strong>左侧方向区移动，右侧按钮对应冲刺、下砸、脉冲和跳跃；竖屏与横屏都能游玩。</p>
+            <p><strong>触屏：</strong>左侧是可滑动换向的整块方向盘，不必抬手重按；右侧冲、砸、击、跃保持分区与间距，竖屏与横屏都能游玩。</p>
             <p><strong>拾取物：</strong>“种”是永久收藏，“心”恢复生命；风羽、发条、珍珠和羽翼会提供限时能力，冷却与星能显示剩余次数。</p>
             <p><strong>芽芯不新增按键：</strong>回声用“击”，风行“冲”后接“跃”，根守在地面按“砸”。</p>
             <p><strong>任务物：</strong>晶冠、锻炉印记、雷光火种与时页碎片会推进目标；第 5 关修复锚点后返回圣所，第 11 关需为反应炉充能。</p>
             <p><strong>新机关：</strong>弹簧台会把星芽高高弹起；灯相 / 墨相平台可切换；热能灯塔与织界继电器会显示剩余秒数。</p>
-            <p><strong>BOSS：</strong>三位守门者都不能正面强攻。先观察场地机关，再寻找发光核心。</p>
+            <p><strong>第四幕：</strong>低重力要用长按跳跃升空、下砸锚定；时花冻结局部危险；纸影会重演 1.8 秒前的路线。</p>
+            <p><strong>BOSS：</strong>四位守门者都不能正面强攻。先观察场地机关，再寻找发光核心。</p>
             <p><strong>进度：</strong>到达检查点和完成关卡时自动保存。</p>
           </div>
         </div>
@@ -199,8 +200,8 @@
       <section id="victory-screen" class="screen center-screen victory-screen" aria-hidden="true">
         <p class="eyebrow">WORLD CORE ONLINE</p>
         <h2>世界重新发芽</h2>
-        <p>九片生态已经恢复，三位守门者的核心也重归星海。</p>
-        <p id="victory-stats" class="victory-stats">12 / 12 关 · 0 枚记忆种子</p>
+        <p>十二片生态已经恢复，四位守门者的核心也重归星海。</p>
+        <p id="victory-stats" class="victory-stats">16 / 16 关 · 0 枚记忆种子</p>
         <button class="primary-action" data-action="levels">再次挑战</button>
         <button data-action="home">返回主菜单</button>
       </section>
@@ -234,7 +235,7 @@
       </div>
 
       <div id="touch-controls" class="touch-controls" aria-label="触屏控制">
-        <div class="touch-move">
+        <div class="touch-move" aria-label="滑动方向盘">
           <button data-touch="left" aria-label="向左">‹</button>
           <button data-touch="right" aria-label="向右">›</button>
         </div>
