@@ -294,8 +294,23 @@ test("startup keeps art loading scoped to the selected stage", async () => {
     "the renderer needs an explicit current-level asset selector");
   assert.match(source, /function\s+preloadLevelArt\s*\(level\)/,
     "the renderer needs a stage-scoped preload entry point");
-  assert.match(source, /preloadLevelArt\s*\(currentLevel\)/,
-    "startLevel() must begin the selected stage preload during its briefing");
+  assert.match(source, /function\s+loadCurrentLevelArt\s*\([\s\S]*?preloadLevelArt\s*\(level\)/,
+    "the briefing loader must preload only the selected stage");
   assert.match(source, /\b(?:promise|loadPromise)\b[\s\S]{0,220}?artImageCache|artImageCache[\s\S]{0,220}?\b(?:promise|loadPromise)\b/i,
     "art cache entries must share one in-flight Promise per image");
+});
+
+test("briefing blocks play until selected-stage art is ready and supports retry", async () => {
+  const source = await readProjectFile("public/play/game.js");
+
+  assert.match(source, /let\s+levelArtState\s*=\s*["']idle["']/,
+    "the renderer needs an explicit level-art loading state");
+  assert.match(source, /function\s+loadCurrentLevelArt\s*\(/,
+    "stage loading needs one guarded async entry point");
+  assert.match(source, /levelArtState\s*!==\s*["']ready["'][\s\S]{0,80}?return/,
+    "briefing input must not start play before art is ready");
+  assert.match(source, /function\s+retryCurrentLevelArt\s*\(/,
+    "failed packaged art needs an explicit retry path");
+  assert.match(source, /artImageCache\.delete\s*\(/,
+    "retry must discard failed image cache entries");
 });

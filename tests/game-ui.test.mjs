@@ -33,6 +33,9 @@ test("game shell exposes every required screen and HUD surface", async () => {
     "toast",
     "touch-controls",
     "announcer",
+    "briefing-load-status",
+    "briefing-retry",
+    "briefing-start-prompt",
   ]) {
     assert.match(html, new RegExp(`\\bid=["']${id}["']`), `missing #${id}`);
   }
@@ -49,6 +52,7 @@ test("game shell exposes every required screen and HUD surface", async () => {
     "mute",
     "fullscreen",
     "pause",
+    "retry-art",
   ]) {
     assert.match(
       html,
@@ -74,6 +78,21 @@ test("game shell exposes every required screen and HUD surface", async () => {
     /<(?:script|link)\b[^>]*(?:src|href)=["']https?:\/\//i,
     "the offline build must not depend on a remote runtime asset",
   );
+});
+
+test("stage briefing explains art loading instead of appearing frozen", async () => {
+  const [html, css] = await Promise.all([
+    readProjectFile("public/play/index.html"),
+    readProjectFile("public/play/game.css"),
+  ]);
+
+  assert.match(html, /id=["']briefing-load-status["'][^>]*aria-live=["']polite["']/i,
+    "briefing loading status must be announced to assistive technology");
+  assert.match(html, /id=["']briefing-retry["'][^>]*data-action=["']retry-art["']/i,
+    "briefing needs a visible retry action when packaged art fails");
+  assert.match(css, /\.sprout-loader\b/, "briefing needs a visible loading animation");
+  assert.match(css, /#briefing\[data-load-state=["']ready["']\][\s\S]{0,240}?\.start-prompt/,
+    "the start prompt must only become visible after art is ready");
 });
 
 test("expedition shell exposes the hero profile and three unlockable sprout modules", async () => {

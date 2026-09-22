@@ -282,6 +282,17 @@
     return loadPromise;
   }
 
+  function clearFailedArtAssets(names) {
+    names.forEach((name) => {
+      const config = artAssetConfig(name);
+      if (!config.src) return;
+      const key = `${name}:${config.src}`;
+      if (!artImageCache.get(key)?.failed) return;
+      artImageCache.delete(key);
+      artImageLoadPromises.delete(key);
+    });
+  }
+
   function frameSpec(group, name, fallback) {
     const configured = artManifest()[group]?.[name];
     const source = configured || fallback;
@@ -405,6 +416,9 @@
   let audioContext = null;
   let captureReady = false;
   let animationFrameId = null;
+  let levelArtState = "idle";
+  let levelArtLoadRequest = 0;
+  let levelArtAutoStart = false;
   const hudRenderCache = Object.create(null);
 
   function usesPortraitViewport() {
@@ -1021,7 +1035,6 @@
     stopAnimationLoop();
     resetInput();
     currentLevel = normalizeLevel(rawLevel(id));
-    preloadLevelArt(currentLevel);
     runtime = makeRuntime(currentLevel);
     player = makePlayer(currentLevel);
     cameraX = clamp(currentLevel.spawn.x - 180, 0, Math.max(0, currentLevel.worldWidth - VIEW_W));
@@ -1031,25 +1044,67 @@
     captureReady = false;
     updateHud();
 
-    if (skipBriefing) {
-      scene = "playing";
-      showOnly(null);
-      setGameUi(true);
-      setTimeout(() => { captureReady = true; }, 180);
-      resumeAnimationLoop();
-    } else {
-      scene = "briefing";
-      setGameUi(false);
-      $("#briefing-number").textContent = `STAGE ${pad(currentLevel.id)}${currentLevel.isBoss ? " · BOSS" : ""}`;
-      $("#briefing-title").textContent = currentLevel.name;
-      $("#briefing-subtitle").textContent = currentLevel.subtitle;
-      $("#briefing-mechanic").textContent = currentLevel.mechanic;
-      showOnly("briefing");
+    scene = "briefing";
+    levelArtAutoStart = skipBriefing;
+    setGameUi(false);
+    $("#briefing-number").textContent = `STAGE ${pad(currentLevel.id)}${currentLevel.isBoss ? " · BOSS" : ""}`;
+    $("#briefing-title").textContent = currentLevel.name;
+    $("#briefing-subtitle").textContent = currentLevel.subtitle;
+    $("#briefing-mechanic").textContent = currentLevel.mechanic;
+    showOnly("briefing");
+    loadCurrentLevelArt();
+  }
+
+  function setLevelArtState(state) {
+    levelArtState = state;
+    const briefing = $("#briefing");
+    const status = $("#briefing-load-status");
+    const retry = $("#briefing-retry");
+    const prompt = $("#briefing-start-prompt");
+    if (briefing) briefing.dataset.loadState = state;
+    if (status) {
+      status.textContent = state === "failed"
+        ? "星芽与场景没有完整展开，请重新加载"
+        : state === "ready"
+          ? "星芽与场景已就绪"
+          : "正在展开星芽与本关场景……";
     }
+    if (retry) retry.hidden = state !== "failed";
+    if (prompt) prompt.hidden = state !== "ready";
+  }
+
+  async function loadCurrentLevelArt(retryFailed = false) {
+    if (!currentLevel || scene !== "briefing") return;
+    const level = currentLevel;
+    const request = ++levelArtLoadRequest;
+    const assetNames = levelArtAssetNames(level);
+    if (retryFailed) clearFailedArtAssets(assetNames);
+    setLevelArtState("loading");
+    const pending = preloadLevelArt(level);
+    if (assetNames.every((name) => Boolean(artImage(name)))) {
+      setLevelArtState("ready");
+      if (levelArtAutoStart) beginBriefing();
+      return;
+    }
+    const results = await pending;
+    if (request !== levelArtLoadRequest || currentLevel !== level || scene !== "briefing") return;
+    if (results.every(Boolean)) {
+      setLevelArtState("ready");
+      if (levelArtAutoStart) beginBriefing();
+      return;
+    }
+    setLevelArtState("failed");
+  }
+
+  function retryCurrentLevelArt() {
+    if (scene !== "briefing" || levelArtState !== "failed") return;
+    loadCurrentLevelArt(true);
   }
 
   function beginBriefing() {
     if (scene !== "briefing") return;
+    if (levelArtState !== "ready") return;
+    resetInput();
     scene = "playing";
     showOnly(null);
     setGameUi(true);
@@ -1550,6 +1605,7 @@
       if (!document.fullscreenElement) $("#app").requestFullscreen?.();
       else document.exitFullscreen?.();
     }
+    if (action === "retry-art") retryCurrentLevelArt();
   });
 
   function update(dt) {

@@ -134,10 +134,20 @@ async function loadGameQaHook(options = {}) {
     complete = false;
     naturalWidth = 0;
     naturalHeight = 0;
-    addEventListener() {}
+    listeners = new Map();
+    addEventListener(type, listener) {
+      if (!this.listeners.has(type)) this.listeners.set(type, []);
+      this.listeners.get(type).push(listener);
+    }
     set src(value) {
       this.currentSrc = value;
       imageSources.push(value);
+      this.complete = true;
+      this.naturalWidth = 1024;
+      this.naturalHeight = 512;
+      const listeners = this.listeners.get("load") || [];
+      this.listeners.delete("load");
+      listeners.forEach((listener) => listener());
     }
   }
   const browserGlobal = {

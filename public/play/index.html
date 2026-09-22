@@ -169,13 +169,18 @@
         </div>
       </section>
 
-      <section id="briefing" class="screen briefing-screen" aria-hidden="true">
+      <section id="briefing" class="screen briefing-screen" data-load-state="idle" aria-hidden="true">
         <div class="briefing-rule"></div>
         <p id="briefing-number" class="eyebrow">STAGE 01</p>
         <h2 id="briefing-title">风铃草原</h2>
         <p id="briefing-subtitle" class="briefing-subtitle">追着风去远方</p>
         <p id="briefing-mechanic" class="briefing-mechanic">顺着风带越过裂谷</p>
-        <p class="start-prompt">按任意动作键 / 点击屏幕开始</p>
+        <div class="briefing-loader">
+          <span class="sprout-loader" aria-hidden="true"><i></i><b></b></span>
+          <p id="briefing-load-status" aria-live="polite">正在展开星芽与本关场景……</p>
+          <button id="briefing-retry" class="briefing-retry" data-action="retry-art" hidden>重新展开</button>
+        </div>
+        <p id="briefing-start-prompt" class="start-prompt" hidden>按任意动作键 / 点击屏幕开始</p>
       </section>
 
       <section id="pause-screen" class="screen center-screen" aria-hidden="true">

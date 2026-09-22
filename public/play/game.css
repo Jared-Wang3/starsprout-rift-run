@@ -1350,6 +1350,107 @@ kbd {
   font-size: clamp(0.9rem, 1.6vw, 1.1rem);
 }
 
+.briefing-loader {
+  display: flex;
+  min-height: 5rem;
+  margin-top: 1.45rem;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.65rem;
+  color: var(--paper);
+}
+
+.briefing-loader p {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.sprout-loader {
+  position: relative;
+  display: block;
+  width: 2.9rem;
+  height: 2.5rem;
+  filter: drop-shadow(0 0 0.65rem rgba(113, 199, 212, 0.48));
+  animation: sprout-loader-breathe 1.15s ease-in-out infinite;
+}
+
+.sprout-loader::before,
+.sprout-loader::after {
+  position: absolute;
+  top: 0.1rem;
+  width: 1.45rem;
+  height: 1rem;
+  border: 2px solid var(--paper);
+  background: var(--teal);
+  content: "";
+}
+
+.sprout-loader::before {
+  left: 0.12rem;
+  border-radius: 90% 12% 80% 18%;
+  transform: rotate(24deg);
+  transform-origin: right bottom;
+}
+
+.sprout-loader::after {
+  right: 0.12rem;
+  border-radius: 12% 90% 18% 80%;
+  transform: rotate(-24deg);
+  transform-origin: left bottom;
+}
+
+.sprout-loader i {
+  position: absolute;
+  z-index: 1;
+  bottom: 0.1rem;
+  left: 50%;
+  width: 0.28rem;
+  height: 1.55rem;
+  border-radius: 1rem;
+  background: var(--amber);
+  transform: translateX(-50%);
+}
+
+.sprout-loader b {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 0.32rem;
+  border-radius: 50%;
+  background: var(--paper);
+  opacity: 0.35;
+}
+
+.briefing-retry {
+  min-width: 8.5rem;
+  margin-top: 0.25rem;
+  border-color: var(--coral);
+  background: rgba(240, 93, 78, 0.14);
+  color: var(--paper);
+}
+
+#briefing[data-load-state="ready"] .briefing-loader {
+  display: none;
+}
+
+#briefing[data-load-state="ready"] .start-prompt {
+  display: block;
+}
+
+#briefing[data-load-state="failed"] .sprout-loader {
+  animation: none;
+  filter: grayscale(0.7) drop-shadow(0 0 0.45rem rgba(240, 93, 78, 0.42));
+  opacity: 0.72;
+}
+
+#briefing[data-load-state="failed"] .briefing-loader p {
+  color: var(--amber);
+}
+
 .start-prompt {
   margin: 2rem 0 0;
   color: var(--paper);
@@ -1773,6 +1874,11 @@ kbd {
 @keyframes prompt-pulse {
   0%, 100% { opacity: 0.48; }
   50% { opacity: 1; }
+}
+
+@keyframes sprout-loader-breathe {
+  0%, 100% { transform: translateY(0) scale(0.92); }
+  50% { transform: translateY(-0.22rem) scale(1.06); }
 }
 
 @keyframes rift-breathe {
