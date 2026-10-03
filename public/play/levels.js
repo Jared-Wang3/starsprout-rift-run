@@ -62,15 +62,15 @@
     );
   }
 
-  function checkpoint(id, x, y, respawnX, respawnY) {
-    return {
+  function checkpoint(id, x, y, respawnX, respawnY, options) {
+    return Object.assign({
       id: id,
       x: x,
       y: y,
       w: 34,
       h: 92,
       respawn: { x: respawnX, y: respawnY }
-    };
+    }, options || {});
   }
 
   var levels = [
@@ -1418,7 +1418,7 @@
         enemy("lg-enemy-01", "steam-tick", 970, 566, 940, 1230, { hp: 2, speed: 52 }),
         enemy("lg-enemy-02", "propeller-wasp", 1410, 345, 1280, 1610, { hp: 2, yBob: 54, speed: 62 }),
         enemy("lg-enemy-03", "echo-bat", 1830, 350, 1710, 2100, { hp: 2, yBob: 44, speed: 78 }),
-        enemy("lg-enemy-04", "steam-tick", 2460, 566, 2430, 2760, { hp: 2, speed: 58 }),
+        enemy("lg-enemy-04", "thunder-drummer", 2460, 566, 2430, 2760, { hp: 3, speed: 52 }),
         enemy("lg-enemy-05", "propeller-wasp", 3040, 350, 2910, 3160, { hp: 2, yBob: 60, speed: 68 }),
         enemy("lg-enemy-06", "echo-bat", 3610, 305, 3470, 3890, { hp: 3, yBob: 48, speed: 86 }),
         enemy("lg-enemy-07", "steam-tick", 4140, 566, 4040, 4380, { hp: 3, speed: 66 })
@@ -1549,7 +1549,7 @@
       enemies: [
         enemy("sh-enemy-01", "shard-crawler", 1210, 566, 1180, 1510, { hp: 2, speed: 48 }),
         enemy("sh-enemy-02", "orbit-eye", 1730, 330, 1600, 2020, { hp: 2, yBob: 42, speed: 76 }),
-        enemy("sh-enemy-03", "shadow-sprout", 2220, 566, 2190, 2510, { hp: 2, speed: 62 }),
+        enemy("sh-enemy-03", "thread-spinner", 2220, 566, 2190, 2510, { hp: 2, speed: 58 }),
         enemy("sh-enemy-04", "orbit-eye", 2860, 300, 2700, 3110, { hp: 3, yBob: 48, speed: 86 }),
         enemy("sh-enemy-05", "shard-crawler", 3280, 566, 3250, 3610, { hp: 3, speed: 58 }),
         enemy("sh-enemy-06", "shadow-sprout", 4370, 566, 4330, 4590, { hp: 3, speed: 72 })
@@ -1701,7 +1701,7 @@
         enemy("ta-enemy-01", "cargo-bot", 1060, 566, 1030, 1430, { hp: 2, speed: 58 }),
         enemy("ta-enemy-02", "propeller-wasp", 1800, 355, 1650, 2070, { hp: 2, yBob: 45, speed: 92 }),
         enemy("ta-enemy-03", "storm-cannon", 2500, 552, 2500, 2500, { hp: 3, speed: 0 }),
-        enemy("ta-enemy-04", "cargo-bot", 3170, 566, 3140, 3460, { hp: 3, speed: 68 }),
+        enemy("ta-enemy-04", "thunder-drummer", 3170, 566, 3140, 3460, { hp: 3, speed: 62 }),
         enemy("ta-enemy-05", "propeller-wasp", 3510, 315, 3380, 3730, { hp: 3, yBob: 48, speed: 102 }),
         enemy("ta-enemy-06", "storm-cannon", 4170, 552, 4170, 4170, { hp: 3, speed: 0 }),
         enemy("ta-enemy-07", "cargo-bot", 4520, 566, 4400, 4680, { hp: 3, speed: 74 })
@@ -1820,9 +1820,9 @@
       ],
       enemies: [
         enemy("rw-minion-01", "propeller-wasp", 1510, 300, 1320, 1800, { hp: 2, yBob: 44, speed: 92, spawnOnBossPhase: 2 }),
-        enemy("rw-minion-02", "shadow-sprout", 1850, 566, 1640, 2050, { hp: 2, speed: 72, spawnOnBossPhase: 2 }),
+        enemy("rw-minion-02", "thread-spinner", 1850, 566, 1640, 2050, { hp: 2, speed: 66, spawnOnBossPhase: 2 }),
         enemy("rw-minion-03", "orbit-eye", 2550, 270, 2320, 2820, { hp: 3, yBob: 50, speed: 104, spawnOnBossPhase: 3 }),
-        enemy("rw-minion-04", "storm-cannon", 2960, 552, 2960, 2960, { hp: 3, speed: 0, spawnOnBossPhase: 3 })
+        enemy("rw-minion-04", "thunder-drummer", 2960, 566, 2760, 3150, { hp: 3, speed: 62, spawnOnBossPhase: 3 })
       ],
       collectibles: [
         collectible("rw-seed-01", "memory-seed", 350, 445),
@@ -1966,7 +1966,7 @@
         enemy("sg-eye-01", "orbit-eye", 1370, 285, 1250, 1580, { hp: 2, yBob: 45, speed: 76 }),
         enemy("sg-eye-02", "orbit-eye", 2240, 260, 2140, 2480, { hp: 2, yBob: 48, speed: 84 }),
         enemy("sg-shadow-01", "shadow-sprout", 3160, 566, 3090, 3440, { hp: 2, speed: 72 }),
-        enemy("sg-eye-03", "orbit-eye", 4180, 300, 4050, 4450, { hp: 3, yBob: 56, speed: 96 })
+        enemy("sg-eye-03", "star-siphon", 4180, 300, 4050, 4450, { hp: 3, yBob: 56, speed: 96 })
       ],
       collectibles: [
         collectible("sg-seed-01", "memory-seed", 320, 470),
@@ -2069,7 +2069,7 @@
       ],
       enemies: [
         enemy("tc-eye-01", "orbit-eye", 1180, 350, 1120, 1510, { hp: 2, yBob: 42, speed: 86 }),
-        enemy("tc-shadow-01", "shadow-sprout", 1900, 566, 1870, 2260, { hp: 2, speed: 80 }),
+        enemy("tc-shadow-01", "chrono-leech", 1900, 566, 1870, 2260, { hp: 3, speed: 76 }),
         enemy("tc-cannon-01", "storm-cannon", 2790, 552, 2790, 2790, { hp: 3, speed: 0 }),
         enemy("tc-eye-02", "orbit-eye", 3650, 280, 3540, 3950, { hp: 3, yBob: 52, speed: 104 })
       ],
@@ -2170,7 +2170,7 @@
       enemies: [
         enemy("ec-shadow-01", "shadow-sprout", 860, 566, 820, 1120, { hp: 2, speed: 72 }),
         enemy("ec-eye-01", "orbit-eye", 1880, 320, 1720, 2030, { hp: 2, yBob: 44, speed: 82 }),
-        enemy("ec-shadow-02", "shadow-sprout", 2700, 566, 2520, 3050, { hp: 2, speed: 84 }),
+        enemy("ec-shadow-02", "mirror-mimic", 2700, 566, 2520, 3050, { hp: 3, speed: 78 }),
         enemy("ec-eye-02", "orbit-eye", 4040, 300, 3870, 4290, { hp: 3, yBob: 54, speed: 96 })
       ],
       collectibles: [
@@ -2206,7 +2206,6 @@
       key: "starwhale-court",
       act: 4,
       kind: "boss",
-      finale: true,
       name: "星噬鲸庭",
       nameEn: "STAR-EATER COURT",
       subtitle: "在引力潮中拉回最后一颗星",
@@ -2264,8 +2263,8 @@
         hazard("sw-star-02", "falling-star", 2780, 145, 46, 46, { phase: 1.4 })
       ],
       enemies: [
-        enemy("sw-minion-01", "orbit-eye", 1450, 285, 1260, 1740, { hp: 2, yBob: 48, speed: 92, spawnOnBossPhase: 2 }),
-        enemy("sw-minion-02", "shadow-sprout", 1730, 566, 1600, 1980, { hp: 2, speed: 78, spawnOnBossPhase: 2 }),
+        enemy("sw-minion-01", "star-siphon", 1450, 285, 1260, 1740, { hp: 2, yBob: 48, speed: 92, spawnOnBossPhase: 2 }),
+        enemy("sw-minion-02", "chrono-leech", 1730, 566, 1600, 1980, { hp: 3, speed: 74, spawnOnBossPhase: 2 }),
         enemy("sw-minion-03", "storm-cannon", 2910, 552, 2910, 2910, { hp: 3, speed: 0, spawnOnBossPhase: 3 })
       ],
       collectibles: [
@@ -2303,6 +2302,1446 @@
         ],
         mechanism: { shielded: true, exposeBy: "moving-gravity-anchors", resetAnchorsOnExposure: true }
       }
+    },
+
+    {
+      id: 17,
+      key: "foldpaper-canyon",
+      act: 5,
+      kind: "stage",
+      name: "折纸峡谷",
+      nameEn: "FOLDPAPER CANYON",
+      subtitle: "把墙折成路，再把路折回世界",
+      briefing: {
+        kicker: "STAGE 17 · FOLD",
+        title: "折纸峡谷",
+        subtitle: "把墙折成路，再把路折回世界",
+        mechanic: "脉冲击中珊瑚色折痕，会让同组纸层在墙面与桥面之间翻折；出口要求三处地形都保持在修复形态。",
+        hint: "每次折叠都会同时移走旧路并展开新路。先看虚线指向，再站到不会被翻走的位置发射脉冲。"
+      },
+      theme: {
+        id: "foldpaper-canyon",
+        palette: {
+          skyTop: "#07182B",
+          skyBottom: "#B96857",
+          ink: "#06101D",
+          paper: "#F4E9D2",
+          ground: "#29384A",
+          groundDark: "#121C29",
+          platform: "#68757A",
+          accent: "#F06A55",
+          accent2: "#5BD5CF",
+          danger: "#E64F59",
+          fog: "#5C5060"
+        },
+        material: "perforated-origami-stone",
+        ambient: { type: "crease-sparks", count: 44, speed: 0.42 },
+        landmark: { type: "folded-compass", x: 2880, y: 72, scale: 1.7, accent: "#F06A55" }
+      },
+      worldWidth: 4900,
+      worldHeight: WORLD_HEIGHT,
+      killY: 820,
+      camera: { mode: "follow", deadZoneX: 0.34, lookAhead: 150 },
+      spawn: { x: 100, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4700,
+        y: 470,
+        w: 94,
+        h: 150,
+        requires: { type: "fold-pattern", count: 3, label: "稳定折面" }
+      },
+      platforms: [
+        platform("fc-ground-01", 0, 620, 700, 100, { material: "fold-stone" }),
+        platform("fc-wall-a", 720, 345, 42, 275, { material: "crease-paper", foldGroup: "a", foldState: 0 }),
+        platform("fc-bridge-a", 700, 500, 430, 26, { kind: "one-way", material: "crease-paper", foldGroup: "a", foldState: 1 }),
+        platform("fc-ground-02", 1130, 620, 570, 100, { material: "fold-stone" }),
+        platform("fc-step-02", 1280, 445, 180, 24, { kind: "one-way", material: "paper-brass" }),
+        platform("fc-wall-b", 1740, 315, 44, 305, { material: "crease-paper", foldGroup: "b", foldState: 0 }),
+        platform("fc-bridge-b", 1700, 420, 520, 26, { kind: "one-way", material: "crease-paper", foldGroup: "b", foldState: 1 }),
+        platform("fc-ground-03", 2220, 620, 560, 100, { material: "fold-stone" }),
+        platform("fc-high-03", 2320, 360, 210, 24, { kind: "one-way", material: "paper-brass" }),
+        platform("fc-wall-c", 2820, 350, 44, 270, { material: "crease-paper", foldGroup: "c", foldState: 0 }),
+        platform("fc-bridge-c", 2780, 485, 560, 26, { kind: "one-way", material: "crease-paper", foldGroup: "c", foldState: 1 }),
+        platform("fc-ground-04", 3340, 620, 620, 100, { material: "fold-stone" }),
+        platform("fc-fold-step", 3610, 410, 185, 24, { kind: "one-way", material: "paper-brass" }),
+        platform("fc-ground-05", 4210, 620, 690, 100, { material: "fold-stone" }),
+        platform("fc-finish-step", 4480, 480, 180, 24, { kind: "one-way", material: "paper-brass" })
+      ],
+      hazards: [
+        hazard("fc-void-01", "star-void", 700, 670, 430, 50, { damage: 99 }),
+        hazard("fc-void-02", "star-void", 1700, 670, 520, 50, { damage: 99 }),
+        hazard("fc-void-03", "star-void", 2780, 670, 560, 50, { damage: 99 }),
+        hazard("fc-spike-01", "crystal-spike", 1450, 588, 100, 32),
+        hazard("fc-spike-02", "crystal-spike", 3680, 588, 110, 32)
+      ],
+      enemies: [
+        enemy("fc-shadow-01", "fold-beetle", 1240, 566, 1170, 1590, { hp: 3, speed: 62 }),
+        enemy("fc-eye-01", "orbit-eye", 2320, 300, 2220, 2620, { hp: 2, yBob: 44, speed: 84 }),
+        enemy("fc-shadow-02", "thread-spinner", 3470, 566, 3380, 3860, { hp: 3, speed: 74 }),
+        enemy("fc-eye-02", "orbit-eye", 4310, 320, 4220, 4600, { hp: 3, yBob: 48, speed: 96 })
+      ],
+      collectibles: [
+        collectible("fc-seed-01", "memory-seed", 360, 470),
+        collectible("fc-seed-02", "memory-seed", 2420, 300),
+        collectible("fc-heart", "heart", 3530, 350),
+        collectible("fc-seed-03", "memory-seed", 4530, 425)
+      ],
+      checkpoints: [
+        checkpoint("fc-check-01", 1180, 528, 1200, 536),
+        checkpoint("fc-check-02", 3380, 528, 3400, 536)
+      ],
+      mechanics: {
+        type: "world-fold",
+        foldPanels: [
+          { id: "fc-crease-a", group: "a", x: 590, y: 470, w: 58, h: 82, targetState: 1 },
+          { id: "fc-crease-b", group: "b", x: 1530, y: 380, w: 58, h: 82, targetState: 1 },
+          { id: "fc-crease-c", group: "c", x: 2560, y: 390, w: 58, h: 82, targetState: 1 }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 18,
+      key: "kitewind-spire",
+      act: 5,
+      kind: "stage",
+      name: "风筝天塔",
+      nameEn: "KITEWIND SPIRE",
+      subtitle: "让脉冲变成一根会飞的绳",
+      briefing: {
+        kicker: "STAGE 18 · TETHER",
+        title: "风筝天塔",
+        subtitle: "让脉冲变成一根会飞的绳",
+        mechanic: "脉冲命中风筝锚后会形成短暂牵引线，把星芽拉向空中锚点；移动和跳跃仍能改变摆荡方向。",
+        hint: "不要等牵引结束才找下一枚锚。摆到线的外侧时转身发射，就能在空中接力。"
+      },
+      theme: {
+        id: "kitewind-spire",
+        palette: {
+          skyTop: "#153A58",
+          skyBottom: "#9BC9D0",
+          ink: "#071624",
+          paper: "#F7EBD2",
+          ground: "#3C5262",
+          groundDark: "#172A38",
+          platform: "#748995",
+          accent: "#F2A65A",
+          accent2: "#36C7C4",
+          danger: "#E85E62",
+          fog: "#8FAFB9"
+        },
+        material: "kite-silk-and-brass",
+        ambient: { type: "kite-streamers", count: 46, speed: 0.82 },
+        landmark: { type: "giant-kite-mast", x: 2940, y: 48, scale: 1.78, accent: "#36C7C4" }
+      },
+      worldWidth: 4800,
+      worldHeight: WORLD_HEIGHT,
+      killY: 850,
+      camera: { mode: "follow", deadZoneX: 0.32, lookAhead: 170 },
+      spawn: { x: 92, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4605,
+        y: 470,
+        w: 94,
+        h: 150,
+        requires: { type: "kite-chain", count: 4, label: "风筝锚" }
+      },
+      platforms: [
+        platform("ks-ground-start", 0, 620, 650, 100, { material: "cloud-stone" }),
+        platform("ks-launch", 470, 455, 175, 24, { kind: "one-way", material: "kite-brass" }),
+        platform("ks-perch-01", 980, 390, 150, 24, { kind: "one-way", material: "kite-brass" }),
+        platform("ks-perch-02", 1530, 300, 150, 24, { kind: "one-way", material: "kite-brass" }),
+        platform("ks-rest-01", 1910, 620, 350, 100, { material: "cloud-stone" }),
+        platform("ks-perch-03", 2390, 400, 155, 24, { kind: "one-way", material: "kite-brass" }),
+        platform("ks-perch-04", 3010, 285, 155, 24, { kind: "one-way", material: "kite-brass" }),
+        platform("ks-rest-02", 3350, 620, 360, 100, { material: "cloud-stone" }),
+        platform("ks-perch-05", 3840, 390, 160, 24, { kind: "one-way", material: "kite-brass" }),
+        platform("ks-ground-end", 4210, 620, 590, 100, { material: "cloud-stone" }),
+        platform("ks-finish", 4440, 480, 175, 24, { kind: "one-way", material: "kite-brass" })
+      ],
+      hazards: [
+        hazard("ks-void-01", "star-void", 650, 670, 1260, 50, { damage: 99 }),
+        hazard("ks-void-02", "star-void", 2260, 670, 1090, 50, { damage: 99 }),
+        hazard("ks-void-03", "star-void", 3710, 670, 500, 50, { damage: 99 })
+      ],
+      enemies: [
+        enemy("ks-wasp-01", "propeller-wasp", 1040, 330, 900, 1240, { hp: 2, yBob: 46, speed: 92 }),
+        enemy("ks-eye-01", "orbit-eye", 2050, 310, 1920, 2240, { hp: 2, yBob: 52, speed: 88 }),
+        enemy("ks-wasp-02", "star-siphon", 3060, 230, 2860, 3260, { hp: 3, yBob: 48, speed: 104 }),
+        enemy("ks-eye-02", "mirror-mimic", 4360, 566, 4240, 4580, { hp: 3, speed: 82 })
+      ],
+      collectibles: [
+        collectible("ks-seed-01", "memory-seed", 520, 395),
+        collectible("ks-seed-02", "memory-seed", 1580, 240),
+        collectible("ks-heart", "heart", 2050, 520),
+        collectible("ks-seed-03", "memory-seed", 3070, 225),
+        collectible("ks-star", "star-charge", 3900, 330, { charges: 2 })
+      ],
+      checkpoints: [
+        checkpoint("ks-check-01", 1940, 528, 1960, 536),
+        checkpoint("ks-check-02", 3380, 528, 3400, 536)
+      ],
+      mechanics: {
+        type: "kite-tether",
+        kiteAnchors: [
+          { id: "ks-kite-a", x: 760, y: 180, w: 72, h: 150, duration: 2.8, pull: 1420 },
+          { id: "ks-kite-b", x: 1320, y: 115, w: 72, h: 170, duration: 2.8, pull: 1480 },
+          { id: "ks-kite-c", x: 2320, y: 150, w: 72, h: 180, duration: 2.7, pull: 1500 },
+          { id: "ks-kite-d", x: 2860, y: 90, w: 72, h: 190, duration: 2.6, pull: 1540 },
+          { id: "ks-kite-e", x: 3780, y: 145, w: 72, h: 180, duration: 2.6, pull: 1580 }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 19,
+      key: "turning-page-escape",
+      act: 5,
+      kind: "stage",
+      name: "逆页逃亡",
+      nameEn: "TURNING PAGE ESCAPE",
+      subtitle: "抵达终点以后，真正的路才刚开始",
+      briefing: {
+        kicker: "STAGE 19 · RETURN",
+        title: "逆页逃亡",
+        subtitle: "抵达终点以后，真正的路才刚开始",
+        mechanic: "先前往书页最右端唤醒返航星种；世界随后翻页，原路消失、返程纸桥展开，出口会回到出发处。",
+        hint: "墨潮从右向左吞没书页。返程平台比去程更高，利用冲刺和下砸快速切换层级。"
+      },
+      theme: {
+        id: "turning-page-escape",
+        palette: {
+          skyTop: "#071528",
+          skyBottom: "#5A6E8B",
+          ink: "#020B17",
+          paper: "#F4E7CE",
+          ground: "#38465C",
+          groundDark: "#141D2E",
+          platform: "#7C7A82",
+          accent: "#F07A55",
+          accent2: "#5FDDD0",
+          danger: "#CA3654",
+          fog: "#515A72"
+        },
+        material: "accordion-book-paper",
+        ambient: { type: "flying-pages", count: 52, speed: 1.0 },
+        landmark: { type: "turning-page-shrine", x: 4020, y: 56, scale: 1.72, accent: "#5FDDD0" }
+      },
+      worldWidth: 4900,
+      worldHeight: WORLD_HEIGHT,
+      killY: 830,
+      camera: { mode: "follow", deadZoneX: 0.36, lookAhead: 145 },
+      spawn: { x: 150, y: 536, facing: 1 },
+      goal: {
+        type: "return-gate",
+        x: 24,
+        y: 470,
+        w: 96,
+        h: 150,
+        requires: { type: "return-seed", label: "返航星种" }
+      },
+      platforms: [
+        platform("tp-ground-start", 0, 620, 600, 100, { material: "book-stone" }),
+        platform("tp-out-01", 600, 525, 430, 26, { kind: "one-way", material: "page-paper", pagePhase: "outbound" }),
+        platform("tp-back-01", 620, 365, 390, 26, { kind: "one-way", material: "ink-paper", pagePhase: "return" }),
+        platform("tp-ground-02", 1030, 620, 470, 100, { material: "book-stone" }),
+        platform("tp-out-02", 1500, 455, 520, 26, { kind: "one-way", material: "page-paper", pagePhase: "outbound" }),
+        platform("tp-back-02", 1510, 305, 500, 26, { kind: "one-way", material: "ink-paper", pagePhase: "return" }),
+        platform("tp-ground-03", 2020, 620, 500, 100, { material: "book-stone" }),
+        platform("tp-out-03", 2520, 520, 520, 26, { kind: "one-way", material: "page-paper", pagePhase: "outbound" }),
+        platform("tp-back-03", 2540, 380, 480, 26, { kind: "one-way", material: "ink-paper", pagePhase: "return" }),
+        platform("tp-ground-04", 3040, 620, 500, 100, { material: "book-stone" }),
+        platform("tp-out-04", 3540, 450, 480, 26, { kind: "one-way", material: "page-paper", pagePhase: "outbound" }),
+        platform("tp-back-04", 3560, 290, 450, 26, { kind: "one-way", material: "ink-paper", pagePhase: "return" }),
+        platform("tp-ground-end", 4020, 620, 880, 100, { material: "book-stone" }),
+        platform("tp-seed-dais", 4440, 470, 220, 28, { kind: "one-way", material: "shrine-brass" })
+      ],
+      hazards: [
+        hazard("tp-void-01", "star-void", 600, 670, 430, 50, { damage: 99 }),
+        hazard("tp-void-02", "star-void", 1500, 670, 520, 50, { damage: 99 }),
+        hazard("tp-void-03", "star-void", 2520, 670, 520, 50, { damage: 99 }),
+        hazard("tp-void-04", "star-void", 3540, 670, 480, 50, { damage: 99 }),
+        hazard("tp-rift-01", "void-rift", 1220, 586, 110, 34),
+        hazard("tp-rift-02", "void-rift", 3190, 586, 120, 34)
+      ],
+      enemies: [
+        enemy("tp-shadow-01", "chrono-leech", 1120, 566, 1070, 1440, { hp: 3, speed: 76 }),
+        enemy("tp-bat-01", "echo-bat", 1740, 340, 1530, 1970, { hp: 2, yBob: 45, speed: 90 }),
+        enemy("tp-shadow-02", "fold-beetle", 3090, 566, 3060, 3470, { hp: 4, speed: 68 }),
+        enemy("tp-eye-01", "orbit-eye", 4140, 330, 4050, 4370, { hp: 3, yBob: 50, speed: 98 })
+      ],
+      collectibles: [
+        collectible("tp-seed-01", "memory-seed", 760, 465),
+        collectible("tp-heart", "heart", 2200, 520),
+        collectible("tp-seed-02", "memory-seed", 2720, 460),
+        collectible("tp-return-seed", "return-seed", 4530, 405, { quest: true })
+      ],
+      checkpoints: [
+        checkpoint("tp-check-01", 1080, 528, 1100, 536),
+        checkpoint("tp-check-02", 3070, 528, 3090, 536),
+        checkpoint("tp-check-03", 4100, 528, 4120, 536)
+      ],
+      mechanics: {
+        type: "page-return",
+        pageTurn: { itemType: "return-seed", inkSpeed: 220, startOffset: 180, resetOffset: 220 }
+      },
+      boss: null
+    },
+
+    {
+      id: 20,
+      key: "thousand-page-aviary",
+      act: 5,
+      kind: "boss",
+      name: "千页鸾庭",
+      nameEn: "THOUSAND-PAGE AVIARY",
+      subtitle: "让守门者撞进自己写下的折痕",
+      briefing: {
+        kicker: "BOSS 05 · CREASE",
+        title: "千页守鸾",
+        subtitle: "让守门者撞进自己写下的折痕",
+        mechanic: "守鸾俯冲前会点亮一块场地折痕。在它落下前对准该折痕下砸，把纸台折起，才能困住羽翼并暴露胸口星种。",
+        hint: "观察珊瑚色预警线，而不是追着 Boss 跑。后两个阶段会制造落页和地面冲击波干扰下砸时机。"
+      },
+      theme: {
+        id: "thousand-page-aviary",
+        palette: {
+          skyTop: "#081427",
+          skyBottom: "#485873",
+          ink: "#030A16",
+          paper: "#F6E9D0",
+          ground: "#303D52",
+          groundDark: "#121A2B",
+          platform: "#6F707C",
+          accent: "#F06A50",
+          accent2: "#4DD7CC",
+          danger: "#E23D56",
+          fog: "#4C526B"
+        },
+        material: "book-spine-brass",
+        ambient: { type: "page-flock", count: 54, speed: 0.72 },
+        landmark: { type: "origami-aviary", x: 2280, y: 45, scale: 1.82, accent: "#F06A50" }
+      },
+      worldWidth: 3700,
+      worldHeight: WORLD_HEIGHT,
+      killY: 820,
+      camera: { mode: "boss-lock", deadZoneX: 0.42, lookAhead: 80 },
+      spawn: { x: 90, y: 536, facing: 1 },
+      goal: { type: "world-core", x: 3440, y: 435, w: 120, h: 185, requires: "boss-defeated" },
+      platforms: [
+        platform("pa-ground-entry", 0, 620, 820, 100, { material: "aviary-stone" }),
+        platform("pa-entry-step", 330, 480, 190, 24, { kind: "one-way", material: "book-brass" }),
+        platform("pa-entry-bridge", 820, 555, 300, 65, { material: "book-spine" }),
+        platform("pa-arena-floor", 1120, 620, 2160, 100, { material: "aviary-stone" }),
+        platform("pa-high-left", 1310, 390, 180, 24, { kind: "one-way", material: "book-brass" }),
+        platform("pa-high-mid", 2060, 330, 180, 24, { kind: "one-way", material: "book-brass" }),
+        platform("pa-high-right", 2810, 390, 180, 24, { kind: "one-way", material: "book-brass" }),
+        platform("pa-exit", 3280, 620, 420, 100, { material: "aviary-stone" })
+      ],
+      hazards: [
+        hazard("pa-rift-left", "void-rift", 1350, 586, 120, 34),
+        hazard("pa-rift-mid", "void-rift", 2110, 586, 120, 34),
+        hazard("pa-rift-right", "void-rift", 2860, 586, 120, 34)
+      ],
+      enemies: [
+        enemy("pa-minion-01", "star-siphon", 1450, 300, 1250, 1760, { hp: 3, yBob: 44, speed: 90, spawnOnBossPhase: 2 }),
+        enemy("pa-minion-02", "fold-beetle", 2550, 566, 2380, 2920, { hp: 4, speed: 68, spawnOnBossPhase: 3 })
+      ],
+      collectibles: [
+        collectible("pa-seed-01", "memory-seed", 390, 420),
+        collectible("pa-heart-entry", "heart", 910, 505),
+        collectible("pa-star-charge", "star-charge", 2070, 270, { charges: 2 }),
+        collectible("pa-heart-phase-03", "heart", 2920, 330, { spawnOnBossPhase: 3 }),
+        collectible("pa-core", "page-core-seed", 2240, 455, { quest: true, spawnOnBossDefeat: true })
+      ],
+      checkpoints: [checkpoint("pa-check-01", 1030, 478, 1050, 536)],
+      mechanics: {
+        type: "fold-warden",
+        arenaTrigger: { x: 1120, lockLeft: 1120, lockRight: 3280 },
+        foldTraps: [
+          { id: "pa-trap-a", x: 1430, y: 574, w: 260, h: 46, armTime: 1.7 },
+          { id: "pa-trap-b", x: 2020, y: 574, w: 260, h: 46, armTime: 1.7 },
+          { id: "pa-trap-c", x: 2610, y: 574, w: 260, h: 46, armTime: 1.7 }
+        ]
+      },
+      boss: {
+        id: "thousand-page-warden",
+        archetype: "fold-warden",
+        name: "千页守鸾 · 折界执笔者",
+        hp: 3,
+        maxHealth: 3,
+        arena: { x: 1120, y: 130, w: 2160, h: 490 },
+        spawn: { x: 2100, y: 190 },
+        body: { w: 190, h: 180 },
+        weakPoint: { type: "page-star-core", vulnerableState: "fold-trapped", damagePerHit: 1, exposedTime: 3.5 },
+        phases: [
+          { atHealth: 3, name: "试折", telegraph: 0.95, diveSpeed: 720, attackCooldown: 1.9 },
+          { atHealth: 2, name: "乱页", telegraph: 0.78, diveSpeed: 840, attackCooldown: 1.55 },
+          { atHealth: 1, name: "终章", telegraph: 0.65, diveSpeed: 960, attackCooldown: 1.25 }
+        ],
+        mechanism: { shielded: true, exposeBy: "downstrike-fold-trap", resetTrapOnExposure: true }
+      }
+    },
+
+    {
+      id: 21,
+      key: "starweight-court",
+      act: 6,
+      kind: "stage",
+      name: "衡星砝庭",
+      nameEn: "STARWEIGHT COURT",
+      subtitle: "让重量成为一条会呼吸的桥",
+      briefing: {
+        kicker: "STAGE 21 · WEIGHT",
+        title: "衡星砝庭",
+        subtitle: "让重量成为一条会呼吸的桥",
+        mechanic: "脉冲可以推动星砝，空中下砸会把它压入纸槽；左右槽的重量差会连续改变秤桥高度。",
+        hint: "先看桥边的刻度目标。压错砝码时，从侧面用脉冲把它推出纸槽，再重新分配重量。"
+      },
+      theme: {
+        id: "starweight-court",
+        palette: {
+          skyTop: "#111B35",
+          skyBottom: "#8A694F",
+          ink: "#070D1C",
+          paper: "#F3E6CA",
+          ground: "#4A4653",
+          groundDark: "#211E2C",
+          platform: "#9B7A55",
+          accent: "#F1C75B",
+          accent2: "#69D8C9",
+          danger: "#E35E65",
+          fog: "#6B6170"
+        },
+        material: "astrolabe-scale-brass",
+        ambient: { type: "floating-weight-runes", count: 46, speed: 0.36 },
+        landmark: { type: "celestial-balance", x: 3060, y: 56, scale: 1.74, accent: "#F1C75B" }
+      },
+      worldWidth: 5000,
+      worldHeight: WORLD_HEIGHT,
+      killY: 830,
+      camera: { mode: "follow", deadZoneX: 0.34, lookAhead: 155 },
+      spawn: { x: 92, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4815,
+        y: 470,
+        w: 96,
+        h: 150,
+        requires: { type: "balanced-bridges", count: 3, label: "衡星桥" }
+      },
+      platforms: [
+        platform("wc-ground-01", 0, 620, 700, 100, { material: "scale-court-stone" }),
+        platform("wc-training-step", 255, 485, 180, 24, { kind: "one-way", material: "weight-brass" }),
+        platform("wc-scale-bridge-a", 700, 510, 480, 28, { kind: "weight-bridge", material: "balance-paper", weightGroup: "a" }),
+        platform("wc-ground-02", 1180, 620, 570, 100, { material: "scale-court-stone" }),
+        platform("wc-ledge-02", 1350, 430, 185, 24, { kind: "one-way", material: "weight-brass" }),
+        platform("wc-scale-bridge-b", 1750, 455, 590, 28, { kind: "weight-bridge", material: "balance-paper", weightGroup: "b" }),
+        platform("wc-ground-03", 2340, 620, 640, 100, { material: "scale-court-stone" }),
+        platform("wc-high-03", 2530, 370, 190, 24, { kind: "one-way", material: "weight-brass" }),
+        platform("wc-scale-bridge-c", 2980, 505, 620, 28, { kind: "weight-bridge", material: "balance-paper", weightGroup: "c" }),
+        platform("wc-ground-04", 3600, 620, 700, 100, { material: "scale-court-stone" }),
+        platform("wc-balance-lift", 3820, 420, 180, 24, {
+          kind: "moving",
+          material: "weight-brass",
+          motion: { axis: "y", distance: 105, speed: 0.72, phase: 0.35 }
+        }),
+        platform("wc-ground-05", 4300, 620, 700, 100, { material: "scale-court-stone" }),
+        platform("wc-finish-step", 4600, 480, 185, 24, { kind: "one-way", material: "weight-brass" })
+      ],
+      hazards: [
+        hazard("wc-void-01", "star-void", 700, 665, 480, 55, { damage: 99 }),
+        hazard("wc-spike-01", "crystal-spike", 1435, 588, 96, 32),
+        hazard("wc-void-02", "star-void", 1750, 665, 590, 55, { damage: 99 }),
+        hazard("wc-star-01", "falling-star", 2070, 120, 44, 44, { interval: 2.3, telegraph: 0.78, phase: 0.4 }),
+        hazard("wc-spike-02", "crystal-spike", 2700, 588, 102, 32),
+        hazard("wc-void-03", "star-void", 2980, 665, 620, 55, { damage: 99 }),
+        hazard("wc-star-02", "falling-star", 3290, 105, 46, 46, { interval: 2, telegraph: 0.72, phase: 1.2 }),
+        hazard("wc-spike-03", "crystal-spike", 4090, 588, 106, 32)
+      ],
+      enemies: [
+        enemy("wc-beetle-01", "fold-beetle", 1240, 566, 1210, 1640, { hp: 3, speed: 58 }),
+        enemy("wc-eye-01", "orbit-eye", 2470, 315, 2360, 2780, { hp: 3, yBob: 46, speed: 88 }),
+        enemy("wc-leech-01", "chrono-leech", 3690, 566, 3630, 4140, { hp: 4, speed: 76 }),
+        enemy("wc-eye-02", "star-siphon", 4440, 320, 4330, 4740, { hp: 3, yBob: 52, speed: 102 })
+      ],
+      collectibles: [
+        collectible("wc-seed-01", "memory-seed", 325, 430),
+        collectible("wc-seed-02", "memory-seed", 910, 420),
+        collectible("wc-heart-01", "heart", 1450, 370),
+        collectible("wc-seed-03", "memory-seed", 2070, 390),
+        collectible("wc-star", "star-charge", 2580, 310, { charges: 2 }),
+        collectible("wc-seed-04", "memory-seed", 3290, 420),
+        collectible("wc-heart-02", "heart", 3905, 360),
+        collectible("wc-seed-05", "memory-seed", 4640, 425)
+      ],
+      checkpoints: [
+        checkpoint("wc-check-01", 1215, 528, 1235, 536),
+        checkpoint("wc-check-02", 2375, 528, 2395, 536),
+        checkpoint("wc-check-03", 3635, 528, 3655, 536)
+      ],
+      mechanics: {
+        type: "starweight-balance",
+        weightBlocks: [
+          { id: "wc-weight-a1", group: "a", x: 245, y: 558, w: 54, h: 62, mass: 1, pushBy: "pulse", seatBy: "downstrike" },
+          { id: "wc-weight-a2", group: "a", x: 475, y: 546, w: 66, h: 74, mass: 1, pushBy: "pulse", seatBy: "downstrike" },
+          { id: "wc-weight-b1", group: "b", x: 1260, y: 558, w: 54, h: 62, mass: 1, pushBy: "pulse", seatBy: "downstrike" },
+          { id: "wc-weight-b2", group: "b", x: 1510, y: 546, w: 66, h: 74, mass: 2, pushBy: "pulse", seatBy: "downstrike" },
+          { id: "wc-weight-c1", group: "c", x: 2420, y: 558, w: 54, h: 62, mass: 1, pushBy: "pulse", seatBy: "downstrike" },
+          { id: "wc-weight-c2", group: "c", x: 2630, y: 546, w: 66, h: 74, mass: 2, pushBy: "pulse", seatBy: "downstrike" },
+          { id: "wc-weight-c3", group: "c", x: 2830, y: 534, w: 78, h: 86, mass: 3, pushBy: "pulse", seatBy: "downstrike" }
+        ],
+        weightSlots: [
+          { id: "wc-slot-a-left", group: "a", side: "left", x: 365, y: 585, w: 86, h: 35, capacity: 1, ejectBy: "pulse" },
+          { id: "wc-slot-a-right", group: "a", side: "right", x: 555, y: 585, w: 86, h: 35, capacity: 1, ejectBy: "pulse" },
+          { id: "wc-slot-b-left", group: "b", side: "left", x: 1340, y: 585, w: 92, h: 35, capacity: 1, ejectBy: "pulse" },
+          { id: "wc-slot-b-right", group: "b", side: "right", x: 1580, y: 585, w: 92, h: 35, capacity: 1, ejectBy: "pulse" },
+          { id: "wc-slot-c-left", group: "c", side: "left", x: 2470, y: 585, w: 110, h: 35, capacity: 2, ejectBy: "pulse" },
+          { id: "wc-slot-c-right", group: "c", side: "right", x: 2740, y: 585, w: 110, h: 35, capacity: 2, ejectBy: "pulse" }
+        ],
+        scaleBridges: [
+          { id: "wc-balance-a", platform: "wc-scale-bridge-a", leftSlot: "wc-slot-a-left", rightSlot: "wc-slot-a-right", minY: 350, maxY: 555, targetDelta: 0, tolerance: 0.15 },
+          { id: "wc-balance-b", platform: "wc-scale-bridge-b", leftSlot: "wc-slot-b-left", rightSlot: "wc-slot-b-right", minY: 315, maxY: 555, targetDelta: 1, tolerance: 0.15 },
+          { id: "wc-balance-c", platform: "wc-scale-bridge-c", leftSlot: "wc-slot-c-left", rightSlot: "wc-slot-c-right", minY: 300, maxY: 555, targetDelta: 0, tolerance: 0.15 }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 22,
+      key: "duplex-silhouette-harbor",
+      act: 6,
+      kind: "stage",
+      name: "双层剪影港",
+      nameEn: "DUPLEX SILHOUETTE HARBOR",
+      subtitle: "冲过纸缝，在两座港口之间换岸",
+      briefing: {
+        kicker: "STAGE 22 · SILHOUETTE",
+        title: "双层剪影港",
+        subtitle: "冲过纸缝，在两座港口之间换岸",
+        mechanic: "冲刺穿过发光裁切缝会在前景与背景之间换层；另一层的地面、敌人和危险只留下剪影。",
+        hint: "先看远处同色灯塔确认下一段落脚层。普通移动碰到裁切缝不会换层，必须用冲刺贯穿。"
+      },
+      theme: {
+        id: "duplex-silhouette-harbor",
+        palette: {
+          skyTop: "#071A2D",
+          skyBottom: "#B55F63",
+          ink: "#030A14",
+          paper: "#F2DFC5",
+          ground: "#344654",
+          groundDark: "#111C2A",
+          platform: "#7E8790",
+          accent: "#F0A85A",
+          accent2: "#5ED8D2",
+          danger: "#E44762",
+          fog: "#64596D"
+        },
+        material: "cut-paper-dock",
+        ambient: { type: "layered-paper-gulls", count: 48, speed: 0.7 },
+        landmark: { type: "double-lighthouse", x: 3380, y: 60, scale: 1.72, accent: "#5ED8D2" }
+      },
+      worldWidth: 5000,
+      worldHeight: WORLD_HEIGHT,
+      killY: 825,
+      camera: { mode: "follow", deadZoneX: 0.34, lookAhead: 160 },
+      spawn: { x: 90, y: 536, facing: 1 },
+      goal: { type: "rift-gate", x: 4815, y: 470, w: 96, h: 150, requires: "reach" },
+      platforms: [
+        platform("dh-shared-start", 0, 620, 610, 100, { material: "harbor-stone", lane: "both" }),
+        platform("dh-foreground-01", 610, 620, 590, 100, { material: "sunset-dock", lane: "foreground" }),
+        platform("dh-background-01", 610, 455, 590, 28, { kind: "one-way", material: "shadow-dock", lane: "background" }),
+        platform("dh-background-step-01", 970, 345, 175, 24, { kind: "one-way", material: "shadow-sail", lane: "background" }),
+        platform("dh-shared-island-01", 1200, 620, 430, 100, { material: "harbor-stone", lane: "both" }),
+        platform("dh-foreground-02", 1630, 475, 600, 28, { kind: "one-way", material: "sunset-dock", lane: "foreground" }),
+        platform("dh-background-02", 1630, 620, 600, 100, { material: "shadow-dock", lane: "background" }),
+        platform("dh-foreground-crane", 1880, 340, 180, 24, { kind: "moving", material: "sunset-sail", lane: "foreground", motion: { axis: "y", distance: 90, speed: 0.82, phase: 0.25 } }),
+        platform("dh-shared-island-02", 2230, 620, 470, 100, { material: "harbor-stone", lane: "both" }),
+        platform("dh-foreground-03", 2700, 620, 620, 100, { material: "sunset-dock", lane: "foreground" }),
+        platform("dh-background-03", 2700, 430, 620, 28, { kind: "one-way", material: "shadow-dock", lane: "background" }),
+        platform("dh-background-crane", 2960, 300, 180, 24, { kind: "moving", material: "shadow-sail", lane: "background", motion: { axis: "x", distance: 120, speed: 0.94, phase: 0.6 } }),
+        platform("dh-shared-island-03", 3320, 620, 520, 100, { material: "harbor-stone", lane: "both" }),
+        platform("dh-foreground-04", 3840, 455, 560, 28, { kind: "one-way", material: "sunset-dock", lane: "foreground" }),
+        platform("dh-background-04", 3840, 620, 560, 100, { material: "shadow-dock", lane: "background" }),
+        platform("dh-shared-end", 4400, 620, 600, 100, { material: "harbor-stone", lane: "both" }),
+        platform("dh-finish-step", 4610, 480, 180, 24, { kind: "one-way", material: "seam-brass", lane: "both" })
+      ],
+      hazards: [
+        hazard("dh-void-01", "star-void", 610, 665, 590, 55, { damage: 99, lane: "background" }),
+        hazard("dh-spike-01", "crystal-spike", 820, 588, 105, 32, { lane: "foreground" }),
+        hazard("dh-void-02", "star-void", 1630, 665, 600, 55, { damage: 99, lane: "foreground" }),
+        hazard("dh-spike-02", "crystal-spike", 1940, 588, 105, 32, { lane: "background" }),
+        hazard("dh-void-03", "star-void", 2700, 665, 620, 55, { damage: 99, lane: "background" }),
+        hazard("dh-spike-03", "crystal-spike", 2960, 588, 112, 32, { lane: "foreground" }),
+        hazard("dh-void-04", "star-void", 3840, 665, 560, 55, { damage: 99, lane: "foreground" }),
+        hazard("dh-spike-04", "crystal-spike", 4070, 588, 112, 32, { lane: "background" })
+      ],
+      enemies: [
+        enemy("dh-mimic-01", "mirror-mimic", 720, 566, 650, 1090, { hp: 3, speed: 72, lane: "foreground" }),
+        enemy("dh-eye-01", "orbit-eye", 980, 285, 740, 1160, { hp: 2, yBob: 48, speed: 88, lane: "background" }),
+        enemy("dh-spinner-01", "thread-spinner", 1760, 566, 1660, 2160, { hp: 3, speed: 70, lane: "background" }),
+        enemy("dh-wasp-01", "propeller-wasp", 1920, 285, 1680, 2180, { hp: 3, yBob: 46, speed: 100, lane: "foreground" }),
+        enemy("dh-mimic-02", "mirror-mimic", 2810, 566, 2740, 3240, { hp: 4, speed: 80, lane: "foreground" }),
+        enemy("dh-eye-02", "star-siphon", 3040, 260, 2770, 3260, { hp: 3, yBob: 54, speed: 104, lane: "background" }),
+        enemy("dh-spinner-02", "thread-spinner", 3940, 566, 3880, 4320, { hp: 4, speed: 78, lane: "background" })
+      ],
+      collectibles: [
+        collectible("dh-seed-01", "memory-seed", 330, 455),
+        collectible("dh-seed-02", "memory-seed", 1030, 285, { lane: "background" }),
+        collectible("dh-heart-01", "heart", 1900, 285, { lane: "foreground" }),
+        collectible("dh-seed-03", "memory-seed", 2450, 540),
+        collectible("dh-star", "star-charge", 3040, 245, { charges: 2, lane: "background" }),
+        collectible("dh-seed-04", "memory-seed", 3590, 540),
+        collectible("dh-heart-02", "heart", 4130, 540, { lane: "background" }),
+        collectible("dh-seed-05", "memory-seed", 4660, 425)
+      ],
+      checkpoints: [
+        checkpoint("dh-check-01", 1240, 528, 1260, 536),
+        checkpoint("dh-check-02", 2270, 528, 2290, 536),
+        checkpoint("dh-check-03", 3360, 528, 3380, 536),
+        checkpoint("dh-check-04", 4440, 528, 4460, 536)
+      ],
+      mechanics: {
+        type: "silhouette-lanes",
+        initialLane: "foreground",
+        lanes: [
+          { id: "foreground", depth: 1, opacity: 1, color: "#F0A85A" },
+          { id: "background", depth: 0, opacity: 0.66, color: "#5ED8D2" }
+        ],
+        seams: [
+          { id: "dh-seam-a", x: 540, y: 250, w: 78, h: 370, from: "foreground", to: "background", trigger: "dash" },
+          { id: "dh-seam-b", x: 1555, y: 235, w: 82, h: 385, from: "background", to: "foreground", trigger: "dash" },
+          { id: "dh-seam-c", x: 2625, y: 220, w: 82, h: 400, from: "foreground", to: "background", trigger: "dash" },
+          { id: "dh-seam-d", x: 3765, y: 230, w: 82, h: 390, from: "background", to: "foreground", trigger: "dash" }
+        ],
+        inactiveLane: { collision: false, enemyContact: false, opacity: 0.28 }
+      },
+      boss: null
+    },
+
+    {
+      id: 23,
+      key: "sproutstitch-meadow",
+      act: 6,
+      kind: "stage",
+      name: "芽纹绣原",
+      nameEn: "SPROUTSTITCH MEADOW",
+      subtitle: "把走过的弧线绣成下一次落脚",
+      briefing: {
+        kicker: "STAGE 23 · STITCH",
+        title: "芽纹绣原",
+        subtitle: "把走过的弧线绣成下一次落脚",
+        mechanic: "用脉冲点亮绣架后，最近数秒的移动轨迹会被记录；再次发射脉冲可把这条轨迹固化成临时纸桥。",
+        hint: "先借弹簧画出平缓的跳跃弧线，落地后再固化。轨迹太陡会变成难以站稳的纸阶。"
+      },
+      theme: {
+        id: "sproutstitch-meadow",
+        palette: {
+          skyTop: "#26475A",
+          skyBottom: "#E7C985",
+          ink: "#10212A",
+          paper: "#F7EBD2",
+          ground: "#56735D",
+          groundDark: "#2D4438",
+          platform: "#C39B69",
+          accent: "#F0B95A",
+          accent2: "#54CDBA",
+          danger: "#D95663",
+          fog: "#BAD0A8"
+        },
+        material: "embroidered-grass-paper",
+        ambient: { type: "thread-petals", count: 52, speed: 0.58 },
+        landmark: { type: "giant-embroidery-hoop", x: 3100, y: 52, scale: 1.8, accent: "#54CDBA" }
+      },
+      worldWidth: 5000,
+      worldHeight: WORLD_HEIGHT,
+      killY: 835,
+      camera: { mode: "follow", deadZoneX: 0.34, lookAhead: 165 },
+      spawn: { x: 92, y: 536, facing: 1 },
+      goal: {
+        type: "rift-gate",
+        x: 4810,
+        y: 470,
+        w: 96,
+        h: 150,
+        requires: { type: "woven-routes", count: 3, label: "芽纹纸桥" }
+      },
+      platforms: [
+        platform("sm-ground-01", 0, 620, 610, 100, { material: "stitch-meadow-earth" }),
+        platform("sm-spring-01", 440, 570, 145, 28, { kind: "spring", material: "thread-bloom", bounceY: -760 }),
+        platform("sm-island-01", 1210, 620, 600, 100, { material: "stitch-meadow-earth" }),
+        platform("sm-high-01", 1380, 420, 180, 24, { kind: "one-way", material: "embroidery-hoop" }),
+        platform("sm-spring-02", 1630, 570, 150, 28, { kind: "spring", material: "thread-bloom", bounceY: -810 }),
+        platform("sm-island-02", 2520, 620, 650, 100, { material: "stitch-meadow-earth" }),
+        platform("sm-high-02", 2700, 360, 190, 24, { kind: "one-way", material: "embroidery-hoop" }),
+        platform("sm-spring-03", 2980, 570, 155, 28, { kind: "spring", material: "thread-bloom", bounceY: -850 }),
+        platform("sm-island-03", 3980, 620, 520, 100, { material: "stitch-meadow-earth" }),
+        platform("sm-thread-lift", 4120, 390, 180, 24, { kind: "moving", material: "embroidery-hoop", motion: { axis: "y", distance: 115, speed: 0.78, phase: 0.45 } }),
+        platform("sm-ground-end", 4500, 620, 500, 100, { material: "stitch-meadow-earth" }),
+        platform("sm-finish-step", 4610, 480, 180, 24, { kind: "one-way", material: "embroidery-hoop" })
+      ],
+      hazards: [
+        hazard("sm-void-01", "star-void", 610, 665, 600, 55, { damage: 99 }),
+        hazard("sm-star-01", "falling-star", 900, 130, 44, 44, { interval: 2.5, telegraph: 0.82, phase: 0.3 }),
+        hazard("sm-spike-01", "crystal-spike", 1430, 588, 105, 32),
+        hazard("sm-void-02", "star-void", 1810, 665, 710, 55, { damage: 99 }),
+        hazard("sm-star-02", "falling-star", 2160, 105, 46, 46, { interval: 2.2, telegraph: 0.76, phase: 1.1 }),
+        hazard("sm-spike-02", "crystal-spike", 2760, 588, 110, 32),
+        hazard("sm-void-03", "star-void", 3170, 665, 810, 55, { damage: 99 }),
+        hazard("sm-star-03", "falling-star", 3560, 90, 48, 48, { interval: 1.9, telegraph: 0.7, phase: 0.7 }),
+        hazard("sm-spike-03", "crystal-spike", 4300, 588, 110, 32)
+      ],
+      enemies: [
+        enemy("sm-hopper-01", "seed-hopper", 1280, 566, 1240, 1710, { hp: 3, speed: 64 }),
+        enemy("sm-wasp-01", "propeller-wasp", 1510, 340, 1260, 1760, { hp: 3, yBob: 48, speed: 96 }),
+        enemy("sm-spinner-01", "thread-spinner", 2600, 566, 2560, 3070, { hp: 4, speed: 74 }),
+        enemy("sm-eye-01", "orbit-eye", 2790, 285, 2560, 3070, { hp: 3, yBob: 52, speed: 98 }),
+        enemy("sm-spinner-02", "thread-spinner", 4060, 566, 4020, 4430, { hp: 4, speed: 82 })
+      ],
+      collectibles: [
+        collectible("sm-seed-01", "memory-seed", 315, 445),
+        collectible("sm-seed-02", "memory-seed", 910, 370),
+        collectible("sm-heart-01", "heart", 1460, 365),
+        collectible("sm-seed-03", "memory-seed", 2160, 350),
+        collectible("sm-star", "star-charge", 2770, 300, { charges: 2 }),
+        collectible("sm-seed-04", "memory-seed", 3560, 330),
+        collectible("sm-heart-02", "heart", 4190, 330),
+        collectible("sm-seed-05", "memory-seed", 4680, 425)
+      ],
+      checkpoints: [
+        checkpoint("sm-check-01", 1250, 528, 1270, 536),
+        checkpoint("sm-check-02", 2560, 528, 2580, 536),
+        checkpoint("sm-check-03", 4020, 528, 4040, 536)
+      ],
+      mechanics: {
+        type: "trajectory-weave",
+        weaveRules: {
+          recordSeconds: 3.4,
+          sampleInterval: 0.08,
+          segmentLength: 54,
+          segmentThickness: 18,
+          lifetime: 9,
+          maxActiveBridges: 3,
+          solidifyBy: "pulse",
+          cancelOnDamage: true
+        },
+        looms: [
+          { id: "sm-loom-a", x: 500, y: 465, w: 62, h: 86, bridgeZone: { x: 590, y: 220, w: 640, h: 400 }, targetPlatform: "sm-island-01" },
+          { id: "sm-loom-b", x: 1695, y: 455, w: 62, h: 86, bridgeZone: { x: 1790, y: 160, w: 750, h: 460 }, targetPlatform: "sm-island-02" },
+          { id: "sm-loom-c", x: 3045, y: 445, w: 62, h: 86, bridgeZone: { x: 3150, y: 120, w: 850, h: 500 }, targetPlatform: "sm-island-03" }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 24,
+      key: "sky-paper-dragon",
+      act: 6,
+      kind: "boss",
+      name: "天穹纸龙",
+      nameEn: "SKY PAPER DRAGON",
+      subtitle: "沿着活着的书脊冲向天穹核心",
+      briefing: {
+        kicker: "BOSS 06 · SKYDRAGON",
+        title: "天穹纸龙",
+        subtitle: "沿着活着的书脊冲向天穹核心",
+        mechanic: "纸龙的身体就是移动关卡。攀上龙身，下砸三处结鳞，纸鳞会翻转成通往头冠核心的短暂跑道。",
+        hint: "每轮只需完成一次三结鳞机关并命中核心。三轮成功后战斗结束，不必反复磨损普通部位。"
+      },
+      theme: {
+        id: "sky-paper-dragon",
+        palette: {
+          skyTop: "#06142E",
+          skyBottom: "#6B4C83",
+          ink: "#020812",
+          paper: "#F5E5C9",
+          ground: "#313552",
+          groundDark: "#11152A",
+          platform: "#73708A",
+          accent: "#F2BE55",
+          accent2: "#55DCD1",
+          danger: "#ED4863",
+          fog: "#514E73"
+        },
+        material: "celestial-dragon-paper",
+        ambient: { type: "dragon-scale-comets", count: 60, speed: 0.9 },
+        landmark: { type: "sky-scroll-gate", x: 2360, y: 36, scale: 1.9, accent: "#F2BE55" }
+      },
+      worldWidth: 4200,
+      worldHeight: WORLD_HEIGHT,
+      killY: 850,
+      camera: { mode: "boss-lock", deadZoneX: 0.4, lookAhead: 95 },
+      spawn: { x: 92, y: 536, facing: 1 },
+      goal: { type: "world-core", x: 3940, y: 425, w: 126, h: 195, requires: "boss-defeated" },
+      platforms: [
+        platform("pd-ground-entry", 0, 620, 850, 100, { material: "sky-temple-stone" }),
+        platform("pd-entry-step", 330, 480, 190, 24, { kind: "one-way", material: "dragon-brass" }),
+        platform("pd-launch", 690, 550, 150, 28, { kind: "spring", material: "dragon-scale", bounceY: -820 }),
+        platform("pd-body-head", 1050, 430, 340, 34, { kind: "boss-body", material: "living-paper-scale", bossAttached: true, segment: "head" }),
+        platform("pd-body-neck", 1390, 365, 330, 32, { kind: "boss-body", material: "living-paper-scale", bossAttached: true, segment: "neck" }),
+        platform("pd-body-01", 1720, 440, 340, 32, { kind: "boss-body", material: "living-paper-scale", bossAttached: true, segment: "body-a" }),
+        platform("pd-body-02", 2060, 325, 340, 32, { kind: "boss-body", material: "living-paper-scale", bossAttached: true, segment: "body-b" }),
+        platform("pd-body-03", 2400, 420, 340, 32, { kind: "boss-body", material: "living-paper-scale", bossAttached: true, segment: "body-c" }),
+        platform("pd-body-04", 2740, 345, 340, 32, { kind: "boss-body", material: "living-paper-scale", bossAttached: true, segment: "body-d" }),
+        platform("pd-body-tail", 3080, 455, 320, 30, { kind: "boss-body", material: "living-paper-scale", bossAttached: true, segment: "tail" }),
+        platform("pd-arena-exit", 3500, 620, 700, 100, { material: "sky-temple-stone" }),
+        platform("pd-core-step", 3800, 490, 190, 24, { kind: "one-way", material: "dragon-brass" })
+      ],
+      hazards: [
+        hazard("pd-sky-void", "star-void", 850, 665, 2650, 55, { damage: 99 }),
+        hazard("pd-star-01", "falling-star", 1320, 90, 46, 46, { interval: 2.4, telegraph: 0.82, phase: 0.2 }),
+        hazard("pd-star-02", "falling-star", 2140, 70, 48, 48, { interval: 2.1, telegraph: 0.74, phase: 1.0 }),
+        hazard("pd-star-03", "falling-star", 2920, 85, 50, 50, { interval: 1.8, telegraph: 0.68, phase: 1.5 }),
+        hazard("pd-rift-left", "void-rift", 3620, 586, 120, 34),
+        hazard("pd-rift-right", "void-rift", 4010, 586, 120, 34)
+      ],
+      enemies: [
+        enemy("pd-wasp-01", "propeller-wasp", 1450, 260, 1180, 1760, { hp: 3, yBob: 50, speed: 102, spawnOnBossPhase: 2 }),
+        enemy("pd-eye-01", "star-siphon", 2520, 245, 2220, 2870, { hp: 3, yBob: 54, speed: 108, spawnOnBossPhase: 2 }),
+        enemy("pd-mimic-01", "mirror-mimic", 3650, 566, 3550, 3920, { hp: 4, speed: 84, spawnOnBossPhase: 3 })
+      ],
+      collectibles: [
+        collectible("pd-seed-01", "memory-seed", 365, 425),
+        collectible("pd-heart-entry", "heart", 735, 490),
+        collectible("pd-star-charge", "star-charge", 2220, 265, { charges: 2 }),
+        collectible("pd-heart-phase-03", "heart", 2980, 285, { spawnOnBossPhase: 3 }),
+        collectible("pd-core", "sky-dragon-core", 3990, 455, { quest: true, spawnOnBossDefeat: true })
+      ],
+      checkpoints: [checkpoint("pd-check-01", 790, 478, 810, 536)],
+      mechanics: {
+        type: "sky-paper-dragon",
+        arenaTrigger: { x: 850, lockLeft: 850, lockRight: 3500 },
+        exposureCycles: 3,
+        dragonRoute: {
+          centerX: 2240,
+          centerY: 360,
+          radiusX: 520,
+          radiusY: 135,
+          speed: 0.34,
+          phaseSpeedByCycle: [0.34, 0.46, 0.58]
+        },
+        bodyPlatforms: [
+          { platform: "pd-body-head", offsetX: -1190, offsetY: 70, phase: 0 },
+          { platform: "pd-body-neck", offsetX: -850, offsetY: 5, phase: 0.35 },
+          { platform: "pd-body-01", offsetX: -510, offsetY: 80, phase: 0.7 },
+          { platform: "pd-body-02", offsetX: -170, offsetY: -35, phase: 1.05 },
+          { platform: "pd-body-03", offsetX: 170, offsetY: 60, phase: 1.4 },
+          { platform: "pd-body-04", offsetX: 510, offsetY: -15, phase: 1.75 },
+          { platform: "pd-body-tail", offsetX: 850, offsetY: 95, phase: 2.1 }
+        ],
+        knotScales: [
+          { id: "pd-knot-a", platform: "pd-body-01", offsetX: 105, offsetY: -38, w: 64, h: 42, activation: "downstrike", order: 1 },
+          { id: "pd-knot-b", platform: "pd-body-02", offsetX: 138, offsetY: -38, w: 64, h: 42, activation: "downstrike", order: 2 },
+          { id: "pd-knot-c", platform: "pd-body-04", offsetX: 126, offsetY: -38, w: 64, h: 42, activation: "downstrike", order: 3 }
+        ],
+        scaleFlip: { duration: 4.5, runDirection: "head", resetKnotsAfterExposure: true }
+      },
+      boss: {
+        id: "sky-paper-dragon",
+        archetype: "sky-paper-dragon",
+        name: "天穹纸龙 · 星卷守门者",
+        hp: 3,
+        maxHealth: 3,
+        arena: { x: 850, y: 90, w: 2650, h: 530 },
+        spawn: { x: 2240, y: 255 },
+        body: { w: 1540, h: 270 },
+        weakPoint: { type: "sky-crown-core", offsetX: -690, offsetY: -65, vulnerableState: "knots-broken", damagePerHit: 1, maxHitsPerExposure: 1, exposedTime: 4.5 },
+        phases: [
+          { atHealth: 3, name: "游卷", requiredKnots: 3, routeSpeed: 0.34, attackCooldown: 2.2, starfallCount: 1 },
+          { atHealth: 2, name: "翻鳞", requiredKnots: 3, routeSpeed: 0.46, attackCooldown: 1.75, starfallCount: 2 },
+          { atHealth: 1, name: "天穹", requiredKnots: 3, routeSpeed: 0.58, attackCooldown: 1.3, starfallCount: 3 }
+        ],
+        mechanism: {
+          shielded: true,
+          bodyIsPlatform: true,
+          exposeBy: "three-knot-scales",
+          requiredKnots: 3,
+          exposureCycles: 3,
+          resetKnotsOnExposure: true,
+          defeatEffect: "open-sky-scroll"
+        }
+      }
+    },
+
+    {
+      id: 25,
+      key: "dewdrop-miniature-garden",
+      act: 7,
+      kind: "stage",
+      name: "露珠缩景园",
+      nameEn: "DEWDROP MINIATURE GARDEN",
+      subtitle: "换一种身量，走进纸叶背面",
+      briefing: {
+        kicker: "STAGE 25 · SCALE",
+        title: "露珠缩景园",
+        subtitle: "换一种身量，走进纸叶背面",
+        mechanic: "脉冲唤醒露镜，在小芽与巨芽之间切换；小芽穿过纤维窄缝，巨芽下砸击碎厚蜡壳。",
+        hint: "露镜只改变星芽，不改变世界。窄缝与蜡壳前后都留有安全的复原位置。"
+      },
+      theme: {
+        id: "dewdrop-miniature-garden",
+        palette: {
+          skyTop: "#315F68",
+          skyBottom: "#DCE8B8",
+          ink: "#0B2026",
+          paper: "#F4EDDA",
+          ground: "#5E7656",
+          groundDark: "#304638",
+          platform: "#C8B879",
+          accent: "#F4C45A",
+          accent2: "#72D6C9",
+          danger: "#E95A58",
+          fog: "#C5DDBE"
+        },
+        material: "dew-magnified-fiber-paper",
+        ambient: { type: "rolling-dew-prisms", count: 48, speed: 0.46 },
+        landmark: { type: "dewdrop-prism-tree", x: 3090, y: 46, scale: 1.82, accent: "#72D6C9" }
+      },
+      worldWidth: 5000,
+      worldHeight: WORLD_HEIGHT,
+      killY: 820,
+      camera: { mode: "follow", deadZoneX: 0.34, lookAhead: 155 },
+      spawn: { x: 92, y: 536, facing: 1 },
+      goal: { type: "rift-gate", x: 4810, y: 470, w: 96, h: 150, requires: "reach" },
+      platforms: [
+        platform("dg-ground-01", 0, 620, 980, 100, { material: "moss-fiber-earth" }),
+        platform("dg-canopy-01", 540, 455, 350, 48, { material: "pressed-leaf-canopy" }),
+        platform("dg-ledge-01", 930, 405, 175, 24, { kind: "one-way", material: "dew-brass" }),
+        platform("dg-ground-02", 1120, 620, 980, 100, { material: "moss-fiber-earth" }),
+        platform("dg-canopy-02", 1510, 450, 390, 52, { material: "pressed-leaf-canopy" }),
+        platform("dg-ledge-02", 1950, 365, 180, 24, { kind: "one-way", material: "dew-brass" }),
+        platform("dg-ground-03", 2240, 620, 1000, 100, { material: "moss-fiber-earth" }),
+        platform("dg-canopy-03", 2580, 445, 420, 54, { material: "pressed-leaf-canopy" }),
+        platform("dg-ledge-03", 3080, 350, 185, 24, { kind: "one-way", material: "dew-brass" }),
+        platform("dg-ground-04", 3380, 620, 920, 100, { material: "moss-fiber-earth" }),
+        platform("dg-canopy-04", 3580, 452, 400, 50, { material: "pressed-leaf-canopy" }),
+        platform("dg-ledge-04", 4150, 390, 180, 24, { kind: "one-way", material: "dew-brass" }),
+        platform("dg-ground-05", 4420, 620, 580, 100, { material: "moss-fiber-earth" }),
+        platform("dg-finish-step", 4610, 480, 180, 24, { kind: "one-way", material: "dew-brass" })
+      ],
+      hazards: [
+        hazard("dg-pit-01", "fall", 980, 665, 140, 55, { damage: 99 }),
+        hazard("dg-press-01", "paper-press", 1810, 260, 92, 360, { telegraph: 0.78, on: 0.8, off: 1.5, phase: 0.2 }),
+        hazard("dg-pit-02", "fall", 2100, 665, 140, 55, { damage: 99 }),
+        hazard("dg-thorn-01", "crystal-spike", 2760, 588, 105, 32),
+        hazard("dg-pit-03", "fall", 3240, 665, 140, 55, { damage: 99 }),
+        hazard("dg-press-02", "paper-press", 3850, 250, 98, 370, { telegraph: 0.7, on: 0.72, off: 1.25, phase: 0.8 }),
+        hazard("dg-pit-04", "fall", 4300, 665, 120, 55, { damage: 99 })
+      ],
+      enemies: [
+        enemy("dg-lens-beetle-01", "lens-beetle", 760, 566, 690, 920, { hp: 2, speed: 54 }),
+        enemy("dg-spinner-01", "thread-spinner", 1260, 566, 1160, 1470, { hp: 3, speed: 64 }),
+        enemy("dg-lens-beetle-02", "lens-beetle", 2320, 566, 2280, 2550, { hp: 3, speed: 62 }),
+        enemy("dg-siphon-01", "star-siphon", 3060, 285, 2780, 3190, { hp: 3, yBob: 48, speed: 98 }),
+        enemy("dg-lens-beetle-03", "lens-beetle", 3480, 566, 3420, 3770, { hp: 3, speed: 70 }),
+        enemy("dg-spinner-02", "thread-spinner", 4480, 566, 4440, 4740, { hp: 4, speed: 76 })
+      ],
+      collectibles: [
+        collectible("dg-seed-01", "memory-seed", 330, 445),
+        collectible("dg-seed-02", "memory-seed", 820, 395),
+        collectible("dg-heart-01", "heart", 1320, 520),
+        collectible("dg-seed-03", "memory-seed", 2010, 310),
+        collectible("dg-star", "star-charge", 2660, 390, { charges: 2 }),
+        collectible("dg-seed-04", "memory-seed", 3170, 295),
+        collectible("dg-heart-02", "heart", 4050, 350),
+        collectible("dg-seed-05", "memory-seed", 4680, 425)
+      ],
+      checkpoints: [
+        checkpoint("dg-check-01", 1160, 528, 1180, 536),
+        checkpoint("dg-check-02", 2280, 528, 2300, 536),
+        checkpoint("dg-check-03", 3420, 528, 3440, 536),
+        checkpoint("dg-check-04", 4450, 528, 4470, 536)
+      ],
+      mechanics: {
+        type: "scale-lenses",
+        initialForm: "giant",
+        forms: {
+          small: {
+            label: "小芽",
+            scale: 0.62,
+            widthScale: 0.68,
+            heightScale: 0.58,
+            moveSpeedMultiplier: 1.12,
+            jumpMultiplier: 1.04,
+            canBreakWax: false
+          },
+          giant: {
+            label: "巨芽",
+            scale: 1.22,
+            widthScale: 1.14,
+            heightScale: 1.2,
+            moveSpeedMultiplier: 0.9,
+            jumpMultiplier: 0.92,
+            canBreakWax: true
+          }
+        },
+        lenses: [
+          { id: "dg-lens-a", x: 380, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" },
+          { id: "dg-lens-b", x: 920, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" },
+          { id: "dg-lens-c", x: 1360, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" },
+          { id: "dg-lens-d", x: 2030, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" },
+          { id: "dg-lens-e", x: 2440, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" },
+          { id: "dg-lens-f", x: 3210, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" },
+          { id: "dg-lens-g", x: 3470, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" },
+          { id: "dg-lens-h", x: 4290, y: 500, w: 62, h: 92, activation: "pulse", mode: "toggle" }
+        ],
+        narrowPassages: [
+          { id: "dg-narrow-a", x: 540, y: 503, w: 350, h: 117, requiredForm: "small", clearance: 102 },
+          { id: "dg-narrow-b", x: 1510, y: 502, w: 390, h: 118, requiredForm: "small", clearance: 104 },
+          { id: "dg-narrow-c", x: 3580, y: 502, w: 400, h: 118, requiredForm: "small", clearance: 103 }
+        ],
+        waxSeals: [
+          { id: "dg-wax-a", x: 1140, y: 454, w: 54, h: 166, requiredForm: "giant", activation: "downstrike", hp: 1 },
+          { id: "dg-wax-b", x: 2260, y: 446, w: 58, h: 174, requiredForm: "giant", activation: "downstrike", hp: 1 },
+          { id: "dg-wax-c", x: 3400, y: 438, w: 60, h: 182, requiredForm: "giant", activation: "downstrike", hp: 1 },
+          { id: "dg-wax-d", x: 4440, y: 448, w: 56, h: 172, requiredForm: "giant", activation: "downstrike", hp: 1 }
+        ],
+        transitionFreeze: 0.2,
+        safeMargin: 18
+      },
+      boss: null
+    },
+
+    {
+      id: 26,
+      key: "cometline-switchyard",
+      act: 7,
+      kind: "stage",
+      name: "彗线换轨站",
+      nameEn: "COMETLINE SWITCHYARD",
+      subtitle: "离开轨道，才能选对下一条路",
+      briefing: {
+        kicker: "STAGE 26 · RAIL",
+        title: "彗线换轨站",
+        subtitle: "离开轨道，才能选对下一条路",
+        mechanic: "跳上轨车沿彗线滑行；左右选择岔道，跳跃脱轨，冲刺加速并撕开轨上星丝。",
+        hint: "岔口会提前亮起方向旗。依次停靠三座星站后，终点车库才会开启。"
+      },
+      theme: {
+        id: "cometline-switchyard",
+        palette: {
+          skyTop: "#081B34",
+          skyBottom: "#715777",
+          ink: "#040B18",
+          paper: "#F4E7D0",
+          ground: "#394459",
+          groundDark: "#171D30",
+          platform: "#9B7656",
+          accent: "#F4C057",
+          accent2: "#50D7CF",
+          danger: "#EB5263",
+          fog: "#5D5871"
+        },
+        material: "quilled-comet-foil",
+        ambient: { type: "rail-sparks-and-tickets", count: 56, speed: 1.08 },
+        landmark: { type: "comet-sorting-wheel", x: 3230, y: 42, scale: 1.86, accent: "#F4C057" }
+      },
+      worldWidth: 5200,
+      worldHeight: WORLD_HEIGHT,
+      killY: 850,
+      camera: { mode: "follow", deadZoneX: 0.32, lookAhead: 185 },
+      spawn: { x: 96, y: 536, facing: 1 },
+      goal: {
+        type: "rail-depot",
+        x: 5000,
+        y: 445,
+        w: 112,
+        h: 175,
+        requires: { type: "rail-stations", count: 3, label: "彗线星站" }
+      },
+      platforms: [
+        platform("cr-ground-start", 0, 620, 760, 100, { material: "switchyard-stone" }),
+        platform("cr-launch-deck", 430, 485, 210, 24, { kind: "one-way", material: "rail-brass" }),
+        platform("cr-station-west", 1180, 620, 650, 100, { material: "switchyard-stone" }),
+        platform("cr-station-west-high", 1410, 390, 230, 26, { kind: "one-way", material: "station-foil" }),
+        platform("cr-station-crown", 2240, 620, 700, 100, { material: "switchyard-stone" }),
+        platform("cr-station-crown-high", 2530, 325, 240, 26, { kind: "one-way", material: "station-foil" }),
+        platform("cr-station-east", 3360, 620, 720, 100, { material: "switchyard-stone" }),
+        platform("cr-station-east-high", 3690, 405, 230, 26, { kind: "one-way", material: "station-foil" }),
+        platform("cr-depot-ground", 4500, 620, 700, 100, { material: "switchyard-stone" }),
+        platform("cr-depot-step", 4770, 490, 190, 24, { kind: "one-way", material: "rail-brass" })
+      ],
+      hazards: [
+        hazard("cr-void-01", "star-void", 760, 665, 420, 55, { damage: 99 }),
+        hazard("cr-rail-saw-01", "saw-gear", 1710, 548, 76, 72, { radius: 36, angularSpeed: 3.1 }),
+        hazard("cr-void-02", "star-void", 1830, 665, 410, 55, { damage: 99 }),
+        hazard("cr-star-01", "falling-star", 2690, 110, 46, 46, { interval: 2.2, telegraph: 0.76, phase: 0.4 }),
+        hazard("cr-void-03", "star-void", 2940, 665, 420, 55, { damage: 99 }),
+        hazard("cr-rail-saw-02", "saw-gear", 3930, 548, 78, 72, { radius: 37, angularSpeed: -3.4 }),
+        hazard("cr-void-04", "star-void", 4080, 665, 420, 55, { damage: 99 }),
+        hazard("cr-star-02", "falling-star", 4620, 120, 48, 48, { interval: 1.9, telegraph: 0.68, phase: 1.1 })
+      ],
+      enemies: [
+        enemy("cr-wisp-01", "rail-wisp", 930, 350, 800, 1120, { hp: 2, yBob: 52, speed: 98 }),
+        enemy("cr-spinner-01", "thread-spinner", 1270, 566, 1210, 1740, { hp: 3, speed: 70 }),
+        enemy("cr-wisp-02", "rail-wisp", 2050, 285, 1870, 2260, { hp: 3, yBob: 48, speed: 108 }),
+        enemy("cr-drummer-01", "thunder-drummer", 2360, 566, 2280, 2860, { hp: 4, speed: 64 }),
+        enemy("cr-wisp-03", "rail-wisp", 3180, 260, 2990, 3370, { hp: 3, yBob: 56, speed: 116 }),
+        enemy("cr-wasp-01", "propeller-wasp", 3740, 330, 3440, 4020, { hp: 3, yBob: 46, speed: 106 }),
+        enemy("cr-spinner-02", "thread-spinner", 4590, 566, 4530, 4880, { hp: 4, speed: 78 })
+      ],
+      collectibles: [
+        collectible("cr-seed-01", "memory-seed", 340, 445),
+        collectible("cr-seed-02", "memory-seed", 1020, 310),
+        collectible("cr-heart-01", "heart", 1510, 335),
+        collectible("cr-seed-03", "memory-seed", 2110, 260),
+        collectible("cr-star", "star-charge", 2670, 270, { charges: 2 }),
+        collectible("cr-seed-04", "memory-seed", 3220, 260),
+        collectible("cr-heart-02", "heart", 3800, 350),
+        collectible("cr-seed-05", "memory-seed", 4740, 425)
+      ],
+      checkpoints: [
+        checkpoint("cr-check-01", 1210, 528, 1230, 536),
+        checkpoint("cr-check-02", 2280, 528, 2300, 536),
+        checkpoint("cr-check-03", 3400, 528, 3420, 536),
+        checkpoint("cr-check-04", 4540, 528, 4560, 536)
+      ],
+      mechanics: {
+        type: "comet-rails",
+        attachRadius: 54,
+        rideSpeed: 360,
+        dashSpeed: 560,
+        detachVelocityY: -510,
+        junctionLeadTime: 0.8,
+        rescueSnapDistance: 92,
+        rails: [
+          {
+            id: "cr-rail-start",
+            points: [{ x: 570, y: 485 }, { x: 900, y: 390 }, { x: 1260, y: 440 }, { x: 1540, y: 390 }],
+            next: ["cr-rail-high", "cr-rail-low"]
+          },
+          {
+            id: "cr-rail-high",
+            points: [{ x: 1540, y: 390 }, { x: 1900, y: 245 }, { x: 2320, y: 330 }, { x: 2660, y: 325 }],
+            next: ["cr-rail-crown"]
+          },
+          {
+            id: "cr-rail-low",
+            points: [{ x: 1540, y: 390 }, { x: 1910, y: 515 }, { x: 2260, y: 455 }, { x: 2660, y: 325 }],
+            next: ["cr-rail-crown"]
+          },
+          {
+            id: "cr-rail-crown",
+            points: [{ x: 2660, y: 325 }, { x: 3020, y: 220 }, { x: 3420, y: 360 }, { x: 3780, y: 405 }],
+            next: ["cr-rail-east", "cr-rail-loop"]
+          },
+          {
+            id: "cr-rail-loop",
+            points: [{ x: 3780, y: 405 }, { x: 3520, y: 515 }, { x: 3180, y: 470 }, { x: 3420, y: 360 }],
+            next: ["cr-rail-east"]
+          },
+          {
+            id: "cr-rail-east",
+            points: [{ x: 3780, y: 405 }, { x: 4140, y: 275 }, { x: 4540, y: 390 }, { x: 4880, y: 490 }],
+            next: []
+          }
+        ],
+        carts: [
+          { id: "cr-cart-a", rail: "cr-rail-start", progress: 0.05, direction: 1, speed: 330, w: 122, h: 28 },
+          { id: "cr-cart-b", rail: "cr-rail-high", progress: 0.25, direction: 1, speed: 350, w: 118, h: 28 },
+          { id: "cr-cart-c", rail: "cr-rail-low", progress: 0.65, direction: -1, speed: 340, w: 118, h: 28 },
+          { id: "cr-cart-d", rail: "cr-rail-crown", progress: 0.35, direction: 1, speed: 370, w: 124, h: 28 },
+          { id: "cr-cart-e", rail: "cr-rail-east", progress: 0.15, direction: 1, speed: 390, w: 124, h: 28 }
+        ],
+        junctions: [
+          {
+            id: "cr-junction-a",
+            x: 1490,
+            y: 330,
+            w: 100,
+            h: 130,
+            incoming: "cr-rail-start",
+            options: [
+              { input: "up", rail: "cr-rail-high" },
+              { input: "down", rail: "cr-rail-low" }
+            ]
+          },
+          {
+            id: "cr-junction-b",
+            x: 3730,
+            y: 345,
+            w: 110,
+            h: 130,
+            incoming: "cr-rail-crown",
+            options: [
+              { input: "forward", rail: "cr-rail-east" },
+              { input: "down", rail: "cr-rail-loop" }
+            ]
+          }
+        ],
+        stations: [
+          { id: "cr-station-west", label: "西弦站", x: 1410, y: 352, w: 230, h: 96, rail: "cr-rail-start", required: true },
+          { id: "cr-station-crown", label: "天冠站", x: 2530, y: 287, w: 240, h: 96, rail: "cr-rail-crown", required: true },
+          { id: "cr-station-east", label: "东辉站", x: 3690, y: 367, w: 230, h: 96, rail: "cr-rail-east", required: true }
+        ]
+      },
+      boss: null
+    },
+
+    {
+      id: 27,
+      key: "hidden-lantern-silhouette-city",
+      act: 7,
+      kind: "stage",
+      name: "藏灯剪影城",
+      nameEn: "HIDDEN-LANTERN SILHOUETTE CITY",
+      subtitle: "不要熄灭光，借影子穿过它",
+      briefing: {
+        kicker: "STAGE 27 · SHADOW",
+        title: "藏灯剪影城",
+        subtitle: "不要熄灭光，借影子穿过它",
+        mechanic: "巡灯光锥会累积暴露；躲在纸屏投下的阴影里，用脉冲移动屏风，找回三枚影钥。",
+        hint: "从中央灯门向两侧探索，影钥集齐后必须回到中央。青色地纹标出不会被巡灯照到的安全区。"
+      },
+      theme: {
+        id: "hidden-lantern-silhouette-city",
+        palette: {
+          skyTop: "#071126",
+          skyBottom: "#443657",
+          ink: "#020711",
+          paper: "#EFE1C8",
+          ground: "#303747",
+          groundDark: "#111625",
+          platform: "#6F6875",
+          accent: "#F0B958",
+          accent2: "#55D9D0",
+          danger: "#E54A5F",
+          fog: "#4D455D"
+        },
+        material: "vellum-and-black-lacquer",
+        ambient: { type: "moving-cutout-shadows", count: 44, speed: 0.34 },
+        landmark: { type: "rotating-lantern-tower", x: 2520, y: 34, scale: 1.92, accent: "#F0B958" }
+      },
+      worldWidth: 5000,
+      worldHeight: WORLD_HEIGHT,
+      killY: 820,
+      camera: { mode: "follow", deadZoneX: 0.36, lookAhead: 135 },
+      spawn: { x: 2460, y: 536, facing: -1 },
+      goal: {
+        type: "lantern-gate",
+        x: 2420,
+        y: 438,
+        w: 150,
+        h: 182,
+        requires: { type: "collect", itemType: "shadow-key", count: 3, label: "影钥", submit: true }
+      },
+      platforms: [
+        platform("ls-ground-west", 0, 620, 1080, 100, { material: "lantern-city-stone" }),
+        platform("ls-west-awning", 330, 430, 230, 24, { kind: "one-way", material: "lacquer-awning" }),
+        platform("ls-west-roof", 720, 345, 210, 24, { kind: "one-way", material: "vellum-roof" }),
+        platform("ls-ground-mid-west", 1180, 620, 1120, 100, { material: "lantern-city-stone" }),
+        platform("ls-mid-west-awning", 1420, 455, 220, 24, { kind: "one-way", material: "lacquer-awning" }),
+        platform("ls-central-ground", 2300, 620, 400, 100, { material: "lantern-sanctuary" }),
+        platform("ls-central-step-west", 2300, 500, 130, 22, { kind: "one-way", material: "lantern-brass" }),
+        platform("ls-central-step-east", 2570, 500, 130, 22, { kind: "one-way", material: "lantern-brass" }),
+        platform("ls-central-balcony", 2390, 355, 220, 24, { kind: "one-way", material: "lantern-brass" }),
+        platform("ls-ground-mid-east", 2700, 620, 1120, 100, { material: "lantern-city-stone" }),
+        platform("ls-mid-east-awning", 3280, 440, 220, 24, { kind: "one-way", material: "lacquer-awning" }),
+        platform("ls-ground-east", 3920, 620, 1080, 100, { material: "lantern-city-stone" }),
+        platform("ls-east-roof", 4090, 350, 210, 24, { kind: "one-way", material: "vellum-roof" }),
+        platform("ls-east-awning", 4510, 435, 230, 24, { kind: "one-way", material: "lacquer-awning" })
+      ],
+      hazards: [
+        hazard("ls-thorn-west", "crystal-spike", 980, 588, 92, 32),
+        hazard("ls-gap-west", "star-void", 1080, 665, 100, 55, { damage: 99 }),
+        hazard("ls-rift-west", "void-rift", 1740, 586, 120, 34),
+        hazard("ls-rift-east", "void-rift", 3140, 586, 120, 34),
+        hazard("ls-gap-east", "star-void", 3820, 665, 100, 55, { damage: 99 }),
+        hazard("ls-thorn-east", "crystal-spike", 3940, 588, 92, 32)
+      ],
+      enemies: [
+        enemy("ls-heron-west", "lantern-heron", 520, 300, 260, 910, { hp: 3, yBob: 42, speed: 84 }),
+        enemy("ls-mimic-west", "mirror-mimic", 1300, 566, 1210, 1690, { hp: 4, speed: 76 }),
+        enemy("ls-heron-crown", "lantern-heron", 2440, 275, 2240, 2740, { hp: 3, yBob: 50, speed: 92 }),
+        enemy("ls-siphon-east", "star-siphon", 3370, 300, 3100, 3720, { hp: 3, yBob: 52, speed: 102 }),
+        enemy("ls-heron-east", "lantern-heron", 4480, 300, 4070, 4800, { hp: 4, yBob: 46, speed: 98 })
+      ],
+      collectibles: [
+        collectible("ls-seed-west", "memory-seed", 260, 445),
+        collectible("ls-key-west", "shadow-key", 480, 375, { quest: true, order: 1, label: "影钥", badge: "影" }),
+        collectible("ls-heart-west", "heart", 1460, 400),
+        collectible("ls-key-crown", "shadow-key", 2495, 295, { quest: true, order: 2, label: "影钥", badge: "影" }),
+        collectible("ls-star", "star-charge", 3350, 380, { charges: 2 }),
+        collectible("ls-key-east", "shadow-key", 4580, 380, { quest: true, order: 3, label: "影钥", badge: "影" }),
+        collectible("ls-seed-east", "memory-seed", 4780, 445)
+      ],
+      checkpoints: [
+        checkpoint("ls-check-center", 2360, 528, 2440, 536, { activation: "proximity", radius: 180 }),
+        checkpoint("ls-check-west", 1180, 528, 1200, 536, { activation: "proximity", radius: 150 }),
+        checkpoint("ls-check-east", 3800, 528, 3780, 536, { activation: "proximity", radius: 150 })
+      ],
+      mechanics: {
+        type: "lantern-shadow",
+        collisionWorld: "single",
+        centralGate: { id: "ls-central-gate", x: 2420, y: 438, w: 150, h: 182 },
+        exposure: {
+          grace: 1.2,
+          damageInterval: 1.1,
+          damage: 1,
+          decayPerSecond: 1.8,
+          safeEdgeColor: "#55D9D0"
+        },
+        searchlights: [
+          { id: "ls-light-west", x: 760, y: 110, w: 90, h: 90, pivotX: 805, pivotY: 155, radius: 720, angleMin: 0.35, angleMax: 2.55, sweepPeriod: 7.4, phase: 0.15, warning: 0.75 },
+          { id: "ls-light-mid-west", x: 1650, y: 95, w: 88, h: 88, pivotX: 1694, pivotY: 139, radius: 690, angleMin: 0.5, angleMax: 2.65, sweepPeriod: 6.7, phase: 0.62, warning: 0.72 },
+          { id: "ls-light-crown", x: 2455, y: 75, w: 96, h: 96, pivotX: 2503, pivotY: 123, radius: 760, angleMin: 0.25, angleMax: 2.85, sweepPeriod: 8.2, phase: 0.35, warning: 0.8 },
+          { id: "ls-light-mid-east", x: 3290, y: 95, w: 88, h: 88, pivotX: 3334, pivotY: 139, radius: 690, angleMin: 0.5, angleMax: 2.65, sweepPeriod: 6.5, phase: 0.08, warning: 0.7 },
+          { id: "ls-light-east", x: 4170, y: 110, w: 90, h: 90, pivotX: 4215, pivotY: 155, radius: 720, angleMin: 0.35, angleMax: 2.55, sweepPeriod: 7.1, phase: 0.78, warning: 0.74 }
+        ],
+        screens: [
+          { id: "ls-screen-a", x: 890, y: 350, w: 84, h: 270, axis: "x", min: 820, max: 1080, step: 130, activation: "pulse", occludes: true },
+          { id: "ls-screen-b", x: 1870, y: 330, w: 92, h: 290, axis: "x", min: 1740, max: 2070, step: 165, activation: "pulse", occludes: true },
+          { id: "ls-screen-c", x: 2790, y: 330, w: 92, h: 290, axis: "x", min: 2730, max: 3060, step: 165, activation: "pulse", occludes: true },
+          { id: "ls-screen-d", x: 4030, y: 350, w: 84, h: 270, axis: "x", min: 3920, max: 4180, step: 130, activation: "pulse", occludes: true }
+        ],
+        shadowKeys: ["ls-key-west", "ls-key-crown", "ls-key-east"]
+      },
+      boss: null
+    },
+
+    {
+      id: 28,
+      key: "grand-cadence-theater",
+      act: 7,
+      kind: "boss",
+      finale: true,
+      name: "万籁终演场",
+      nameEn: "GRAND CADENCE THEATER",
+      subtitle: "把夺回的星片奏成最后一击",
+      briefing: {
+        kicker: "BOSS 07 · SCOREWING",
+        title: "谱翼指挥蛾",
+        subtitle: "把夺回的星片奏成最后一击",
+        mechanic: "用脉冲捕获飞来的星片并储存在芽芯中；蓄满后冲刺，把星片齐射回谱翼指挥蛾。",
+        hint: "三个阶段分别要储存一、二、三枚星片。未蓄满时冲刺只用于闪避，不会浪费已经捕获的星片。"
+      },
+      theme: {
+        id: "grand-cadence-theater",
+        palette: {
+          skyTop: "#090F26",
+          skyBottom: "#6A3F61",
+          ink: "#030711",
+          paper: "#F5E6CD",
+          ground: "#3B354B",
+          groundDark: "#171326",
+          platform: "#8C6873",
+          accent: "#F3BE55",
+          accent2: "#58DAD0",
+          danger: "#EC4661",
+          fog: "#55425F"
+        },
+        material: "embossed-score-paper-and-foil",
+        ambient: { type: "floating-score-shards", count: 64, speed: 0.76 },
+        landmark: { type: "metronome-moon-stage", x: 2320, y: 28, scale: 1.96, accent: "#F3BE55" }
+      },
+      worldWidth: 4000,
+      worldHeight: WORLD_HEIGHT,
+      killY: 820,
+      camera: { mode: "boss-lock", deadZoneX: 0.42, lookAhead: 90 },
+      spawn: { x: 92, y: 536, facing: 1 },
+      goal: { type: "world-core", x: 3740, y: 425, w: 126, h: 195, requires: "boss-defeated" },
+      platforms: [
+        platform("ma-ground-entry", 0, 620, 760, 100, { material: "theater-stone" }),
+        platform("ma-entry-step", 320, 480, 190, 24, { kind: "one-way", material: "score-brass" }),
+        platform("ma-entry-bridge", 760, 555, 300, 65, { material: "score-spine" }),
+        platform("ma-arena-floor", 1060, 620, 2340, 100, { material: "theater-stage" }),
+        platform("ma-perch-left", 1290, 405, 190, 24, { kind: "one-way", material: "score-brass" }),
+        platform("ma-perch-mid-left", 1710, 330, 180, 24, { kind: "one-way", material: "score-brass" }),
+        platform("ma-center-dais", 2130, 490, 240, 28, { kind: "one-way", material: "conductor-foil" }),
+        platform("ma-perch-mid-right", 2610, 330, 180, 24, { kind: "one-way", material: "score-brass" }),
+        platform("ma-perch-right", 3020, 405, 190, 24, { kind: "one-way", material: "score-brass" }),
+        platform("ma-ground-exit", 3400, 620, 600, 100, { material: "theater-stone" }),
+        platform("ma-core-step", 3640, 490, 190, 24, { kind: "one-way", material: "score-brass" })
+      ],
+      hazards: [
+        hazard("ma-void-entry", "star-void", 760, 665, 300, 55, { damage: 99 }),
+        hazard("ma-rift-left", "void-rift", 1370, 586, 120, 34),
+        hazard("ma-rift-mid-left", "void-rift", 1840, 586, 120, 34),
+        hazard("ma-rift-mid-right", "void-rift", 2540, 586, 120, 34),
+        hazard("ma-rift-right", "void-rift", 3010, 586, 120, 34),
+        hazard("ma-star-01", "falling-star", 1570, 100, 46, 46, { interval: 2.3, telegraph: 0.8, phase: 0.25 }),
+        hazard("ma-star-02", "falling-star", 2860, 90, 48, 48, { interval: 2.0, telegraph: 0.72, phase: 1.0 })
+      ],
+      enemies: [
+        enemy("ma-wisp-01", "rail-wisp", 1480, 300, 1250, 1780, { hp: 3, yBob: 50, speed: 104, spawnOnBossPhase: 2 }),
+        enemy("ma-heron-01", "lantern-heron", 2870, 285, 2600, 3200, { hp: 4, yBob: 48, speed: 96, spawnOnBossPhase: 3 })
+      ],
+      collectibles: [
+        collectible("ma-seed-01", "memory-seed", 360, 425),
+        collectible("ma-heart-entry", "heart", 910, 505),
+        collectible("ma-star-charge", "star-charge", 2220, 430, { charges: 2 }),
+        collectible("ma-heart-phase-03", "heart", 3060, 350, { spawnOnBossPhase: 3 }),
+        collectible("ma-core", "scorewing-core", 3800, 455, { quest: true, spawnOnBossDefeat: true })
+      ],
+      checkpoints: [checkpoint("ma-check-01", 980, 478, 1000, 536)],
+      mechanics: {
+        type: "scorewing-maestro",
+        arenaTrigger: { x: 1060, lockLeft: 1060, lockRight: 3400 },
+        shardRules: {
+          captureBy: "pulse",
+          storeBy: "automatic",
+          releaseBy: "dash",
+          releaseMode: "stored-volley",
+          requiredByPhase: [1, 2, 3],
+          storeLimitByPhase: [1, 2, 3],
+          captureRadius: 54,
+          captureWindow: 0.72,
+          shardLifetime: 5.5,
+          volleySpeed: 920,
+          volleyWindow: 2.8,
+          keepStoredOnEarlyDash: true,
+          resetOnVolleyHit: true
+        },
+        emitters: [
+          { id: "ma-emitter-left", x: 1280, y: 190, direction: 1, interval: 2.4, phase: 0.15 },
+          { id: "ma-emitter-crown", x: 2190, y: 125, direction: 0, interval: 2.15, phase: 0.65 },
+          { id: "ma-emitter-right", x: 3160, y: 190, direction: -1, interval: 2.3, phase: 1.1 }
+        ],
+        volleyLanes: [
+          { id: "ma-lane-low", y: 525, h: 58 },
+          { id: "ma-lane-mid", y: 385, h: 58 },
+          { id: "ma-lane-high", y: 245, h: 58 }
+        ]
+      },
+      boss: {
+        id: "scorewing-maestro",
+        archetype: "scorewing-maestro",
+        name: "谱翼指挥蛾 · 未写终曲",
+        hp: 3,
+        maxHealth: 3,
+        arena: { x: 1060, y: 100, w: 2340, h: 520 },
+        spawn: { x: 2230, y: 210 },
+        body: { w: 220, h: 186 },
+        weakPoint: {
+          type: "cadence-heart",
+          vulnerableState: "stored-volley-impact",
+          damagePerHit: 1,
+          maxHitsPerVolley: 1,
+          exposedTime: 1.2
+        },
+        phases: [
+          { atHealth: 3, name: "启拍", captureRequired: 1, shardSpeed: 250, shardInterval: 2.4, attackCooldown: 2.2 },
+          { atHealth: 2, name: "复调", captureRequired: 2, shardSpeed: 305, shardInterval: 1.9, attackCooldown: 1.75 },
+          { atHealth: 1, name: "终曲", captureRequired: 3, shardSpeed: 360, shardInterval: 1.45, attackCooldown: 1.3 }
+        ],
+        mechanism: {
+          shielded: true,
+          exposeBy: "captured-shard-dash-volley",
+          counterBy: "capture-store-dash-volley",
+          captureAction: "pulse",
+          releaseAction: "dash",
+          requiredByPhase: [1, 2, 3],
+          directVolleyDamage: 1,
+          resetStoredShardsOnHit: true,
+          defeatEffect: "write-final-cadence"
+        }
+      }
     }
   ];
 
@@ -2329,7 +3768,7 @@
   }
 
   window.StarSproutLevels = {
-    version: 4,
+    version: 7,
     schema: {
       coordinateSystem: "1280x720 logical canvas; x grows right, y grows down",
       level: [
@@ -2357,9 +3796,12 @@
         "boss"
       ],
       entityRect: "x, y, w, h use world pixels; platform y is its top edge",
-      goalRequirement: "requires may be a legacy string or { type: 'collect', itemType, count, label }",
+      goalRequirement: "requires may be a legacy string or an object with type collect, repair-zones, reflect-reactor, echo-pairs, fold-pattern, kite-chain, return-seed, balanced-bridges, woven-routes, or rail-stations; object fields may include itemType, count, label, and type-specific metadata",
       act3Mechanics: ["spring/bounceY", "polarity/sun-moon", "timed relay", "rift-weaver"],
       act4Mechanics: ["gravity zones/orbit", "local time freeze", "delayed echo pairing", "moving gravity anchors"],
+      act5Mechanics: ["world fold topology", "kite tether traversal", "reverse page escape", "downstrike fold trap"],
+      act6Mechanics: ["continuous weight balance", "foreground/background lane switching", "recorded trajectory bridges", "moving dragon body platform"],
+      act7Mechanics: ["player scale lenses", "branching comet rail carts", "single-world lantern exposure and occlusion", "captured shard dash volley"],
       bossLevels: levels.filter(function (level) { return level.kind === "boss" || level.boss; }).map(function (level) { return level.id; })
     },
     levels: levels,

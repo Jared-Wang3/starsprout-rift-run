@@ -28,6 +28,15 @@ test("game shell exposes every required screen and HUD surface", async () => {
     "pause-screen",
     "complete-screen",
     "victory-screen",
+    "trial-screen",
+    "trial-upgrade-screen",
+    "trial-result-screen",
+    "bestiary-screen",
+    "bestiary-grid",
+    "trial-hud",
+    "trial-phase",
+    "trial-route",
+    "trial-route-time",
     "hud",
     "boss-hud",
     "toast",
@@ -53,6 +62,10 @@ test("game shell exposes every required screen and HUD surface", async () => {
     "fullscreen",
     "pause",
     "retry-art",
+    "trials",
+    "start-trial",
+    "trial-retry",
+    "bestiary",
   ]) {
     assert.match(
       html,
@@ -72,12 +85,59 @@ test("game shell exposes every required screen and HUD surface", async () => {
   assert.match(html, /\baria-live=["']polite["']/i);
   assert.match(html, /\baria-live=["']assertive["']/i);
   assert.match(html, /<script\s+src=["']\.\/levels\.js["']><\/script>/i);
+  assert.match(html, /<script\s+src=["']\.\/trials\.js["']><\/script>/i);
   assert.match(html, /<script\s+src=["']\.\/game\.js["']><\/script>/i);
   assert.doesNotMatch(
     html,
     /<(?:script|link)\b[^>]*(?:src|href)=["']https?:\/\//i,
     "the offline build must not depend on a remote runtime asset",
   );
+});
+
+test("home exposes a discovery-only bestiary without leaking unseen creature names", async () => {
+  const html = await readProjectFile("public/play/index.html");
+
+  assert.match(html, /data-action=["']bestiary["']/i);
+  assert.match(html, /id=["']bestiary-grid["']/i);
+  assert.match(html, /只有真正进入星芽视野的生命/i);
+  for (const hiddenName of ["雷鼓兽", "织线蛛", "时砂蛭", "镜像芽", "折页甲虫", "星噬萤"]) {
+    assert.doesNotMatch(html, new RegExp(hiddenName), `undiscovered ${hiddenName} must not be pre-rendered in HTML`);
+  }
+});
+
+test("home presents patrol, rush, and unlockable endless side modes responsively", async () => {
+  const [html, css, trials, arena] = await Promise.all([
+    readProjectFile("public/play/index.html"),
+    readProjectFile("public/play/game.css"),
+    readProjectFile("public/play/trials.js"),
+    readFile(projectFile("public/play/assets/art-v7/trials-nightwatch.webp")),
+  ]);
+
+  assert.match(html, /class=["'][^"']*\btrial-entry\b[^"']*["'][^>]*data-action=["']trials["']/i);
+  for (const id of ["night-watch", "night-rush", "night-endless"]) {
+    assert.match(html, new RegExp(`data-trial-id=["']${id}["']`));
+  }
+  assert.match(html, /星轨[^<]*护送[^<]*(?:拾星|坠种|救援)[^<]*共鸣[^<]*(?:坠星|反潮)[^<]*围城/);
+  assert.match(html, /QUICK RUN[^<]*90 秒/);
+  assert.match(html, /完成裂界夜巡后解锁/);
+  assert.match(css, /\.trial-screen\s*\{[\s\S]*?trials-nightwatch\.webp/);
+  assert.match(css, /\.trial-mode-grid\s*\{/);
+  assert.match(css, /\.trial-mode-card:disabled\s*\{/);
+  assert.match(css, /\.trial-hud\[hidden\]\s*\{[\s\S]*?display:\s*none/,
+    "campaign stages must not reveal the night-watch HUD through a CSS display override");
+  assert.match(css, /@media\s*\(orientation:\s*landscape\)[\s\S]*?\.trial-lobby-copy/i);
+  assert.match(trials, /duration:\s*90/);
+  assert.match(trials, /duration:\s*360/);
+  for (const task of ["relay", "escort", "salvage", "repair", "counter", "siege"]) {
+    assert.match(trials, new RegExp(`task:\\s*["']${task}["']`), `night watch is missing the ${task} tide`);
+  }
+  assert.match(trials, /mode:\s*["']scheduled["']/);
+  assert.match(trials, /mode:\s*["']seeded-random["']/);
+  assert.match(trials, /repeatRounds:\s*true/);
+  assert.match(trials, /endless:\s*true/);
+  assert.equal(arena.subarray(0, 4).toString("ascii"), "RIFF");
+  assert.equal(arena.subarray(8, 12).toString("ascii"), "WEBP");
+  assert.ok(arena.length > 250_000, "night-watch arena art should retain enough detail for full-screen play");
 });
 
 test("stage briefing explains art loading instead of appearing frozen", async () => {
@@ -149,9 +209,14 @@ test("main menu is a responsive rift-cover composition instead of a stacked card
   }
 });
 
-test("route renderer groups the campaign into four acts with mode tags and thumbnails", async () => {
-  const source = await readProjectFile("public/play/game.js");
+test("route renderer groups the campaign into seven acts with mode tags and thumbnails", async () => {
+  const [html, source] = await Promise.all([
+    readProjectFile("public/play/index.html"),
+    readProjectFile("public/play/game.js"),
+  ]);
 
+  assert.match(html, /七幕[^<]*(?:航线|远征)/);
+  assert.match(html, /aria-label=["'][^"']*七幕[^"']*["']/i);
   assert.match(source, /function\s+renderLevelGrid\s*\(/, "missing renderLevelGrid()");
   assert.match(
     source,
@@ -198,29 +263,30 @@ test("touch UI supports portrait play without a blocking rotate notice", async (
   );
 });
 
-test("campaign copy and level selection scale to sixteen stages", async () => {
+test("campaign copy and level selection scale to twenty-eight stages", async () => {
   const [html, css, source] = await Promise.all([
     readProjectFile("public/play/index.html"),
     readProjectFile("public/play/game.css"),
     readProjectFile("public/play/game.js"),
   ]);
 
-  assert.match(html, />\s*16\s*(?:个关卡|片裂界)\s*</);
-  assert.match(html, />\s*4\s*(?:场\s*BOSS|位守门者)\s*</i);
-  assert.match(html, /16\s*\/\s*16\s*关/);
+  assert.match(html, />\s*28\s*(?:个关卡|片裂界)\s*</);
+  assert.match(html, />\s*7\s*(?:场\s*BOSS|位守门者)\s*</i);
+  assert.match(html, /28\s*\/\s*28\s*关/);
+  assert.match(html, /<meta\b[^>]*name=["']description["'][^>]*content=["'][^"']*28[^"']*7[^"']*["']/i);
   assert.doesNotMatch(html, />\s*8\s*个关卡\s*</);
   assert.doesNotMatch(html, />\s*2\s*场\s*BOSS\s*</i);
   assert.doesNotMatch(html, /8\s*\/\s*8\s*关/);
 
   assert.match(css, /\.panel-screen\s*\{[^}]*\boverflow-y:\s*auto\s*;/s,
-    "the sixteen-card route screen must remain vertically scrollable");
+    "the twenty-eight-card route screen must remain vertically scrollable");
   assert.match(css, /\.level-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s,
-    "desktop route selection should fit sixteen cards in four rows");
+    "desktop route selection should fit twenty-eight cards in seven rows");
   assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*?\.level-grid\s*\{[^}]*repeat\(2,/i,
     "mobile route selection should use two columns and scroll");
   assert.match(source, /level-card[^`\n]*\$\{[^}]*\.isBoss[^}]*is-boss/,
     "boss card styling must be driven by level semantics");
-  assert.doesNotMatch(css, /\.level-card\[data-level=["'](?:4|8|12|16)["']\]/,
+  assert.doesNotMatch(css, /\.level-card\[data-level=["'](?:4|8|12|16|20|24|28)["']\]/,
     "boss card styling must not be tied to fixed stage ids");
 });
 
@@ -241,14 +307,66 @@ test("game engine parses and exposes a deterministic QA hook", async () => {
   assert.match(source, /(?:window|globalThis)\.__STARSPROUT_TEST__\s*=/);
   assert.match(source, /PORTRAIT_VIEW_W\s*=\s*960/);
   assert.match(source, /window\.addEventListener\(["']resize["'],\s*syncCanvasViewport/);
+  const hookStart = source.search(/(?:window|globalThis)\.__STARSPROUT_TEST__\s*=/);
+  const hookEnd = source.indexOf("\n\n  init();", hookStart);
+  assert.ok(hookStart >= 0 && hookEnd > hookStart, "QA hook must be a bounded object declared before init()");
+  const hookSource = source.slice(hookStart, hookEnd);
 
-  for (const api of ["snapshot", "startLevel", "step", "captureReady", "unlockAll"]) {
+  for (const api of [
+    "snapshot",
+    "startLevel",
+    "step",
+    "captureReady",
+    "unlockAll",
+    "seatWeight",
+    "crossSeam",
+    "setTrajectory",
+    "solidifyTrajectory",
+    "strikeDragonKnot",
+    "setGrowthForm",
+    "setRailJunction",
+    "visitRailStation",
+    "moveShadowScreen",
+    "setShadowExposure",
+    "captureCrownShard",
+    "launchCrownVolley",
+    "activateTrialAnchorBy",
+    "chooseTrialRoute",
+    "triggerTrialEvent",
+    "spawnTrialSeed",
+    "depositTrialSeed",
+    "chargeTrialNodeBy",
+    "spawnTrialMeteor",
+    "actOnTrialMeteor",
+    "damageTrialElite",
+  ]) {
     assert.match(
-      source,
+      hookSource,
       new RegExp(`\\b${api}\\b`),
       `QA hook is missing ${api}()`,
     );
   }
+});
+
+test("world mechanisms communicate through art and motion instead of text badges", async () => {
+  const source = await readProjectFile("public/play/game.js");
+  const deviceRenderer = source.match(/function\s+renderDevices\b[\s\S]*?function\s+drawCoolantDevice\b/)?.[0] || "";
+  const trialAnchorRenderer = source.match(
+    /trial\.anchors\.forEach[\s\S]*?const\s+pulse\s*=\s*1\s*\+\s*Math\.sin\(runtime\.time\s*\*\s*3\.2\)/,
+  )?.[0] || "";
+  const collectibleBadge = source.match(/function\s+drawCollectibleBadge\b[\s\S]*?function\s+drawCollectible\b/)?.[0] || "";
+
+  assert.match(source, /function\s+drawMechanismFrame\b/);
+  assert.match(deviceRenderer, /"tideRepair"/);
+  assert.match(deviceRenderer, /"auroraReactor"/);
+  assert.match(deviceRenderer, /"echoPad"/);
+  assert.match(deviceRenderer, /"foldTrap"/);
+  assert.doesNotMatch(deviceRenderer, /\.fillText\s*\(/,
+    "diegetic mechanisms must not fall back to characters or countdown labels");
+  assert.doesNotMatch(trialAnchorRenderer, /\.fillText\s*\(/,
+    "night-watch anchors must use constellation nodes rather than glyphs");
+  assert.doesNotMatch(collectibleBadge, /\.fillText\s*\(/,
+    "collectible art must not be covered by a character badge");
 });
 
 test("Electron keeps the same offline play tree inside ASAR", async () => {

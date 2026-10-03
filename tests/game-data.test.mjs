@@ -29,6 +29,19 @@ async function loadLevelBundle() {
   return browserGlobal.StarSproutLevels;
 }
 
+async function loadTrialBundle() {
+  const source = await readFile(new URL("../public/play/trials.js", import.meta.url), "utf8");
+  const browserGlobal = { console };
+  browserGlobal.window = browserGlobal;
+  browserGlobal.globalThis = browserGlobal;
+  vm.runInNewContext(source, browserGlobal, {
+    filename: "public/play/trials.js",
+    timeout: 1_000,
+  });
+  assert.ok(browserGlobal.StarSproutTrials, "trials.js must publish window.StarSproutTrials");
+  return browserGlobal.StarSproutTrials;
+}
+
 function extractLevels(bundle) {
   if (Array.isArray(bundle)) return bundle;
   if (Array.isArray(bundle.levels)) return bundle.levels;
@@ -50,17 +63,17 @@ function isBoss(level) {
   return Boolean(level.boss) || level.type === "boss" || level.kind === "boss";
 }
 
-test("level bundle defines a stable sixteen-stage campaign schema", async () => {
+test("level bundle defines a stable twenty-eight-stage campaign schema", async () => {
   const bundle = await loadLevelBundle();
   const levels = extractLevels(bundle);
 
   assert.equal(typeof bundle.get, "function", "bundle must expose get(id)");
   assert.equal(typeof bundle.clone, "function", "bundle must expose clone(id)");
   assert.ok(Array.isArray(bundle.list), "bundle must expose a list array");
-  assert.equal(levels.length, 16, "campaign must contain exactly sixteen stages");
+  assert.equal(levels.length, 28, "campaign must contain exactly twenty-eight stages");
   assert.deepEqual(
     Array.from(levels, (level) => level.id),
-    Array.from({ length: 16 }, (_, index) => index + 1),
+    Array.from({ length: 28 }, (_, index) => index + 1),
     "stage ids must be sequential and one-based",
   );
 
@@ -95,14 +108,14 @@ test("each act contains three stages and a fourth-stage boss", async () => {
   const levels = extractLevels(bundle);
   const bossIds = Array.from(levels).filter(isBoss).map((level) => level.id);
 
-  assert.deepEqual(bossIds, [4, 8, 12, 16]);
+  assert.deepEqual(bossIds, [4, 8, 12, 16, 20, 24, 28]);
   assert.deepEqual(
     Array.from(bundle.schema?.bossLevels ?? []),
     bossIds,
     "schema.bossLevels must match the actual boss stages",
   );
 
-  for (let act = 1; act <= 4; act += 1) {
+  for (let act = 1; act <= 7; act += 1) {
     const actLevels = levels.filter((level) => level.act === act);
     assert.deepEqual(
       Array.from(actLevels, (level) => level.id),
@@ -130,15 +143,15 @@ test("each act contains three stages and a fourth-stage boss", async () => {
   }
 });
 
-test("only stage 16 is the campaign finale", async () => {
+test("only stage 28 is the campaign finale", async () => {
   const levels = extractLevels(await loadLevelBundle());
   const finaleIds = Array.from(
     levels.filter((level) => level.finale === true),
     (level) => level.id,
   );
 
-  assert.deepEqual(finaleIds, [16]);
-  for (const id of [4, 8, 12]) {
+  assert.deepEqual(finaleIds, [28]);
+  for (const id of [4, 8, 12, 16, 20, 24]) {
     assert.notEqual(levels[id - 1].finale, true, `stage ${id} is an act boss, not the campaign finale`);
   }
 });
@@ -252,6 +265,200 @@ test("act 4 uses four distinct traversal and puzzle loops", async () => {
   assert.ok(level16.collectibles.some((item) => item.type === "starwhale-core" && item.spawnOnBossDefeat));
 });
 
+test("act 5 changes topology, traversal physics, route direction, and boss counterplay", async () => {
+  const levels = extractLevels(await loadLevelBundle());
+  const level17 = levels.find((level) => level.id === 17);
+  const level18 = levels.find((level) => level.id === 18);
+  const level19 = levels.find((level) => level.id === 19);
+  const level20 = levels.find((level) => level.id === 20);
+
+  assert.equal(level17.mechanics.type, "world-fold");
+  assert.equal(level17.goal.requires.type, "fold-pattern");
+  assert.ok(level17.mechanics.foldPanels.length >= 3);
+  assert.ok(level17.platforms.some((platform) => platform.foldGroup && Number(platform.foldState) === 0));
+  assert.ok(level17.platforms.some((platform) => platform.foldGroup && Number(platform.foldState) === 1));
+
+  assert.equal(level18.mechanics.type, "kite-tether");
+  assert.equal(level18.goal.requires.type, "kite-chain");
+  assert.ok(level18.mechanics.kiteAnchors.length >= 5);
+  assert.ok(level18.mechanics.kiteAnchors.every((anchor) => anchor.duration > 0 && anchor.pull > 0));
+
+  assert.equal(level19.mechanics.type, "page-return");
+  assert.equal(level19.goal.requires.type, "return-seed");
+  assert.ok(level19.collectibles.some((item) => item.type === "return-seed"));
+  assert.ok(level19.platforms.some((platform) => platform.pagePhase === "outbound"));
+  assert.ok(level19.platforms.some((platform) => platform.pagePhase === "return"));
+  assert.ok(level19.goal.x < level19.spawn.x, "stage 19 must return to an exit behind the starting point");
+
+  assert.equal(level20.boss.archetype, "fold-warden");
+  assert.equal(level20.boss.mechanism.exposeBy, "downstrike-fold-trap");
+  assert.ok(level20.mechanics.foldTraps.length >= 3);
+  assert.ok(level20.collectibles.some((item) => item.type === "page-core-seed" && item.spawnOnBossDefeat));
+});
+
+test("act 6 balances weights, switches silhouette lanes, weaves trajectories, and climbs the sky dragon", async () => {
+  const bundle = await loadLevelBundle();
+  const levels = extractLevels(bundle);
+  const level21 = levels.find((level) => level.id === 21);
+  const level22 = levels.find((level) => level.id === 22);
+  const level23 = levels.find((level) => level.id === 23);
+  const level24 = levels.find((level) => level.id === 24);
+
+  assert.equal(bundle.version, 7);
+  assert.ok(Array.from(bundle.schema?.act6Mechanics ?? []).length >= 4,
+    "schema.act6Mechanics must document all four new gameplay loops");
+
+  assert.equal(level21.mechanics.type, "starweight-balance");
+  assert.deepEqual(
+    { type: level21.goal.requires.type, count: level21.goal.requires.count },
+    { type: "balanced-bridges", count: 3 },
+  );
+  assert.ok(level21.mechanics.weightBlocks.length >= 6, "stage 21 needs enough movable weights for three puzzles");
+  assert.equal(level21.mechanics.weightSlots.length, 6, "stage 21 needs left/right slots for three balances");
+  assert.equal(level21.mechanics.scaleBridges.length, 3, "stage 21 must raise three independently balanced bridges");
+  assert.ok(level21.mechanics.weightBlocks.every((weight) => weight.pushBy === "pulse" && weight.seatBy === "downstrike"));
+  assert.ok(level21.mechanics.scaleBridges.every((bridge) => bridge.minY < bridge.maxY && bridge.leftSlot && bridge.rightSlot));
+
+  assert.equal(level22.mechanics.type, "silhouette-lanes");
+  assert.equal(level22.goal.requires, "reach");
+  assert.deepEqual(Array.from(level22.mechanics.lanes, (lane) => lane.id).sort(), ["background", "foreground"]);
+  assert.ok(level22.mechanics.lanes.some((lane) => lane.id === level22.mechanics.initialLane));
+  assert.ok(level22.mechanics.seams.length >= 4, "stage 22 needs repeated dash seams across the route");
+  assert.ok(level22.mechanics.seams.every((seam) => seam.trigger === "dash" && seam.from !== seam.to));
+  const laneRecords = [...level22.platforms, ...level22.hazards, ...level22.enemies, ...level22.collectibles]
+    .filter((entry) => entry.lane && entry.lane !== "both");
+  assert.deepEqual([...new Set(laneRecords.map((entry) => entry.lane))].sort(), ["background", "foreground"]);
+
+  assert.equal(level23.mechanics.type, "trajectory-weave");
+  assert.deepEqual(
+    { type: level23.goal.requires.type, count: level23.goal.requires.count },
+    { type: "woven-routes", count: 3 },
+  );
+  assert.equal(level23.mechanics.looms.length, 3, "stage 23 needs one loom for each gap");
+  assert.equal(level23.mechanics.weaveRules.solidifyBy, "pulse");
+  assert.equal(level23.mechanics.weaveRules.maxActiveBridges, 3);
+  assert.ok(level23.mechanics.weaveRules.recordSeconds > 0 && level23.mechanics.weaveRules.lifetime > 0);
+  assert.ok(level23.mechanics.looms.every((loom) => loom.bridgeZone?.w > 0 && loom.bridgeZone?.h > 0));
+
+  assert.equal(level24.mechanics.type, "sky-paper-dragon");
+  assert.equal(level24.boss.archetype, "sky-paper-dragon");
+  assert.equal(level24.mechanics.exposureCycles, 3);
+  assert.equal(level24.mechanics.knotScales.length, 3);
+  assert.ok(level24.mechanics.knotScales.every((knot) => knot.activation === "downstrike"));
+  assert.deepEqual(Array.from(level24.mechanics.knotScales, (knot) => knot.order), [1, 2, 3]);
+  assert.ok(level24.mechanics.bodyPlatforms.length >= 7, "the dragon body must form a traversable moving route");
+  assert.deepEqual(Array.from(level24.boss.phases, (phase) => phase.requiredKnots), [3, 3, 3]);
+  assert.equal(level24.boss.mechanism.exposeBy, "three-knot-scales");
+  assert.equal(level24.boss.mechanism.bodyIsPlatform, true);
+  assert.equal(level24.boss.mechanism.exposureCycles, 3);
+  assert.ok(level24.collectibles.some((item) => item.type === "sky-dragon-core" && item.spawnOnBossDefeat));
+});
+
+test("act 7 changes avatar scale, branches rail travel, uses same-world shadows, and volleys captured shards", async () => {
+  const bundle = await loadLevelBundle();
+  const levels = extractLevels(bundle);
+  const level25 = levels.find((level) => level.id === 25);
+  const level26 = levels.find((level) => level.id === 26);
+  const level27 = levels.find((level) => level.id === 27);
+  const level28 = levels.find((level) => level.id === 28);
+
+  assert.equal(bundle.version, 7);
+  assert.match(String(bundle.schema?.goalRequirement ?? ""), /rail-stations/,
+    "the public goal schema must document the stage 26 rail-stations requirement");
+  assert.deepEqual(
+    Array.from(bundle.schema?.act7Mechanics ?? []),
+    [
+      "player scale lenses",
+      "branching comet rail carts",
+      "single-world lantern exposure and occlusion",
+      "captured shard dash volley",
+    ],
+  );
+
+  assert.equal(level25.mechanics.type, "scale-lenses");
+  assert.equal(level25.mechanics.initialForm, "giant");
+  assert.deepEqual(Object.keys(level25.mechanics.forms).sort(), ["giant", "small"]);
+  assert.ok(level25.mechanics.forms.small.scale < 1, "small form must be visibly smaller than the base hero");
+  assert.ok(level25.mechanics.forms.giant.scale > 1, "giant form must be visibly larger than the base hero");
+  assert.ok(level25.mechanics.lenses.length >= 4, "stage 25 needs repeated form changes across the route");
+  assert.ok(level25.mechanics.lenses.every((lens) => lens.activation === "pulse"
+    && [lens.x, lens.y, lens.w, lens.h].every(Number.isFinite)));
+  assert.ok(level25.mechanics.narrowPassages.length >= 3);
+  assert.ok(level25.mechanics.narrowPassages.every((passage) => passage.requiredForm === "small"));
+  assert.ok(level25.mechanics.waxSeals.length >= 3);
+  assert.ok(level25.mechanics.waxSeals.every((seal) => seal.requiredForm === "giant"
+    && seal.activation === "downstrike" && seal.hp > 0));
+  assert.ok(level25.enemies.some((enemy) => enemy.type === "lens-beetle"));
+
+  assert.equal(level26.mechanics.type, "comet-rails");
+  assert.deepEqual(
+    { type: level26.goal.requires.type, count: level26.goal.requires.count },
+    { type: "rail-stations", count: 3 },
+  );
+  assert.equal(level26.mechanics.stations.length, 3, "stage 26 needs exactly three required stops");
+  const stationIds = Array.from(level26.mechanics.stations, (station) => station.id);
+  assert.equal(new Set(stationIds).size, stationIds.length, "rail station ids must be stable and unique");
+  assert.ok(level26.mechanics.stations.every((station) => station.required === true
+    && [station.x, station.y, station.w, station.h].every(Number.isFinite)));
+  assert.ok(level26.mechanics.rails.length >= 5, "the switchyard needs multiple branches and a recovery loop");
+  const railIds = new Set(level26.mechanics.rails.map((rail) => rail.id));
+  assert.ok(level26.mechanics.rails.every((rail) => rail.points.length >= 2
+    && rail.points.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))));
+  assert.ok(level26.mechanics.carts.length >= 3);
+  assert.ok(level26.mechanics.carts.every((cart) => railIds.has(cart.rail)
+    && cart.speed > 0 && cart.w > 0 && cart.h > 0));
+  assert.ok(level26.mechanics.junctions.length >= 2);
+  assert.ok(level26.mechanics.junctions.every((junction) => junction.options.length >= 2
+    && junction.options.every((option) => railIds.has(option.rail))));
+  assert.ok(level26.enemies.some((enemy) => enemy.type === "rail-wisp"));
+
+  assert.equal(level27.mechanics.type, "lantern-shadow");
+  assert.equal(level27.mechanics.collisionWorld, "single",
+    "stage 27 shadows must not reuse the foreground/background lane mechanic");
+  assert.deepEqual(
+    {
+      type: level27.goal.requires.type,
+      itemType: level27.goal.requires.itemType,
+      count: level27.goal.requires.count,
+      submit: level27.goal.requires.submit,
+    },
+    { type: "collect", itemType: "shadow-key", count: 3, submit: true },
+  );
+  assert.ok(level27.goal.x < level27.spawn.x,
+    "the shadow-key route must return to the central gate rather than finish at the far right");
+  const shadowKeys = level27.collectibles.filter((item) => item.type === "shadow-key");
+  assert.equal(shadowKeys.length, 3);
+  assert.ok(shadowKeys.every((item) => item.quest === true));
+  assert.deepEqual(
+    Array.from(level27.mechanics.shadowKeys).sort(),
+    Array.from(shadowKeys, (item) => item.id).sort(),
+  );
+  assert.ok(level27.mechanics.exposure.grace >= 1,
+    "searchlight exposure needs a forgiving mobile-readable grace window");
+  assert.ok(level27.mechanics.searchlights.length >= 3);
+  assert.ok(level27.mechanics.searchlights.every((light) => light.warning >= 0.55
+    && light.radius > 0 && light.sweepPeriod > 0));
+  assert.ok(level27.mechanics.screens.length >= 3);
+  assert.ok(level27.mechanics.screens.every((screen) => screen.occludes === true
+    && screen.activation === "pulse"
+    && [screen.x, screen.y, screen.w, screen.h].every(Number.isFinite)));
+  assert.ok(level27.enemies.some((enemy) => enemy.type === "lantern-heron"));
+
+  assert.equal(level28.mechanics.type, "scorewing-maestro");
+  assert.equal(level28.boss.archetype, "scorewing-maestro");
+  assert.equal(level28.finale, true);
+  assert.equal(level28.boss.maxHealth, 3);
+  assert.equal(level28.boss.hp, 3);
+  assert.equal(level28.mechanics.shardRules.captureBy, "pulse");
+  assert.equal(level28.mechanics.shardRules.releaseBy, "dash");
+  assert.equal(level28.mechanics.shardRules.releaseMode, "stored-volley");
+  assert.deepEqual(Array.from(level28.mechanics.shardRules.requiredByPhase), [1, 2, 3]);
+  assert.deepEqual(Array.from(level28.boss.phases, (phase) => phase.captureRequired), [1, 2, 3]);
+  assert.equal(level28.boss.mechanism.counterBy, "capture-store-dash-volley");
+  assert.deepEqual(Array.from(level28.boss.mechanism.requiredByPhase), [1, 2, 3]);
+  assert.ok(level28.collectibles.some((item) => item.type === "scorewing-core" && item.spawnOnBossDefeat));
+});
+
 test("all stages have distinct worlds instead of palette-swapped repetition", async () => {
   const levels = extractLevels(await loadLevelBundle());
   const worlds = Array.from(levels, levelWorld);
@@ -272,4 +479,128 @@ test("level factory returns isolated mutable data for restart and replay", async
   const originalX = second.spawn.x;
   first.spawn.x += 999;
   assert.equal(second.spawn.x, originalX);
+});
+
+test("night watch offers six distinct tides, scheduled events, and an endlessly growing cycle", async () => {
+  const bundle = await loadTrialBundle();
+  const patrol = bundle.trials.find((entry) => entry.id === "night-watch");
+  const rush = bundle.trials.find((entry) => entry.id === "night-rush");
+  const endless = bundle.trials.find((entry) => entry.id === "night-endless");
+
+  assert.ok(patrol, "night-watch patrol must exist");
+  assert.ok(rush, "night-rush trial must exist");
+  assert.ok(endless, "night-endless trial must exist");
+  assert.equal(patrol.duration, 360);
+  assert.equal(patrol.level.kind, "trial");
+  assert.doesNotMatch(patrol.level.mechanic, /九十秒/, "the main patrol must not inherit the rush timer copy");
+  assert.equal(patrol.level.worldWidth, 1280, "night watch must use a fixed arena rather than a scrolling route");
+  assert.deepEqual(
+    Array.from(patrol.circuit.phases, (phase) => phase.task),
+    ["relay", "escort", "salvage", "repair", "counter", "siege"],
+  );
+  assert.deepEqual(Array.from(patrol.circuit.phases, (phase) => phase.startsAt), [0, 60, 120, 180, 240, 300]);
+  assert.deepEqual(
+    Array.from(patrol.circuit.phases, (phase) => phase.arenaMotion),
+    ["still", "lift", "drift", "split", "storm", "dawn"],
+  );
+  assert.ok(patrol.circuit.phases.every((phase) => phase.objectiveRequired > 0));
+  const [relay, escort, salvage, repair, counter, siege] = patrol.circuit.phases;
+  assert.ok(relay.actionPatterns.length >= 3);
+  assert.deepEqual(
+    [...new Set(relay.actionPatterns.flat().map((step) => step.action))].sort(),
+    ["dash", "downstrike", "touch"],
+  );
+  assert.equal(escort.routeChoice.defaultRoute, "safe");
+  assert.deepEqual(Array.from(escort.routes, (route) => route.id), ["safe", "risky"]);
+  assert.ok(escort.routes.find((route) => route.id === "risky").scoreMultiplier > 1,
+    "the short escort branch must trade safety for score");
+  assert.equal(salvage.salvage.seedType, "fallen-star-seed");
+  assert.ok(salvage.salvage.thiefTypes.length >= 3 && salvage.salvage.stolenRescueWindow > 0);
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(repair.nodeActions)),
+    { west: "pulse", crown: "dash", east: "downstrike" },
+  );
+  assert.ok(repair.nodeCharge >= 3, "repair tide needs charged repair nodes");
+  assert.ok(counter.meteorInterval > 0 && counter.riftHp >= 3);
+  assert.deepEqual(Array.from(counter.meteorTypes, (meteor) => meteor.id), ["normal", "splitter", "heavy"]);
+  assert.deepEqual(
+    Array.from(counter.meteorTypes, (meteor) => Array.from(meteor.actionSequence)),
+    [["downstrike"], ["pulse", "downstrike"], ["pulse", "pulse", "downstrike"]],
+  );
+  assert.deepEqual(Array.from(siege.siege.objectives, (objective) => objective.task), ["relay", "salvage", "repair", "counter"]);
+  assert.deepEqual(Array.from(siege.siege.elite.shieldActions), ["pulse", "dash", "downstrike"]);
+  assert.equal(siege.siege.completion, "elite-defeated");
+
+  assert.deepEqual(Array.from(patrol.upgradeAt), [50, 110, 170, 230, 290]);
+  assert.deepEqual(Array.from(patrol.upgradeRounds, (round) => round.length), [3, 3, 3, 3, 3]);
+  assert.deepEqual(
+    Array.from(patrol.upgradeRounds, (round) => Array.from(round)),
+    [
+      ["seed-shell", "star-magnet", "branch-compass"],
+      ["seed-vacuum", "rescue-bloom", "core-bloom"],
+      ["root-burst", "resonant-tools", "time-pollen"],
+      ["meteor-mirror", "split-lens", "quick-dash"],
+      ["dawn-oath", "constellation-bonus", "pulse-bloom"],
+    ],
+    "each mutation round must appear before the tide where its effect is useful",
+  );
+  for (const id of patrol.upgradeRounds.flat()) {
+    assert.ok(bundle.upgrades[id], `missing mutation definition ${id}`);
+  }
+
+  const eventIds = [
+    "tailwind-lane",
+    "red-comet-wager",
+    "seed-rain",
+    "ink-eclipse",
+    "mirror-bloom",
+    "dawn-wager",
+  ];
+  assert.equal(patrol.eventPlan.mode, "scheduled");
+  assert.deepEqual(Array.from(patrol.eventPlan.schedule, (event) => event.at), [30, 90, 150, 210, 270, 330]);
+  assert.deepEqual(Array.from(patrol.eventPlan.schedule, (event) => event.event), eventIds);
+  for (const id of eventIds) {
+    assert.ok(bundle.events[id], `missing night-watch event ${id}`);
+    assert.ok(bundle.events[id].duration > 0);
+    assert.match(String(bundle.events[id].announcement ?? ""), /\S/);
+  }
+  assert.ok(bundle.events["red-comet-wager"].choices.length >= 2);
+  assert.ok(bundle.events["dawn-wager"].choices.length >= 2);
+
+  assert.equal(rush.duration, 90);
+  assert.deepEqual(Array.from(rush.circuit.phases, (phase) => phase.routeLength), [2, 3, 4]);
+  assert.equal(endless.endless, true);
+  assert.equal(endless.duration, 0);
+  assert.equal(endless.cycleDuration, 60);
+  assert.deepEqual(Array.from(endless.circuit.phases, (phase) => phase.task),
+    ["relay", "escort", "salvage", "repair", "counter", "siege"]);
+  assert.equal(endless.eventPlan.mode, "seeded-random");
+  assert.deepEqual(Array.from(endless.eventPlan.pool, (entry) => entry.event), eventIds);
+  assert.ok(Array.isArray(endless.eventPlan.interval) && endless.eventPlan.interval[0] > 0);
+  assert.equal(endless.upgradeCadence.firstAt, 50);
+  assert.equal(endless.upgradeCadence.interval, 60);
+  assert.equal(endless.upgradeCadence.repeatRounds, true);
+  assert.equal(endless.upgradeCadence.duplicatePolicy, "rank");
+  assert.ok(endless.upgradeCadence.rankReward.coreMax > 0);
+});
+
+test("six mechanically distinct creatures enter the campaign gradually after stage eight", async () => {
+  const levels = extractLevels(await loadLevelBundle());
+  const newcomers = [
+    "thunder-drummer",
+    "thread-spinner",
+    "chrono-leech",
+    "mirror-mimic",
+    "fold-beetle",
+    "star-siphon",
+  ];
+  const earlyTypes = new Set(levels.filter((level) => level.id <= 8).flatMap((level) => level.enemies.map((enemy) => enemy.type)));
+  const lateTypes = new Set(levels.filter((level) => level.id >= 9).flatMap((level) => level.enemies.map((enemy) => enemy.type)));
+
+  for (const type of newcomers) {
+    assert.equal(earlyTypes.has(type), false, `${type} must not appear before the late-game onboarding`);
+    assert.equal(lateTypes.has(type), true, `${type} must appear in stages 9-28`);
+  }
+  assert.ok(levels.find((level) => level.id === 9).enemies.some((enemy) => enemy.type === "thunder-drummer"));
+  assert.ok(levels.find((level) => level.id === 10).enemies.some((enemy) => enemy.type === "thread-spinner"));
 });

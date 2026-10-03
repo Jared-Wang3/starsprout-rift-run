@@ -103,6 +103,7 @@ test("art manifest is offline-only and every declared raster asset is packaged",
   const manifestSource = await readProjectFile("public/play/art-assets.js");
   const manifest = await loadBrowserBundle("public/play/art-assets.js", "StarSproutArt");
   assert.equal(typeof manifest.assets, "object", "manifest.assets must be an object");
+  assert.equal(manifest.version, "10.0.0", "act 7 art must publish manifest version 10.0.0");
   assert.doesNotMatch(manifestSource, /https?:\/\//i, "art manifest must not use remote URLs");
 
   const requiredSheets = [
@@ -110,14 +111,25 @@ test("art manifest is offline-only and every declared raster asset is packaged",
     "hero",
     "enemiesA",
     "enemiesB",
+    "enemiesC",
+    "enemiesD",
+    "mechanisms",
+    "mechanismsB",
     "boss",
     "collectibles",
     "environmentsA",
     "environmentsB",
     "environmentsC",
     "environmentsD",
+    "environmentsE",
+    "environmentsF",
+    "environmentsG",
+    "trialsArena",
     "bossWeaver",
     "bossStarWhale",
+    "bossFoldWarden",
+    "bossSkyPaperDragon",
+    "bossScorewingMaestro",
     "act3Collectibles",
   ];
   const declaredUrls = new Set();
@@ -126,14 +138,14 @@ test("art manifest is offline-only and every declared raster asset is packaged",
     assert.ok(config, `manifest.assets is missing ${sheetName}`);
     assert.match(
       String(config.src ?? ""),
-      /^\.\/assets\/art-v[235]\/[a-z0-9][a-z0-9._-]*$/i,
+      /^\.\/assets\/art-v(?:[2-9]|1[01])\/[a-z0-9][a-z0-9._-]*$/i,
       `${sheetName} must use a packaged versioned art path`,
     );
   }
 
   for (const [sheetName, value] of Object.entries(manifest.assets)) {
     const config = assetConfig(value);
-    assert.match(String(config?.src ?? ""), /^\.\/assets\/art-v[235]\/[a-z0-9][a-z0-9._-]*$/i,
+    assert.match(String(config?.src ?? ""), /^\.\/assets\/art-v(?:[2-9]|1[01])\/[a-z0-9][a-z0-9._-]*$/i,
       `${sheetName} must use a packaged versioned art path`);
     declaredUrls.add(config.src);
   }
@@ -155,15 +167,40 @@ test("art manifest is offline-only and every declared raster asset is packaged",
   }
   assert.ok(totalBytes <= 16 * 1024 * 1024, `art package is too large (${totalBytes} bytes)`);
 
+  for (const sheetName of [
+    "hero",
+    "enemiesA",
+    "enemiesB",
+    "enemiesD",
+    "boss",
+    "collectibles",
+    "bossWeaver",
+    "bossStarWhale",
+    "bossSkyPaperDragon",
+    "bossScorewingMaestro",
+    "mechanismsB",
+    "act3Collectibles",
+  ]) {
+    assert.match(
+      String(assetConfig(manifest.assets[sheetName])?.src || ""),
+      /\.webp$/,
+      `${sheetName} must keep its mobile-sized WebP atlas`,
+    );
+  }
+
   const runtimeAssetRoot = fileURLToPath(projectFile("public/play/assets"));
   const runtimeFiles = await walkFiles(runtimeAssetRoot);
   const chromaFiles = runtimeFiles.filter((file) => /chroma/i.test(path.basename(file)));
   assert.deepEqual(chromaFiles, [], "runtime assets must not include chroma-key intermediates");
 });
 
-test("sprite and background maps cover the complete sixteen-stage campaign", async () => {
-  const manifest = await loadBrowserBundle("public/play/art-assets.js", "StarSproutArt");
-  const levels = extractLevels(await loadBrowserBundle("public/play/levels.js", "StarSproutLevels"));
+test("sprite and background maps cover the complete twenty-eight-stage campaign", async () => {
+  const [manifest, levelBundle, gameSource] = await Promise.all([
+    loadBrowserBundle("public/play/art-assets.js", "StarSproutArt"),
+    loadBrowserBundle("public/play/levels.js", "StarSproutLevels"),
+    readProjectFile("public/play/game.js"),
+  ]);
+  const levels = extractLevels(levelBundle);
 
   assertFrameCoverage(manifest, "heroFrames", [
     "idle",
@@ -179,6 +216,53 @@ test("sprite and background maps cover the complete sixteen-stage campaign", asy
   const enemyTypes = new Set(levels.flatMap((level) => level.enemies.map((enemy) => enemy.type)));
   assert.ok(enemyTypes.size >= 15, "campaign should exercise the full enemy roster");
   assertFrameCoverage(manifest, "enemyFrames", enemyTypes);
+  assertFrameCoverage(manifest, "enemyFrames", [
+    "thunder-drummer",
+    "thread-spinner",
+    "chrono-leech",
+    "mirror-mimic",
+    "fold-beetle",
+    "star-siphon",
+    "lens-beetle",
+    "lens-beetle-small",
+    "rail-wisp",
+    "rail-wisp-charge",
+    "lantern-heron",
+    "lantern-heron-alert",
+  ]);
+  const actSevenEnemyCells = {
+    "lens-beetle": [0, 0],
+    "rail-wisp": [1, 0],
+    "lantern-heron": [2, 0],
+    "lens-beetle-small": [0, 1],
+    "rail-wisp-charge": [1, 1],
+    "lantern-heron-alert": [2, 1],
+  };
+  for (const [name, [col, row]] of Object.entries(actSevenEnemyCells)) {
+    assert.equal(manifest.enemyFrames[name].sheet, "enemiesD", `${name} must use the Act VII enemy atlas`);
+    assert.equal(manifest.enemyFrames[name].col, col, `${name} must use atlas column ${col}`);
+    assert.equal(manifest.enemyFrames[name].row, row, `${name} must use atlas row ${row}`);
+  }
+  assert.ok(manifest.assets.environmentsG.gutter >= 5,
+    "the Act VII environment atlas must crop out its bright separator band");
+  assertFrameCoverage(manifest, "deviceFrames", [
+    "tideRepair",
+    "auroraReactor",
+    "sunRelay",
+    "moonRelay",
+    "echoPad",
+    "constellationAnchor",
+    "foldTrap",
+    "polarityDial",
+    "dewLens",
+    "fiberIris",
+    "railJunction",
+    "railStation",
+    "lanternScreen",
+    "shadowKeyAltar",
+    "crownShard",
+    "crownReceptor",
+  ]);
 
   assertFrameCoverage(manifest, "bossFrames", [
     "boilerNormal",
@@ -210,13 +294,54 @@ test("sprite and background maps cover the complete sixteen-stage campaign", asy
     .filter(([, value]) => frameConfig(value)?.sheet === "bossStarWhale");
   assert.equal(whaleFrames.length, 8, "bossStarWhale needs a complete 4x2 animation set");
   assertFrameCoverage(manifest, "bossFrames", whaleFrames.map(([name]) => name));
+  const foldWardenFrames = Object.entries(manifest.bossFrames)
+    .filter(([, value]) => frameConfig(value)?.sheet === "bossFoldWarden");
+  assert.equal(foldWardenFrames.length, 8, "bossFoldWarden needs a complete 4x2 animation set");
+  assertFrameCoverage(manifest, "bossFrames", foldWardenFrames.map(([name]) => name));
+  const skyDragonFrames = Object.entries(manifest.bossFrames)
+    .filter(([, value]) => frameConfig(value)?.sheet === "bossSkyPaperDragon");
+  assert.equal(skyDragonFrames.length, 8, "bossSkyPaperDragon needs a complete 4x2 animation set");
+  assertFrameCoverage(manifest, "bossFrames", skyDragonFrames.map(([name]) => name));
+  const skyDragonCells = new Set(skyDragonFrames.map(([, value]) => {
+    const frame = frameConfig(value);
+    return `${frame.sheet}:${frame.col}:${frame.row}`;
+  }));
+  assert.equal(skyDragonCells.size, 8, "sky-paper-dragon animation states must use eight distinct cells");
+  const scorewingFrames = Object.entries(manifest.bossFrames)
+    .filter(([, value]) => frameConfig(value)?.sheet === "bossScorewingMaestro");
+  assert.equal(scorewingFrames.length, 8, "bossScorewingMaestro needs a complete 4x2 animation set");
+  assertFrameCoverage(manifest, "bossFrames", [
+    "scorewingIdle",
+    "scorewingCharge",
+    "scorewingShardCast",
+    "scorewingVolleyGuard",
+    "scorewingStunned",
+    "scorewingCoreOpen",
+    "scorewingEnraged",
+    "scorewingDefeated",
+  ]);
+  const scorewingCells = new Set(scorewingFrames.map(([, value]) => {
+    const frame = frameConfig(value);
+    return `${frame.sheet}:${frame.col}:${frame.row}`;
+  }));
+  assert.equal(scorewingCells.size, 8, "scorewing-maestro animation states must use eight distinct cells");
 
   const collectibleTypes = new Set([
     "heart",
     ...levels.flatMap((level) => level.collectibles.map((item) => item.type)),
   ]);
   assert.ok(collectibleTypes.size >= 16, "campaign should exercise the full collectible roster");
-  assertFrameCoverage(manifest, "collectibleFrames", collectibleTypes);
+  const proceduralCollectibles = [...collectibleTypes]
+    .filter((type) => !Object.prototype.hasOwnProperty.call(manifest.collectibleFrames, type));
+  assertFrameCoverage(manifest, "collectibleFrames", [...collectibleTypes]
+    .filter((type) => !proceduralCollectibles.includes(type)));
+  for (const type of proceduralCollectibles) {
+    assert.match(
+      gameSource,
+      new RegExp(`PROCEDURAL_COLLECTIBLE_TYPES[\\s\\S]{0,900}?["']${type}["']`),
+      `${type} must use either a dedicated manifest frame or an explicit procedural-art registry`,
+    );
+  }
   assert.deepEqual(
     { ...frameConfig(manifest.collectibleFrames["forge-seal"]) },
     { sheet: "collectibles", col: 2, row: 1 },
@@ -224,13 +349,13 @@ test("sprite and background maps cover the complete sixteen-stage campaign", asy
   );
 
   const stageIds = Array.from(levels, (level) => String(level.id));
-  assert.deepEqual(stageIds, Array.from({ length: 16 }, (_, index) => String(index + 1)));
+  assert.deepEqual(stageIds, Array.from({ length: 28 }, (_, index) => String(index + 1)));
   assertFrameCoverage(manifest, "levelBackgroundFrames", stageIds);
   const backgroundCells = new Set(stageIds.map((id) => {
     const frame = frameConfig(manifest.levelBackgroundFrames[id]);
     return `${frame.sheet}:${frame.col}:${frame.row}`;
   }));
-  assert.equal(backgroundCells.size, 16, "all sixteen stages need distinct background cells");
+  assert.equal(backgroundCells.size, 28, "all twenty-eight stages need distinct background cells");
   for (const id of stageIds.slice(0, 4)) {
     assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsA");
   }
@@ -240,9 +365,26 @@ test("sprite and background maps cover the complete sixteen-stage campaign", asy
   for (const id of stageIds.slice(8, 12)) {
     assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsC");
   }
-  for (const id of stageIds.slice(12)) {
+  for (const id of stageIds.slice(12, 16)) {
     assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsD");
   }
+  for (const id of stageIds.slice(16, 20)) {
+    assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsE");
+  }
+  for (const id of stageIds.slice(20, 24)) {
+    assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsF");
+  }
+  for (const id of stageIds.slice(24, 28)) {
+    assert.equal(frameConfig(manifest.levelBackgroundFrames[id]).sheet, "environmentsG");
+  }
+  assert.equal(frameConfig(manifest.levelBackgroundFrames[101]).sheet, "trialsArena");
+  assert.match(String(manifest.assets.trialsArena?.src || ""), /art-v7\/trials-nightwatch\.webp$/);
+  assert.match(String(manifest.assets.environmentsF?.src || ""), /art-v10\/environments-f\.webp$/);
+  assert.match(String(manifest.assets.bossSkyPaperDragon?.src || ""), /art-v10\/boss-sky-paper-dragon\.webp$/);
+  assert.match(String(manifest.assets.environmentsG?.src || ""), /art-v11\/environments-g\.webp$/);
+  assert.match(String(manifest.assets.enemiesD?.src || ""), /art-v11\/enemy-atlas-d\.webp$/);
+  assert.match(String(manifest.assets.mechanismsB?.src || ""), /art-v11\/mechanism-atlas-b\.webp$/);
+  assert.match(String(manifest.assets.bossScorewingMaestro?.src || ""), /art-v11\/boss-scorewing-maestro\.webp$/);
 });
 
 test("renderer falls back to procedural art and never fetches runtime images", async () => {
@@ -251,7 +393,7 @@ test("renderer falls back to procedural art and never fetches runtime images", a
   assert.doesNotMatch(source, /\bfetch\s*\(/, "offline renderer must not fetch art at runtime");
   assert.doesNotMatch(source, /https?:\/\//i, "offline renderer must not reference remote art");
   assert.match(source, /window\.StarSproutArt\s*\|\|\s*\{\}/);
-  assert.match(source, /addEventListener\(["']error["'][\s\S]*?failed\s*=\s*true/);
+  assert.match(source, /addEventListener\(["']error["'][\s\S]{0,80}?finish\s*\(\s*false\s*\)/);
   assert.match(source, /function\s+drawAtlasFrame\b[\s\S]*?if\s*\(!record\)\s*return false/);
 
   for (const symbol of [
@@ -260,11 +402,15 @@ test("renderer falls back to procedural art and never fetches runtime images", a
     "DEFAULT_ENEMY_FRAMES",
     "DEFAULT_BOSS_FRAMES",
     "DEFAULT_COLLECTIBLE_FRAMES",
+    "DEFAULT_DEVICE_FRAMES",
     "drawFallbackHero",
     "drawFallbackEnemy",
+    "drawMechanismFrame",
     "drawBoilerBossFallback",
     "drawEclipseBossFallback",
     "bossWeaver",
+    "drawSkyPaperDragonBossFallback",
+    "drawScorewingBossFallback",
   ]) {
     assert.match(source, new RegExp(`\\b${symbol}\\b`), `renderer is missing ${symbol}`);
   }
@@ -276,6 +422,16 @@ test("renderer falls back to procedural art and never fetches runtime images", a
     source,
     /function\s+drawBoss\b[\s\S]*?draw(?:(?:Rift)?Weaver|StormKite)BossFallback\(/,
     "drawBoss() must have an explicit procedural fallback for the third boss",
+  );
+  assert.match(
+    source,
+    /function\s+drawBoss\b[\s\S]*?drawSkyPaperDragonBossFallback\(/,
+    "drawBoss() must have an explicit procedural fallback for the sixth boss",
+  );
+  assert.match(
+    source,
+    /function\s+drawBoss\b[\s\S]*?drawScorewingBossFallback\(/,
+    "drawBoss() must have an explicit procedural fallback for the seventh boss",
   );
   assert.match(source, /function\s+drawCollectible\b[\s\S]*?drawAtlasFrame\([\s\S]*?drawSeed\(/);
   assert.match(source, /function\s+renderBackground\b[\s\S]*?drawEnvironmentBackdrop\([\s\S]*?if\s*\(!illustrated\)/);
@@ -298,6 +454,14 @@ test("startup keeps art loading scoped to the selected stage", async () => {
     "the briefing loader must preload only the selected stage");
   assert.match(source, /\b(?:promise|loadPromise)\b[\s\S]{0,220}?artImageCache|artImageCache[\s\S]{0,220}?\b(?:promise|loadPromise)\b/i,
     "art cache entries must share one in-flight Promise per image");
+  assert.match(source, /typeof\s+image\.decode\s*===\s*["']function["'][\s\S]{0,80}?await\s+image\.decode\s*\(\)/,
+    "loaded atlases must finish browser decoding before the briefing reports ready");
+  assert.match(source, /function\s+evictArtAssetsExcept\s*\([\s\S]{0,280}?artImageCache\.delete\s*\(/,
+    "decoded atlases outside the core, current stage, and warm stage must be evicted");
+  assert.match(source, /function\s+scheduleLevelArtWarmup\s*\([\s\S]{0,1000}?requestIdleCallback\s*\(/,
+    "the next stage must only warm during a browser idle window");
+  assert.match(source, /function\s+completeLevel\s*\([\s\S]{0,480}?scheduleLevelArtWarmup\s*\(\s*nextCampaignArtLevel/,
+    "campaign completion should warm only the next stage");
 });
 
 test("briefing blocks play until selected-stage art is ready and supports retry", async () => {
